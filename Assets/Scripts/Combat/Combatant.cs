@@ -50,6 +50,7 @@ namespace LuoLuoTrip.Combat
         public float CurrentPoise => _currentPoise;
         public bool IsAlive => _state != CombatState.Dead && _currentHealth > 0f;
         public bool IsInvulnerable => _state == CombatState.Dodging;
+        public bool AutoTickEnabled { get; set; } = true;
 
         private void Awake()
         {
@@ -99,13 +100,19 @@ namespace LuoLuoTrip.Combat
                 SetState(CombatState.Idle);
         }
 
+        public void Tick(float deltaTime)
+        {
+            if (!IsAlive || deltaTime <= 0f) return;
+
+            RecoverResources(deltaTime);
+            UpdateStateTimer(deltaTime);
+            _attackCooldownTimer = Math.Max(0f, _attackCooldownTimer - deltaTime);
+        }
+
         private void Update()
         {
-            if (!IsAlive) return;
-
-            RecoverResources();
-            UpdateStateTimer();
-            _attackCooldownTimer = Math.Max(0f, _attackCooldownTimer - Time.deltaTime);
+            if (!AutoTickEnabled) return;
+            Tick(Time.deltaTime);
         }
 
         public bool TryLightAttack(Combatant target)
@@ -201,28 +208,28 @@ namespace LuoLuoTrip.Combat
             OnDeath?.Invoke(this);
         }
 
-        private void RecoverResources()
+        private void RecoverResources(float deltaTime)
         {
             if (_state == CombatState.Attacking) return;
 
             _currentStamina = Math.Min(_stats.maxStamina,
-                _currentStamina + _stats.staminaRecoveryPerSecond * Time.deltaTime);
+                _currentStamina + _stats.staminaRecoveryPerSecond * deltaTime);
 
             if (_state != CombatState.Staggered)
             {
                 _currentPoise = Math.Min(_stats.maxPoise,
-                    _currentPoise + _stats.poiseRecoveryPerSecond * Time.deltaTime);
+                    _currentPoise + _stats.poiseRecoveryPerSecond * deltaTime);
             }
         }
 
-        private void UpdateStateTimer()
+        private void UpdateStateTimer(float deltaTime)
         {
             if (_stateTimer <= 0f) return;
 
-            _stateTimer -= Time.deltaTime;
+            _stateTimer -= deltaTime;
 
             if (_state == CombatState.Dodging)
-                transform.position += _dodgeDirection * (_dodgeDistance / _dodgeDuration * Time.deltaTime);
+                transform.position += _dodgeDirection * (_dodgeDistance / _dodgeDuration * deltaTime);
 
             if (_stateTimer <= 0f && _state != CombatState.Dead)
                 SetState(CombatState.Idle);
