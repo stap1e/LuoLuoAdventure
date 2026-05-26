@@ -1,3 +1,4 @@
+using System;
 using LuoLuoTrip.Combat;
 using LuoLuoTrip.Combat.Animation;
 using UnityEngine;
@@ -12,6 +13,8 @@ namespace LuoLuoTrip
         [SerializeField] private CharacterData _data;
         [SerializeField] private bool _autoSetupCombat = true;
         [SerializeField] private bool _autoSetupAnimation = true;
+
+        internal static Func<SubFactionId, SubFactionId, bool> HostilityResolver { get; set; }
 
         public CharacterData Data => _data;
         public Combatant Combatant { get; private set; }
@@ -48,6 +51,9 @@ namespace LuoLuoTrip
         {
             if (other == null || _data == null || other._data == null) return false;
             if (_data.Faction == other._data.Faction) return false;
+
+            if (HostilityResolver != null)
+                return HostilityResolver(_data.Faction, other._data.Faction);
 
             return GameBootstrap.Context != null &&
                    GameBootstrap.Context.AreFactionsHostile(_data.Faction, other._data.Faction);

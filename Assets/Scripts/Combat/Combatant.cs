@@ -73,10 +73,16 @@ namespace LuoLuoTrip.Combat
             if (_entity?.Data == null) return;
 
             _stats = CombatStatsCalculator.Calculate(_entity.Data);
-            _currentHealth = _stats.maxHealth;
-            _currentStamina = _stats.maxStamina;
-            _currentPoise = _stats.maxPoise;
-            SetState(CombatState.Idle);
+            RestoreRuntimeState(_stats.maxHealth, _stats.maxStamina, _stats.maxPoise);
+        }
+
+        public void InitializeForTests(CombatStats stats, float? health = null, float? stamina = null, float? poise = null)
+        {
+            _stats = stats;
+            RestoreRuntimeState(
+                health ?? stats.maxHealth,
+                stamina ?? stats.maxStamina,
+                poise ?? stats.maxPoise);
         }
 
         public void RestoreRuntimeState(float health, float stamina, float poise)
@@ -84,6 +90,8 @@ namespace LuoLuoTrip.Combat
             _currentHealth = health >= 0 ? health : _stats.maxHealth;
             _currentStamina = stamina >= 0 ? stamina : _stats.maxStamina;
             _currentPoise = poise >= 0 ? poise : _stats.maxPoise;
+            _attackCooldownTimer = 0f;
+            _stateTimer = 0f;
 
             if (_currentHealth <= 0f)
                 SetState(CombatState.Dead);
@@ -143,10 +151,8 @@ namespace LuoLuoTrip.Combat
             OnHitReceived?.Invoke(hitEvent);
         }
 
-        /// <summary>供 Animator Animation Event 调用：攻击判定帧</summary>
         public void AnimEvent_OnAttackActive() { }
 
-        /// <summary>供 Animator Animation Event 调用：攻击动画结束</summary>
         public void AnimEvent_OnAttackEnd()
         {
             if (_state == CombatState.Attacking)
