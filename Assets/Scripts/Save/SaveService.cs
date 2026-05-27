@@ -94,6 +94,11 @@ namespace LuoLuoTrip.Save
             return save;
         }
 
+        public static bool TryRead(out GameSaveData saveData, string fileName = SaveConstants.DefaultSaveFileName)
+        {
+            return TryRead(fileName, out saveData);
+        }
+
         public static bool TryRead(string fileName, out GameSaveData saveData)
         {
             saveData = null;

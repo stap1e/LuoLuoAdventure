@@ -46,8 +46,8 @@ namespace LuoLuoTrip.Combat
         private float _targetRefreshTimer;
         private float _attackIntervalOffset;
 
-        internal Func<Combatant[]> CombatantQuery { get; set; }
-        internal Combatant CurrentTarget => _target;
+        public Func<Combatant[]> CombatantQuery { get; set; }
+        public Combatant CurrentTarget => _target;
 
         private void Awake()
         {

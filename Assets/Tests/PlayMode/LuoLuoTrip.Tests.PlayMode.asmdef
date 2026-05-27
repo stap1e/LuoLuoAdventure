@@ -2,8 +2,7 @@
     "name": "LuoLuoTrip.Tests.PlayMode",
     "rootNamespace": "LuoLuoTrip.Tests.PlayMode",
     "references": [
-        "LuoLuoTrip",
-        "UnityEngine.TestRunner"
+        "LuoLuoTrip"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

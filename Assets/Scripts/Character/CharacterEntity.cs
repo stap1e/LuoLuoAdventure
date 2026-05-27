@@ -14,7 +14,7 @@ namespace LuoLuoTrip
         [SerializeField] private bool _autoSetupCombat = true;
         [SerializeField] private bool _autoSetupAnimation = true;
 
-        internal static Func<SubFactionId, SubFactionId, bool> HostilityResolver { get; set; }
+        public static Func<SubFactionId, SubFactionId, bool> HostilityResolver { get; set; }
 
         public CharacterData Data => _data;
         public Combatant Combatant { get; private set; }

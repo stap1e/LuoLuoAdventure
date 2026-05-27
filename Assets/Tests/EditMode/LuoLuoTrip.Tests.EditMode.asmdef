@@ -2,9 +2,7 @@
     "name": "LuoLuoTrip.Tests.EditMode",
     "rootNamespace": "LuoLuoTrip.Tests.EditMode",
     "references": [
-        "LuoLuoTrip",
-        "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner"
+        "LuoLuoTrip"
     ],
     "includePlatforms": [
         "Editor"
