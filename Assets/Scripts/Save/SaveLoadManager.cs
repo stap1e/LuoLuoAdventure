@@ -86,7 +86,7 @@ namespace LuoLuoTrip.Save
         {
             if (string.IsNullOrEmpty(_playerCharacterId)) return null;
 
-            foreach (var entity in FindObjectsByType<CharacterEntity>(FindObjectsSortMode.None))
+            foreach (var entity in FindObjectsOfType<CharacterEntity>())
             {
                 if (entity.Data?.Id == _playerCharacterId)
                     return entity.transform.position;
@@ -99,7 +99,7 @@ namespace LuoLuoTrip.Save
             if (string.IsNullOrEmpty(save.player.controlledCharacterId)) return;
 
             _playerCharacterId = save.player.controlledCharacterId;
-            foreach (var entity in FindObjectsByType<CharacterEntity>(FindObjectsSortMode.None))
+            foreach (var entity in FindObjectsOfType<CharacterEntity>())
             {
                 if (entity.Data?.Id != save.player.controlledCharacterId) continue;
                 entity.transform.position = new Vector3(save.player.posX, save.player.posY, save.player.posZ);
@@ -110,7 +110,7 @@ namespace LuoLuoTrip.Save
         private static Dictionary<string, CharacterSaveEntry> CollectCombatStates()
         {
             var lookup = new Dictionary<string, CharacterSaveEntry>();
-            foreach (var combatant in FindObjectsByType<Combatant>(FindObjectsSortMode.None))
+            foreach (var combatant in FindObjectsOfType<Combatant>())
             {
                 if (combatant.CharacterEntity?.Data == null) continue;
                 var id = combatant.CharacterEntity.Data.Id;
@@ -134,7 +134,7 @@ namespace LuoLuoTrip.Save
                     lookup[entry.id] = entry;
             }
 
-            foreach (var combatant in FindObjectsByType<Combatant>(FindObjectsSortMode.None))
+            foreach (var combatant in FindObjectsOfType<Combatant>())
             {
                 var id = combatant.CharacterEntity?.Data?.Id;
                 if (id != null && lookup.TryGetValue(id, out var entry))

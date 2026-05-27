@@ -55,7 +55,7 @@ namespace LuoLuoTrip.Combat
             _entity = GetComponent<CharacterEntity>();
             _spawnPoint = transform.position;
             _attackIntervalOffset = UnityEngine.Random.Range(-_attackIntervalVariance, _attackIntervalVariance);
-            CombatantQuery ??= () => FindObjectsByType<Combatant>(FindObjectsSortMode.None);
+            CombatantQuery = CombatantQuery ?? (() => FindObjectsOfType<Combatant>());
         }
 
         private void Update()

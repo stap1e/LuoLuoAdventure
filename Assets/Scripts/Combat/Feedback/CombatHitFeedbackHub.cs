@@ -25,7 +25,7 @@ namespace LuoLuoTrip.Combat.Feedback
             }
             Instance = this;
 
-            _profile ??= ScriptableObject.CreateInstance<HitFeedbackProfileSO>();
+            _profile = _profile ?? ScriptableObject.CreateInstance<HitFeedbackProfileSO>();
             EnsureServices();
         }
 
@@ -37,7 +37,7 @@ namespace LuoLuoTrip.Combat.Feedback
 
         private void Start()
         {
-            foreach (var combatant in FindObjectsByType<Combatant>(FindObjectsSortMode.None))
+            foreach (var combatant in FindObjectsOfType<Combatant>())
                 Register(combatant);
         }
 

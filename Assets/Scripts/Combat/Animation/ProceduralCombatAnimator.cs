@@ -24,7 +24,7 @@ namespace LuoLuoTrip.Combat.Animation
 
         private void Awake()
         {
-            _visualRoot ??= transform;
+            _visualRoot = _visualRoot ?? transform;
             _baseLocalPos = _visualRoot.localPosition;
             _baseScale = _visualRoot.localScale;
             _baseLocalRot = _visualRoot.localRotation;

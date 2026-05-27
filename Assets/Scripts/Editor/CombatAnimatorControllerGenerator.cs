@@ -37,7 +37,7 @@ namespace LuoLuoTrip.Editor
             LuoLuoTripSetupMenu.EnsureFolderPublic(DefaultFolder);
             LuoLuoTripSetupMenu.EnsureFolderPublic(DefaultClipsFolder);
 
-            config ??= LoadOrCreateConfig(DefaultConfigPath);
+            config = config ?? LoadOrCreateConfig(DefaultConfigPath);
 
             if (File.Exists(controllerPath))
                 AssetDatabase.DeleteAsset(controllerPath);

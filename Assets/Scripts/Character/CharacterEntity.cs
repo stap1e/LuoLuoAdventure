@@ -34,14 +34,14 @@ namespace LuoLuoTrip
 
         public void EnsureAnimationDriver()
         {
-            AnimationDriver ??= GetComponent<CombatAnimationDriver>();
+            AnimationDriver = AnimationDriver ?? GetComponent<CombatAnimationDriver>();
             if (AnimationDriver == null)
                 AnimationDriver = gameObject.AddComponent<CombatAnimationDriver>();
         }
 
         public void EnsureCombatant()
         {
-            Combatant ??= GetComponent<Combatant>();
+            Combatant = Combatant ?? GetComponent<Combatant>();
             if (Combatant == null)
                 Combatant = gameObject.AddComponent<Combatant>();
             Combatant.InitializeFromCharacter();

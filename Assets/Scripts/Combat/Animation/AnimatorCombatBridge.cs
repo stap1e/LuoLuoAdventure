@@ -23,8 +23,8 @@ namespace LuoLuoTrip.Combat.Animation
 
         private void Awake()
         {
-            _animator ??= GetComponent<Animator>();
-            _config ??= ScriptableObject.CreateInstance<CombatAnimatorConfigSO>();
+            _animator = _animator ?? GetComponent<Animator>();
+            _config = _config ?? ScriptableObject.CreateInstance<CombatAnimatorConfigSO>();
             CacheHashes();
         }
 

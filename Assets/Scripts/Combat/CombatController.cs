@@ -85,7 +85,7 @@ namespace LuoLuoTrip.Combat
             Combatant nearest = null;
             var bestDist = _lockOnRange;
 
-            foreach (var other in FindObjectsByType<Combatant>(FindObjectsSortMode.None))
+            foreach (var other in FindObjectsOfType<Combatant>())
             {
                 if (other == _self || !other.IsAlive) continue;
                 if (!IsHostile(other)) continue;
@@ -106,7 +106,7 @@ namespace LuoLuoTrip.Combat
             var bestAngle = float.MaxValue;
             var forward = (current.transform.position - transform.position).normalized;
 
-            foreach (var other in FindObjectsByType<Combatant>(FindObjectsSortMode.None))
+            foreach (var other in FindObjectsOfType<Combatant>())
             {
                 if (other == _self || other == current || !other.IsAlive) continue;
                 if (!IsHostile(other)) continue;

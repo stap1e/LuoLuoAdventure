@@ -14,7 +14,7 @@ namespace LuoLuoTrip.Combat
         {
             if (_autoFindPlayer)
             {
-                foreach (var c in FindObjectsByType<Combatant>(FindObjectsSortMode.None))
+                foreach (var c in FindObjectsOfType<Combatant>())
                 {
                     if (c.GetComponent<CombatController>() != null)
                     {

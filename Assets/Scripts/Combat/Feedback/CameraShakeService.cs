@@ -26,7 +26,7 @@ namespace LuoLuoTrip.Combat.Feedback
             }
             Instance = this;
 
-            _camera ??= GetComponent<Camera>();
+            _camera = _camera ?? GetComponent<Camera>();
             if (_camera == null)
                 _camera = Camera.main;
 
