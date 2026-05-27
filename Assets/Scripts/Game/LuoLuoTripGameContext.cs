@@ -12,7 +12,7 @@ namespace LuoLuoTrip
     {
         public SubFactionId Id;
         public CharacterData Leader;
-        public List<CharacterData> Members = new();
+        public List<CharacterData> Members = new List<CharacterData>();
 
         public SubFactionDefinition Definition => SubFactionRegistry.Get(Id);
 
@@ -23,8 +23,8 @@ namespace LuoLuoTrip
     public class LuoLuoTripGameContext
     {
         public FactionRelationshipService RelationshipService { get; }
-        public Dictionary<SubFactionId, SubFactionState> FactionStates { get; } = new();
-        public List<CharacterData> AllCharacters { get; } = new();
+        public Dictionary<SubFactionId, SubFactionState> FactionStates { get; } = new Dictionary<SubFactionId, SubFactionState>();
+        public List<CharacterData> AllCharacters { get; } = new List<CharacterData>();
 
         public LuoLuoTripGameContext(FactionRelationshipService relationshipService = null)
         {

@@ -7,7 +7,7 @@ namespace LuoLuoTrip
     [CreateAssetMenu(fileName = "SubFactionDatabase", menuName = "LuoLuoTrip/Sub Faction Database")]
     public class SubFactionDatabaseSO : ScriptableObject
     {
-        [SerializeField] private List<SubFactionConfigSO> _configs = new();
+        [SerializeField] private List<SubFactionConfigSO> _configs = new List<SubFactionConfigSO>();
 
         public IReadOnlyList<SubFactionConfigSO> Configs => _configs;
 

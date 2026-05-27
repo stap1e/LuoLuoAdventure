@@ -28,7 +28,7 @@ namespace LuoLuoTrip.Combat
         public float poiseRecoveryPerSecond;
         public float staminaRecoveryPerSecond;
 
-        public static CombatStats CreateDefault() => new()
+        public static CombatStats CreateDefault() => new CombatStats
         {
             maxHealth = 100f,
             maxStamina = 100f,

@@ -14,9 +14,9 @@ namespace LuoLuoTrip.Save
     {
         public int version = SaveConstants.CurrentSaveVersion;
         public string savedAtUtc;
-        public List<CharacterSaveEntry> characters = new();
-        public FactionRelationshipSnapshot relationships = new();
-        public PlayerSaveEntry player = new();
+        public List<CharacterSaveEntry> characters = new List<CharacterSaveEntry>();
+        public FactionRelationshipSnapshot relationships = new FactionRelationshipSnapshot();
+        public PlayerSaveEntry player = new PlayerSaveEntry();
     }
 
     [Serializable]

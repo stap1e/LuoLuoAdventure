@@ -9,7 +9,7 @@ namespace LuoLuoTrip
     [Serializable]
     public class FactionRelationshipMatrix
     {
-        private readonly Dictionary<(SubFactionId, SubFactionId), int> _values = new();
+        private readonly Dictionary<(SubFactionId, SubFactionId), int> _values = new Dictionary<(SubFactionId, SubFactionId), int>();
 
         public static FactionRelationshipMatrix CreateDefault()
         {
@@ -65,7 +65,7 @@ namespace LuoLuoTrip
         }
 
         public FactionRelationshipSnapshot CreateSnapshot() =>
-            new(_values);
+            new FactionRelationshipSnapshot(_values);
 
         public void RestoreFromSnapshot(FactionRelationshipSnapshot snapshot)
         {
@@ -100,7 +100,7 @@ namespace LuoLuoTrip
     [Serializable]
     public class FactionRelationshipSnapshot
     {
-        public List<FactionRelationshipEntry> Entries = new();
+        public List<FactionRelationshipEntry> Entries = new List<FactionRelationshipEntry>();
 
         public FactionRelationshipSnapshot() { }
 

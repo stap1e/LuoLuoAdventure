@@ -13,7 +13,7 @@ namespace LuoLuoTrip
         [Min(0.1f)] public float poiseMultiplier;
         [Min(0.1f)] public float staminaMultiplier;
 
-        public static SubFactionCombatModifiers Default => new()
+        public static SubFactionCombatModifiers Default => new SubFactionCombatModifiers()
         {
             healthMultiplier = 1f,
             attackMultiplier = 1f,
@@ -45,7 +45,7 @@ namespace LuoLuoTrip
         public MainRace Race => GameConstants.GetMainRace(factionId);
 
         public SubFactionDefinition ToDefinition() =>
-            new(factionId, displayName, description);
+            new SubFactionDefinition(factionId, displayName, description);
 
         public static SubFactionCombatModifiers GetDefaultCombatModifiers(SubFactionId id)
         {

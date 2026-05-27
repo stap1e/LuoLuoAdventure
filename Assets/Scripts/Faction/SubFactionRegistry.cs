@@ -77,15 +77,15 @@ namespace LuoLuoTrip
         {
             return new Dictionary<SubFactionId, SubFactionDefinition>
             {
-                { SubFactionId.MotorIronRiders, new(SubFactionId.MotorIronRiders, "铁骑团", "机车族重装先锋") },
-                { SubFactionId.MotorStormGang, new(SubFactionId.MotorStormGang, "风暴帮", "机车族高速突击") },
-                { SubFactionId.MotorDustDevils, new(SubFactionId.MotorDustDevils, "尘魔帮", "机车族沙漠游骑") },
-                { SubFactionId.MotorNightRunners, new(SubFactionId.MotorNightRunners, "夜行者", "机车族暗夜斥候") },
-                { SubFactionId.MotorSteelWolves, new(SubFactionId.MotorSteelWolves, "钢狼团", "机车族机械狼骑") },
-                { SubFactionId.MotorFlameCarts, new(SubFactionId.MotorFlameCarts, "烈焰车帮", "机车族火焰改装") },
-                { SubFactionId.BeastIronClaw, new(SubFactionId.BeastIronClaw, "铁爪部", "猛兽族利爪战团") },
-                { SubFactionId.BeastShadowFang, new(SubFactionId.BeastShadowFang, "影牙部", "猛兽族暗影猎手") },
-                { SubFactionId.BeastThunderHide, new(SubFactionId.BeastThunderHide, "雷皮部", "猛兽族雷霆巨兽") }
+                { SubFactionId.MotorIronRiders, new SubFactionDefinition(SubFactionId.MotorIronRiders, "铁骑团", "机车族重装先锋") },
+                { SubFactionId.MotorStormGang, new SubFactionDefinition(SubFactionId.MotorStormGang, "风暴帮", "机车族高速突击") },
+                { SubFactionId.MotorDustDevils, new SubFactionDefinition(SubFactionId.MotorDustDevils, "尘魔帮", "机车族沙漠游骑") },
+                { SubFactionId.MotorNightRunners, new SubFactionDefinition(SubFactionId.MotorNightRunners, "夜行者", "机车族暗夜斥候") },
+                { SubFactionId.MotorSteelWolves, new SubFactionDefinition(SubFactionId.MotorSteelWolves, "钢狼团", "机车族机械狼骑") },
+                { SubFactionId.MotorFlameCarts, new SubFactionDefinition(SubFactionId.MotorFlameCarts, "烈焰车帮", "机车族火焰改装") },
+                { SubFactionId.BeastIronClaw, new SubFactionDefinition(SubFactionId.BeastIronClaw, "铁爪部", "猛兽族利爪战团") },
+                { SubFactionId.BeastShadowFang, new SubFactionDefinition(SubFactionId.BeastShadowFang, "影牙部", "猛兽族暗影猎手") },
+                { SubFactionId.BeastThunderHide, new SubFactionDefinition(SubFactionId.BeastThunderHide, "雷皮部", "猛兽族雷霆巨兽") }
             };
         }
 

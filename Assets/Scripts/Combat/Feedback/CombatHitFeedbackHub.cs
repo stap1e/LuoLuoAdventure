@@ -14,7 +14,7 @@ namespace LuoLuoTrip.Combat.Feedback
         [SerializeField] private HitFeedbackProfileSO _profile;
         [SerializeField] private bool _onlyShakeWhenPlayerInvolved = true;
 
-        private readonly HashSet<Combatant> _registered = new();
+        private readonly HashSet<Combatant> _registered = new HashSet<Combatant>();
 
         private void Awake()
         {
