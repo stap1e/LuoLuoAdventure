@@ -8,8 +8,11 @@ namespace LuoLuoTrip
         [SerializeField] private CommanderDebugHud _commanderHud;
         [SerializeField] private FactionStandingDebugPanel _factionPanel;
         [SerializeField] private MissionResultDebugPanel _missionPanel;
+        [SerializeField] private MissionResultSummaryPanel _summaryPanel;
 
         private MissionService _missionService;
+        private MissionChainService _chainService;
+        private CommanderProfile _profileBefore;
 
         private void Start()
         {
@@ -23,6 +26,7 @@ namespace LuoLuoTrip
                 _factionPanel.SetService(context.ReputationService);
 
             _missionService = context.MissionService;
+            _chainService = context.MissionChainService;
         }
 
         private void Update()
@@ -39,39 +43,83 @@ namespace LuoLuoTrip
 
         private void TestMechaVictory()
         {
-            var state = _missionService.StartMission("test_mecha");
+            _profileBefore = CloneProfile();
+            _missionService.StartMission("test_mecha");
             var consequence = _missionService.CompleteMissionWithOutcome(MissionOutcomeType.MechaVictory);
-            ShowConsequence(consequence);
+            RecordAndShow(consequence, "test_mecha", MissionOutcomeType.MechaVictory);
         }
 
         private void TestBeastVictory()
         {
-            var state = _missionService.StartMission("test_beast");
+            _profileBefore = CloneProfile();
+            _missionService.StartMission("test_beast");
             var consequence = _missionService.CompleteMissionWithOutcome(MissionOutcomeType.BeastVictory);
-            ShowConsequence(consequence);
+            RecordAndShow(consequence, "test_beast", MissionOutcomeType.BeastVictory);
         }
 
         private void TestBalancedResolution()
         {
-            var state = _missionService.StartMission("test_balance");
+            _profileBefore = CloneProfile();
+            _missionService.StartMission("test_balance");
             var consequence = _missionService.CompleteMissionWithOutcome(MissionOutcomeType.BalancedResolution);
-            ShowConsequence(consequence);
+            RecordAndShow(consequence, "test_balance", MissionOutcomeType.BalancedResolution);
         }
 
-        private void ShowConsequence(MissionConsequence consequence)
+        public void OnMissionCompleted(string missionId, MissionOutcomeType outcome, MissionConsequence consequence)
+        {
+            _profileBefore = _profileBefore ?? CloneProfile();
+            RecordAndShow(consequence, missionId, outcome);
+        }
+
+        private void RecordAndShow(MissionConsequence consequence, string missionId, MissionOutcomeType outcome)
         {
             if (consequence == null) return;
+
+            if (_chainService != null && !missionId.StartsWith("test_"))
+            {
+                _chainService.RecordMissionResult(missionId, outcome, consequence.CommanderExperienceDelta);
+            }
 
             if (_missionPanel != null)
                 _missionPanel.ShowConsequence(consequence);
 
+            var context = GameBootstrap.Context;
             if (_commanderHud != null)
-                _commanderHud.SetProfile(GameBootstrap.Context?.CommanderProfile);
+                _commanderHud.SetProfile(context?.CommanderProfile);
 
             if (_factionPanel != null)
-                _factionPanel.SetService(GameBootstrap.Context?.ReputationService);
+                _factionPanel.SetService(context?.ReputationService);
 
-            Debug.Log($"[Commander] Mission complete: {consequence.Outcome}, XP: +{consequence.CommanderExperienceDelta}");
+            if (_summaryPanel != null && context != null)
+            {
+                var unlocked = _chainService?.State.UnlockedMissionIds.Count > 1
+                    ? _chainService.State.UnlockedMissionIds[_chainService.State.UnlockedMissionIds.Count - 1]
+                    : null;
+                var modifier = _chainService?.BuildMissionModifiers("border_retaliation");
+                _summaryPanel.ShowSummary(missionId, consequence, _profileBefore, context.CommanderProfile, unlocked, modifier);
+            }
+
+            Debug.Log($"[Commander] Mission complete: {consequence.Outcome}, XP: +{consequence.CommanderExperienceDelta}, Level: {context?.CommanderProfile.CommanderLevel}");
+            _profileBefore = null;
+        }
+
+        private CommanderProfile CloneProfile()
+        {
+            var context = GameBootstrap.Context;
+            if (context == null) return null;
+            var p = new CommanderProfile
+            {
+                CommanderLevel = context.CommanderProfile.CommanderLevel,
+                Experience = context.CommanderProfile.Experience,
+                CommandCapacity = context.CommanderProfile.CommandCapacity,
+                MaxDirectControlRank = context.CommanderProfile.MaxDirectControlRank,
+                MaxTacticalCommandRank = context.CommanderProfile.MaxTacticalCommandRank,
+                BaseSyncRate = context.CommanderProfile.BaseSyncRate,
+                MechaTrust = context.CommanderProfile.MechaTrust,
+                BeastTrust = context.CommanderProfile.BeastTrust,
+                BalanceScore = context.CommanderProfile.BalanceScore
+            };
+            return p;
         }
     }
 }

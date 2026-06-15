@@ -15,6 +15,13 @@ namespace LuoLuoTrip
         public int BeastTrust;
         public int BalanceScore;
 
+        public int ExperienceToNextLevel => CommanderLevel < CommanderLevelSystem.MaxCommanderLevel
+            ? CommanderLevelSystem.ExperienceForLevel(CommanderLevel + 1) - Experience
+            : 0;
+
+        public bool CanLevelUp => CommanderLevel < CommanderLevelSystem.MaxCommanderLevel
+            && Experience >= CommanderLevelSystem.ExperienceForLevel(CommanderLevel + 1);
+
         public static CommanderProfile CreateDefault()
         {
             var profile = new CommanderProfile();

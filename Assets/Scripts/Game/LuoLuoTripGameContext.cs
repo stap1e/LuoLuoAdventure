@@ -27,6 +27,7 @@ namespace LuoLuoTrip
         public DynamicFactionHostilityService DynamicHostilityService { get; }
         public CommanderProfile CommanderProfile { get; }
         public MissionService MissionService { get; }
+        public MissionChainService MissionChainService { get; private set; }
         public Dictionary<SubFactionId, SubFactionState> FactionStates { get; } = new Dictionary<SubFactionId, SubFactionState>();
         public List<CharacterData> AllCharacters { get; } = new List<CharacterData>();
 
@@ -37,6 +38,7 @@ namespace LuoLuoTrip
             DynamicHostilityService = new DynamicFactionHostilityService(ReputationService, RelationshipService);
             CommanderProfile = CommanderProfile.CreateDefault();
             MissionService = new MissionService(ReputationService, CommanderProfile);
+            MissionChainService = new MissionChainService();
         }
 
         public void InitializeWorld(bool spawnMinionSquads = true, int minionsPerFaction = 5)
@@ -106,6 +108,11 @@ namespace LuoLuoTrip
                 CommanderProfile.BeastTrust = save.commander.beastTrust;
                 CommanderProfile.BalanceScore = save.commander.balanceScore;
                 CommanderProfile.Clamp();
+            }
+
+            if (save.missionChainState != null && save.missionChainState.CompletedMissions != null)
+            {
+                MissionChainService = new MissionChainService(save.missionChainState);
             }
         }
 

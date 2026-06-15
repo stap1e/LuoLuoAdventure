@@ -20,6 +20,7 @@ namespace LuoLuoTrip.Save
         public CommanderSaveEntry commander = new CommanderSaveEntry();
         public FactionPoliticsSnapshot factionPolitics = new FactionPoliticsSnapshot();
         public List<MissionConsequenceSaveEntry> completedMissions = new List<MissionConsequenceSaveEntry>();
+        public MissionChainState missionChainState = new MissionChainState();
     }
 
     [Serializable]

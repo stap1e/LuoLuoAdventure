@@ -25,13 +25,22 @@ namespace LuoLuoTrip.UI
 
             GUI.Label(new Rect(x, y, _width, 20), $"=== Commander (Lv.{_profile.CommanderLevel}) ===");
             y += 20;
-            GUI.Label(new Rect(x, y, _width, 20), $"XP: {_profile.Experience} | Capacity: {_profile.CommandCapacity}");
+            GUI.Label(new Rect(x, y, _width, 20), $"XP: {_profile.Experience}/{CommanderLevelSystem.ExperienceForLevel(_profile.CommanderLevel + 1)} | Capacity: {_profile.CommandCapacity}");
             y += 18;
             GUI.Label(new Rect(x, y, _width, 20), $"Direct Rank: {_profile.MaxDirectControlRank} | Tact Rank: {_profile.MaxTacticalCommandRank}");
             y += 18;
             GUI.Label(new Rect(x, y, _width, 20), $"Sync: {_profile.BaseSyncRate:P0} | Mecha: {_profile.MechaTrust} | Beast: {_profile.BeastTrust}");
             y += 18;
             GUI.Label(new Rect(x, y, _width, 20), $"Balance: {_profile.BalanceScore}");
+            y += 18;
+
+            if (_profile.CanLevelUp)
+            {
+                GUI.color = Color.green;
+                GUI.Label(new Rect(x, y, _width, 18), "LEVEL UP AVAILABLE!");
+                GUI.color = Color.white;
+                y += 18;
+            }
 
             if (_runtimeState != null)
             {

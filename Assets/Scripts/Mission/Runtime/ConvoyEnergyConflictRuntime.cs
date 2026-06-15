@@ -21,6 +21,7 @@ namespace LuoLuoTrip
         [SerializeField] private float _abandonTime = 10f;
 
         private MissionService _missionService;
+        private MissionChainService _chainService;
         private MissionRuntimeState _missionState;
         private int _mechaCasualties;
         private int _beastCasualties;
@@ -36,7 +37,10 @@ namespace LuoLuoTrip
         {
             var context = GameBootstrap.Context;
             if (context != null)
+            {
                 _missionService = context.MissionService;
+                _chainService = context.MissionChainService;
+            }
         }
 
         private void Update()
@@ -252,6 +256,15 @@ namespace LuoLuoTrip
             _missionState.BeastCasualties = _beastCasualties;
 
             var consequence = _missionService.CompleteMissionWithOutcome(_missionState.Outcome);
+
+            if (_chainService != null)
+            {
+                _chainService.RecordMissionResult("convoy_energy_conflict", _missionState.Outcome,
+                    consequence?.CommanderExperienceDelta ?? 0,
+                    sharedEnergy: _energyNode?.IsSharedByPlayer ?? false,
+                    convoyDestroyed: _convoy?.IsDestroyed ?? false,
+                    beastRaidDefeated: _missionState.Outcome == MissionOutcomeType.MechaVictory);
+            }
 
             Phase = _missionState.Outcome == MissionOutcomeType.Failed
                 ? MissionPhase.Failed

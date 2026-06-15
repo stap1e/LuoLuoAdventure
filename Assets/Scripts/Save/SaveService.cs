@@ -38,7 +38,8 @@ namespace LuoLuoTrip.Save
                     beastTrust = context.CommanderProfile.BeastTrust,
                     balanceScore = context.CommanderProfile.BalanceScore
                 },
-                factionPolitics = context.ReputationService.SaveSnapshot()
+                factionPolitics = context.ReputationService.SaveSnapshot(),
+                missionChainState = context.MissionChainService?.State ?? new MissionChainState()
             };
 
             foreach (var character in context.AllCharacters)

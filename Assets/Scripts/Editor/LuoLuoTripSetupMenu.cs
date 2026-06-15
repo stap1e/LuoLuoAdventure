@@ -272,6 +272,7 @@ namespace LuoLuoTrip.Editor
             var factionPanel = new GameObject("FactionStandingDebugPanel").AddComponent<FactionStandingDebugPanel>();
             var missionPanel = new GameObject("MissionResultDebugPanel").AddComponent<MissionResultDebugPanel>();
             var objectiveHud = new GameObject("MissionObjectiveHud").AddComponent<MissionObjectiveHud>();
+            var summaryPanel = new GameObject("MissionResultSummaryPanel").AddComponent<MissionResultSummaryPanel>();
 
             var conflictGo = new GameObject("ConvoyEnergyConflict");
             var conflict = conflictGo.AddComponent<ConvoyEnergyConflictRuntime>();
@@ -288,7 +289,54 @@ namespace LuoLuoTrip.Editor
             runtimeSo.FindProperty("_commanderHud").objectReferenceValue = commanderHud;
             runtimeSo.FindProperty("_factionPanel").objectReferenceValue = factionPanel;
             runtimeSo.FindProperty("_missionPanel").objectReferenceValue = missionPanel;
+            runtimeSo.FindProperty("_summaryPanel").objectReferenceValue = summaryPanel;
             runtimeSo.ApplyModifiedPropertiesWithoutUndo();
+
+            var borderTriggerGo = new GameObject("BorderRetaliationTrigger");
+            borderTriggerGo.transform.position = new Vector3(25f, 0f, 0f);
+            var borderTrigger = borderTriggerGo.AddComponent<MissionTriggerZone>();
+            var borderTriggerSo = new SerializedObject(borderTrigger);
+            borderTriggerSo.FindProperty("_missionId").stringValue = "border_retaliation";
+            borderTriggerSo.FindProperty("_zoneRadius").floatValue = 10f;
+            borderTriggerSo.ApplyModifiedPropertiesWithoutUndo();
+
+            var borderObjectiveMarker = CreateObjective("Border_ObjectiveMarker", new Vector3(25f, 0.2f, 0f),
+                PlaceholderAssetGenerator.ObjectiveMarkerPrefab);
+
+            var borderConflictGo = new GameObject("BorderRetaliation");
+            var borderConflict = borderConflictGo.AddComponent<BorderRetaliationRuntime>();
+            var borderConflictSo = new SerializedObject(borderConflict);
+            borderConflictSo.FindProperty("_triggerZone").objectReferenceValue = borderTrigger;
+            borderConflictSo.FindProperty("_objectiveHud").objectReferenceValue = objectiveHud;
+            borderConflictSo.ApplyModifiedPropertiesWithoutUndo();
+
+            var rank2MechaData = CharacterData.Create("captain_001", "MechaCaptain", SubFactionId.MotorIronRiders, CharacterRole.Minion);
+            rank2MechaData.CommandRank = 2;
+            rank2MechaData.RequiredCommanderLevel = 5;
+            rank2MechaData.TrustToPlayer = 30;
+            rank2MechaData.AllowDirectControl = false;
+            rank2MechaData.AllowTacticalCommand = true;
+            CreateCombatCharacter("MechaCaptain_Rank2", new Vector3(20f, 0.5f, -3f), rank2MechaData,
+                PlaceholderAssetGenerator.MechaMinionPrefab, isPlayer: false);
+
+            var rank2BeastData = CharacterData.Create("elite_001", "BeastElite", SubFactionId.BeastIronClaw, CharacterRole.Minion);
+            rank2BeastData.CommandRank = 2;
+            rank2BeastData.RequiredCommanderLevel = 5;
+            rank2BeastData.TrustToPlayer = -10;
+            rank2BeastData.AllowDirectControl = false;
+            rank2BeastData.AllowTacticalCommand = true;
+            CreateCombatCharacter("BeastElite_Rank2", new Vector3(28f, 0.5f, 2f), rank2BeastData,
+                PlaceholderAssetGenerator.BeastMinionPrefab, isPlayer: false);
+
+            var rank3DeputyData = CharacterData.Create("deputy_001", "DeputyCommander", SubFactionId.MotorIronRiders, CharacterRole.CityLord);
+            rank3DeputyData.CommandRank = 3;
+            rank3DeputyData.RequiredCommanderLevel = 10;
+            rank3DeputyData.TrustToPlayer = 20;
+            rank3DeputyData.IsHeroOrLeader = true;
+            rank3DeputyData.AllowDirectControl = false;
+            rank3DeputyData.AllowTacticalCommand = false;
+            CreateCombatCharacter("DeputyCommander_Rank3", new Vector3(22f, 0.5f, -1f), rank3DeputyData,
+                PlaceholderAssetGenerator.CityLordPrefab, isPlayer: false);
 
             EditorSceneManager.SaveScene(scene, CommanderScenePath);
             AssetDatabase.Refresh();
