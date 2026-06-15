@@ -263,6 +263,11 @@ namespace LuoLuoTrip.Editor
 
             player.AddComponent<CommanderControlController>();
 
+            var cameraGo = new GameObject("Main Camera");
+            cameraGo.transform.position = new Vector3(0f, 8f, -10f);
+            var cameraFollow = cameraGo.AddComponent<CameraFollowController>();
+            cameraFollow.SetTarget(player.transform);
+
             var commanderHud = new GameObject("CommanderDebugHud").AddComponent<CommanderDebugHud>();
             var factionPanel = new GameObject("FactionStandingDebugPanel").AddComponent<FactionStandingDebugPanel>();
             var missionPanel = new GameObject("MissionResultDebugPanel").AddComponent<MissionResultDebugPanel>();

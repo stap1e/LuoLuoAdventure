@@ -16,6 +16,7 @@ namespace LuoLuoTrip
         public float SyncAssistRemainingTime;
         public float SyncAssistDamageBonus = 0.25f;
         public float SyncAssistDamageReduction = 0.15f;
+        public TacticalCommandState TacticalCommand = new TacticalCommandState();
 
         private CharacterEntity _syncAssistTarget;
         private float _originalAttackBonus;
@@ -99,12 +100,14 @@ namespace LuoLuoTrip
         {
             ActiveCommand = command;
             CommandTarget = target;
+            TacticalCommand.SetCommand(command, target, Time.time);
         }
 
         public void ClearCommand()
         {
             ActiveCommand = CommanderCommandType.None;
             CommandTarget = null;
+            TacticalCommand.Clear();
         }
     }
 }

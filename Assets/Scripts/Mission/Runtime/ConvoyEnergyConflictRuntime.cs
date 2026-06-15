@@ -3,13 +3,21 @@ using UnityEngine;
 
 namespace LuoLuoTrip
 {
+    public enum MissionPhase
+    {
+        Inactive,
+        Active,
+        Resolving,
+        Completed,
+        Failed
+    }
+
     public class ConvoyEnergyConflictRuntime : MonoBehaviour
     {
         [SerializeField] private ConvoyObjective _convoy;
         [SerializeField] private EnergyNodeObjective _energyNode;
         [SerializeField] private MissionTriggerZone _triggerZone;
         [SerializeField] private MissionObjectiveHud _objectiveHud;
-        [SerializeField] private float _abandonDistance = 20f;
         [SerializeField] private float _abandonTime = 10f;
 
         private MissionService _missionService;
@@ -17,10 +25,12 @@ namespace LuoLuoTrip
         private int _mechaCasualties;
         private int _beastCasualties;
         private float _abandonTimer;
-        private bool _isActive;
+        private bool _completionGuard;
         private List<CharacterEntity> _beastEntities = new List<CharacterEntity>();
 
-        public bool IsActive => _isActive;
+        public MissionPhase Phase { get; private set; } = MissionPhase.Inactive;
+        public bool IsActive => Phase == MissionPhase.Active;
+        public MissionOutcomeType? LastOutcome { get; private set; }
 
         private void Start()
         {
@@ -33,12 +43,14 @@ namespace LuoLuoTrip
         {
             if (_missionService == null) return;
 
-            if (!_isActive)
+            if (Phase == MissionPhase.Inactive)
             {
                 if (_triggerZone != null && _triggerZone.MissionStarted)
                     StartConflict();
                 return;
             }
+
+            if (Phase != MissionPhase.Active) return;
 
             UpdateBeastCapture();
             UpdatePlayerInteract();
@@ -46,7 +58,7 @@ namespace LuoLuoTrip
             CheckAbandon();
 
             if (_objectiveHud != null)
-                _objectiveHud.UpdateDisplay(_missionState, _convoy, _energyNode);
+                _objectiveHud.UpdateDisplay(_missionState, _convoy, _energyNode, Phase);
 
             CheckCompletion();
         }
@@ -76,7 +88,8 @@ namespace LuoLuoTrip
             _mechaCasualties = 0;
             _beastCasualties = 0;
             _abandonTimer = 0f;
-            _isActive = true;
+            _completionGuard = false;
+            Phase = MissionPhase.Active;
 
             RefreshBeastEntities();
         }
@@ -84,10 +97,21 @@ namespace LuoLuoTrip
         private void RefreshBeastEntities()
         {
             _beastEntities.Clear();
-            foreach (var entity in FindObjectsOfType<CharacterEntity>())
+            var all = CharacterRuntimeRegistry.Count > 0
+                ? CharacterRuntimeRegistry.QueryBySubFaction(SubFactionId.BeastIronClaw)
+                : new List<CharacterEntity>();
+
+            if (all.Count == 0)
             {
-                if (entity.Data != null && entity.Data.IsAlive && GameConstants.IsBeastSubFaction(entity.Data.Faction))
-                    _beastEntities.Add(entity);
+                foreach (var entity in FindObjectsOfType<CharacterEntity>())
+                {
+                    if (entity.Data != null && entity.Data.IsAlive && GameConstants.IsBeastSubFaction(entity.Data.Faction))
+                        _beastEntities.Add(entity);
+                }
+            }
+            else
+            {
+                _beastEntities.AddRange(all);
             }
         }
 
@@ -126,8 +150,13 @@ namespace LuoLuoTrip
             _mechaCasualties = 0;
             _beastCasualties = 0;
 
-            foreach (var entity in FindObjectsOfType<CharacterEntity>())
+            var all = CharacterRuntimeRegistry.Count > 0
+                ? CharacterRuntimeRegistry.AllCharacters
+                : FindObjectsOfType<CharacterEntity>();
+
+            for (int i = 0; i < all.Count; i++)
             {
+                var entity = all[i];
                 if (entity.Data == null || entity.Data.IsAlive) continue;
                 if (GameConstants.IsMotorSubFaction(entity.Data.Faction))
                     _mechaCasualties++;
@@ -147,7 +176,7 @@ namespace LuoLuoTrip
                 if (_abandonTimer >= _abandonTime)
                 {
                     _missionState.PlayerRetreated = true;
-                    CompleteConflict();
+                    CompleteWithOutcome(MissionOutcomeType.Failed);
                 }
             }
             else
@@ -195,12 +224,16 @@ namespace LuoLuoTrip
             {
                 _missionState.ProtectedConvoy = true;
                 CompleteWithOutcome(MissionOutcomeType.MechaVictory);
-                return;
             }
         }
 
         private void CompleteWithOutcome(MissionOutcomeType outcome)
         {
+            if (_completionGuard) return;
+
+            Phase = MissionPhase.Resolving;
+            LastOutcome = outcome;
+
             if (_missionState == null) return;
             _missionState.MechaCasualties = _mechaCasualties;
             _missionState.BeastCasualties = _beastCasualties;
@@ -210,6 +243,9 @@ namespace LuoLuoTrip
 
         private void CompleteConflict()
         {
+            if (_completionGuard) return;
+            _completionGuard = true;
+
             if (_missionState == null) return;
 
             _missionState.MechaCasualties = _mechaCasualties;
@@ -217,19 +253,31 @@ namespace LuoLuoTrip
 
             var consequence = _missionService.CompleteMissionWithOutcome(_missionState.Outcome);
 
-            _isActive = false;
+            Phase = _missionState.Outcome == MissionOutcomeType.Failed
+                ? MissionPhase.Failed
+                : MissionPhase.Completed;
 
             if (_triggerZone != null)
                 _triggerZone.MarkCompleted();
 
             if (_objectiveHud != null)
-                _objectiveHud.Hide();
+                _objectiveHud.ShowFinalResult(_missionState, Phase);
 
-            Debug.Log($"[Mission] ConvoyEnergyConflict complete: {_missionState.Outcome}, XP: +{consequence?.CommanderExperienceDelta ?? 0}");
+            Debug.Log($"[Mission] ConvoyEnergyConflict complete: {_missionState.Outcome}, Phase: {Phase}, XP: +{consequence?.CommanderExperienceDelta ?? 0}");
         }
 
         private CharacterEntity FindPlayerEntity()
         {
+            if (CharacterRuntimeRegistry.Count > 0)
+            {
+                var all = CharacterRuntimeRegistry.AllCharacters;
+                for (int i = 0; i < all.Count; i++)
+                {
+                    if (all[i] != null && all[i].GetComponent<Combat.CombatController>() != null)
+                        return all[i];
+                }
+            }
+
             foreach (var ctrl in FindObjectsOfType<Combat.CombatController>())
             {
                 return ctrl.GetComponent<CharacterEntity>();

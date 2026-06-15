@@ -20,6 +20,16 @@ namespace LuoLuoTrip
         public Combatant Combatant { get; private set; }
         public CombatAnimationDriver AnimationDriver { get; private set; }
 
+        private void OnEnable()
+        {
+            CharacterRuntimeRegistry.Register(this);
+        }
+
+        private void OnDisable()
+        {
+            CharacterRuntimeRegistry.Unregister(this);
+        }
+
         public void Bind(CharacterData data)
         {
             _data = data;

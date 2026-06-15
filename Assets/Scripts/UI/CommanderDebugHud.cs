@@ -72,7 +72,9 @@ namespace LuoLuoTrip.UI
 
                 if (_runtimeState.HasActiveCommand)
                 {
-                    GUI.Label(new Rect(x, y, _width, 18), $"Command: {_runtimeState.ActiveCommand} -> {_runtimeState.CommandTarget?.Data?.DisplayName}");
+                    GUI.color = Color.cyan;
+                    GUI.Label(new Rect(x, y, _width, 18), $"Command: {_runtimeState.TacticalCommand.StatusText}");
+                    GUI.color = Color.white;
                     y += 18;
                 }
 

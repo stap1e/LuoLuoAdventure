@@ -11,6 +11,8 @@ namespace LuoLuoTrip
         private CharacterEntity _ownerEntity;
         private readonly List<CharacterEntity> _candidates = new List<CharacterEntity>();
         private int _currentIndex = -1;
+        private float _refreshInterval = 0.5f;
+        private float _refreshTimer;
 
         public CharacterEntity CurrentTarget { get; private set; }
 
@@ -31,8 +33,13 @@ namespace LuoLuoTrip
 
         private void Update()
         {
+            _refreshTimer -= Time.deltaTime;
+
             if (Input.GetKeyDown(_selectNextKey))
                 SelectNext();
+
+            if (CurrentTarget != null && (CurrentTarget.Data == null || !CurrentTarget.Data.IsAlive))
+                ClearSelection();
         }
 
         public void SelectNext()
@@ -62,16 +69,33 @@ namespace LuoLuoTrip
             _candidates.Clear();
             _currentIndex = -1;
 
-            foreach (var entity in FindObjectsOfType<CharacterEntity>())
+            if (CharacterRuntimeRegistry.Count > 0)
             {
-                if (entity == _ownerEntity) continue;
-                if (entity.Data == null || !entity.Data.IsAlive) continue;
-                if (entity == null) continue;
+                var all = CharacterRuntimeRegistry.QueryCharactersInRadius(transform.position, _scanRadius);
+                for (int i = 0; i < all.Count; i++)
+                {
+                    if (all[i] != _ownerEntity)
+                        _candidates.Add(all[i]);
+                }
+            }
+            else
+            {
+                foreach (var entity in FindObjectsOfType<CharacterEntity>())
+                {
+                    if (entity == _ownerEntity) continue;
+                    if (entity.Data == null || !entity.Data.IsAlive) continue;
 
-                var dist = Vector3.Distance(transform.position, entity.transform.position);
-                if (dist > _scanRadius) continue;
+                    var dist = Vector3.Distance(transform.position, entity.transform.position);
+                    if (dist > _scanRadius) continue;
 
-                _candidates.Add(entity);
+                    _candidates.Add(entity);
+                }
+
+                if (_refreshTimer <= 0f)
+                {
+                    Debug.LogWarning("[CommanderTargetSelector] CharacterRuntimeRegistry empty, using FindObjectsOfType fallback");
+                    _refreshTimer = _refreshInterval;
+                }
             }
 
             if (CurrentTarget != null && !_candidates.Contains(CurrentTarget))

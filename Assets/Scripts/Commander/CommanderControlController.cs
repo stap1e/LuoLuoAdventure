@@ -16,6 +16,7 @@ namespace LuoLuoTrip
         private SimpleCombatAI _playerAI;
         private ControlPermissionService _permissionService;
         private CommanderDebugHud _debugHud;
+        private CameraFollowController _cameraFollow;
 
         public CommanderControlRuntimeState State => _state;
         public CommanderTargetSelector TargetSelector => _targetSelector;
@@ -40,12 +41,16 @@ namespace LuoLuoTrip
 
             _permissionService = new ControlPermissionService();
 
+            _cameraFollow = FindObjectOfType<CameraFollowController>();
+
             var context = GameBootstrap.Context;
             if (context != null)
             {
                 _debugHud = FindObjectOfType<CommanderDebugHud>();
                 SetupDynamicHostility(context);
             }
+
+            UpdateCameraTarget();
         }
 
         private void Update()
@@ -144,7 +149,13 @@ namespace LuoLuoTrip
                 if (prevCombat != null) prevCombat.enabled = false;
 
                 var prevAI = prevEntity.GetComponent<SimpleCombatAI>();
-                if (prevAI != null) prevAI.enabled = true;
+                if (prevAI != null)
+                {
+                    prevAI.FollowTarget = null;
+                    prevAI.HoldPosition = null;
+                    prevAI.ForcedAttackTarget = null;
+                    prevAI.enabled = true;
+                }
             }
 
             var targetCombat = target.GetComponent<CombatController>();
@@ -159,6 +170,11 @@ namespace LuoLuoTrip
                 _playerCombatController.enabled = false;
 
             _state.SetDirectControl(target);
+
+            if (_state.HasActiveCommand)
+                _state.ClearCommand();
+
+            UpdateCameraTarget();
         }
 
         private void ApplyTacticalCommand(CharacterEntity target)
@@ -183,7 +199,24 @@ namespace LuoLuoTrip
                 if (prevCombat != null) prevCombat.enabled = false;
 
                 var prevAI = _state.DirectControlledEntity.GetComponent<SimpleCombatAI>();
-                if (prevAI != null) prevAI.enabled = true;
+                if (prevAI != null)
+                {
+                    prevAI.FollowTarget = null;
+                    prevAI.HoldPosition = null;
+                    prevAI.ForcedAttackTarget = null;
+                    prevAI.enabled = true;
+                }
+            }
+
+            if (_state.HasActiveCommand && _state.CommandTarget != null)
+            {
+                var cmdAI = _state.CommandTarget.GetComponent<SimpleCombatAI>();
+                if (cmdAI != null)
+                {
+                    cmdAI.FollowTarget = null;
+                    cmdAI.HoldPosition = null;
+                    cmdAI.ForcedAttackTarget = null;
+                }
             }
 
             _state.ReleaseControl();
@@ -193,15 +226,23 @@ namespace LuoLuoTrip
 
             if (_playerAI != null)
                 _playerAI.enabled = false;
+
+            UpdateCameraTarget();
         }
 
         private void HandleTacticalCommandExecution()
         {
-            if (!_state.HasActiveCommand || _state.CommandTarget == null) return;
+            if (!_state.HasActiveCommand || _state.CommandTarget == null)
+            {
+                if (_state.HasActiveCommand && _state.CommandTarget == null)
+                    _state.ClearCommand();
+                return;
+            }
 
             var target = _state.CommandTarget;
             if (!target.Data.IsAlive)
             {
+                ClearTacticalCommandOnTarget(target);
                 _state.ClearCommand();
                 return;
             }
@@ -213,17 +254,44 @@ namespace LuoLuoTrip
             {
                 case CommanderCommandType.FollowPlayer:
                     ai.FollowTarget = _state.OriginalPlayerEntity?.transform;
+                    ai.HoldPosition = null;
+                    ai.ForcedAttackTarget = null;
                     break;
                 case CommanderCommandType.HoldPosition:
                     ai.FollowTarget = null;
                     ai.HoldPosition = target.transform.position;
+                    ai.ForcedAttackTarget = null;
                     break;
                 case CommanderCommandType.AttackCurrentTarget:
                     ai.FollowTarget = null;
-                    ai.ForcedAttackTarget = _state.OriginalPlayerEntity?.GetComponent<LuoLuoTrip.Combat.Combatant>()
-                        ?? ai.CurrentTarget;
+                    ai.HoldPosition = null;
+                    var playerCombatant = _state.OriginalPlayerEntity?.GetComponent<Combatant>();
+                    ai.ForcedAttackTarget = playerCombatant != null && playerCombatant.IsAlive
+                        ? playerCombatant
+                        : ai.CurrentTarget;
+                    if (ai.ForcedAttackTarget != null && !ai.ForcedAttackTarget.IsAlive)
+                        ai.ForcedAttackTarget = null;
                     break;
             }
+
+            _state.TacticalCommand.UpdateStatusText();
+        }
+
+        private void ClearTacticalCommandOnTarget(CharacterEntity target)
+        {
+            var ai = target.GetComponent<SimpleCombatAI>();
+            if (ai == null) return;
+            ai.FollowTarget = null;
+            ai.HoldPosition = null;
+            ai.ForcedAttackTarget = null;
+        }
+
+        private void UpdateCameraTarget()
+        {
+            if (_cameraFollow == null) return;
+            var entity = _state?.DirectControlledEntity;
+            if (entity != null)
+                _cameraFollow.SetTarget(entity.transform);
         }
 
         private void UpdatePredictedControl()

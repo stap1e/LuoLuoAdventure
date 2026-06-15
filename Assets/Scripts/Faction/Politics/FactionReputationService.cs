@@ -9,6 +9,7 @@ namespace LuoLuoTrip
         private readonly FactionPoliticsState _state;
 
         public FactionPoliticsState State => _state;
+        public int StandingsCount => _state.Standings.Count;
 
         public FactionReputationService()
         {

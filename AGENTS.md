@@ -53,6 +53,7 @@ Additional menu items:
 - `Create Bootstrap Scene` 鈥?creates `Assets/Scenes/Bootstrap.unity` with GameBootstrap + SaveLoadManager
 - `LuoLuoTrip/Debug/Print World Summary` 鈥?logs faction states and commander info to Console
 - `LuoLuoTrip/Tools/Compatibility/Run Project Compatibility Check` 鈥?audits Unity version, packages, asmdef, missing scripts, prefab hierarchy, orphaned .meta files
+- `LuoLuoTrip/Tools/Validation/Run Vertical Slice Validation` 鈥?validates scene components, prefabs, runtime API separation, FindObjectsOfType usage
 
 If the `LuoLuoTrip` menu is missing, check Console for compile errors and confirm Unity version.
 

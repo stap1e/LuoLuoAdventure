@@ -5,13 +5,13 @@ using UnityEngine;
 
 namespace LuoLuoTrip.Save
 {
-    /// <summary>挂载到 GameBootstrap 同级，负责自动存档与快捷键存读</summary>
     public class SaveLoadManager : MonoBehaviour
     {
         [SerializeField] private bool _loadOnStart = true;
         [SerializeField] private bool _autoSaveOnQuit = true;
         [SerializeField] private KeyCode _quickSaveKey = KeyCode.F5;
         [SerializeField] private KeyCode _quickLoadKey = KeyCode.F9;
+        [SerializeField] private KeyCode _clearSaveKey = KeyCode.F10;
         [SerializeField] private string _saveFileName = SaveConstants.DefaultSaveFileName;
 
         private string _playerCharacterId;
@@ -31,6 +31,9 @@ namespace LuoLuoTrip.Save
 
             if (Input.GetKeyDown(_quickLoadKey))
                 LoadGame();
+
+            if (Input.GetKeyDown(_clearSaveKey))
+                ClearSave();
         }
 
         private void OnApplicationQuit()
@@ -44,7 +47,7 @@ namespace LuoLuoTrip.Save
             var context = GameBootstrap.Context;
             if (context == null)
             {
-                Debug.LogWarning("[Save] GameContext 未初始化，跳过存档");
+                Debug.LogWarning("[Save] GameContext not initialized, skip save");
                 return;
             }
 
@@ -54,25 +57,44 @@ namespace LuoLuoTrip.Save
             SaveService.Write(save, _saveFileName);
 
             if (!silent)
-                Debug.Log("[Save] 快速存档完成 (F5)");
+            {
+                Debug.Log($"[Save] Quick save complete (F5) | Commander Lv.{context.CommanderProfile.CommanderLevel} XP:{context.CommanderProfile.Experience} | Factions:{context.ReputationService.StandingsCount} | Characters:{save.characters.Count}");
+            }
         }
 
         public void LoadGame()
         {
             if (!SaveService.TryRead(_saveFileName, out var save))
-                return;
-
-            if (GameBootstrap.Context == null)
             {
-                Debug.LogWarning("[Save] GameContext 未初始化，无法读档");
+                Debug.LogWarning("[Save] No save file found");
                 return;
             }
 
-            GameBootstrap.Context.ApplySave(save);
+            if (GameBootstrap.Context == null)
+            {
+                Debug.LogWarning("[Save] GameContext not initialized, cannot load");
+                return;
+            }
+
+            var context = GameBootstrap.Context;
+            context.ApplySave(save);
             RestoreCombatStateFromSave(save);
             RestorePlayerPosition(save);
 
-            Debug.Log($"[Save] 读档完成，存档时间: {save.savedAtUtc}");
+            var commanderOk = context.CommanderProfile != null;
+            var factionOk = context.ReputationService != null;
+            var missionOk = context.MissionService != null;
+
+            Debug.Log($"[Save] Load complete | Commander:{(commanderOk ? $"Lv.{context.CommanderProfile.CommanderLevel}" : "MISSING")} | Factions:{(factionOk ? "OK" : "MISSING")} | Mission:{(missionOk ? "OK" : "MISSING")} | Version:{save.version} | Time:{save.savedAtUtc}");
+
+            if (save.version < 2)
+                Debug.LogWarning($"[Save] Old save version ({save.version}), new fields use defaults");
+        }
+
+        public void ClearSave()
+        {
+            SaveService.Delete(_saveFileName);
+            Debug.Log("[Save] Save file cleared (F10)");
         }
 
         public void NewGame()
@@ -85,6 +107,16 @@ namespace LuoLuoTrip.Save
         private Vector3? FindPlayerPosition()
         {
             if (string.IsNullOrEmpty(_playerCharacterId)) return null;
+
+            if (CharacterRuntimeRegistry.Count > 0)
+            {
+                var all = CharacterRuntimeRegistry.AllCharacters;
+                for (int i = 0; i < all.Count; i++)
+                {
+                    if (all[i].Data?.Id == _playerCharacterId)
+                        return all[i].transform.position;
+                }
+            }
 
             foreach (var entity in FindObjectsOfType<CharacterEntity>())
             {
@@ -99,6 +131,20 @@ namespace LuoLuoTrip.Save
             if (string.IsNullOrEmpty(save.player.controlledCharacterId)) return;
 
             _playerCharacterId = save.player.controlledCharacterId;
+
+            if (CharacterRuntimeRegistry.Count > 0)
+            {
+                var all = CharacterRuntimeRegistry.AllCharacters;
+                for (int i = 0; i < all.Count; i++)
+                {
+                    if (all[i].Data?.Id == save.player.controlledCharacterId)
+                    {
+                        all[i].transform.position = new Vector3(save.player.posX, save.player.posY, save.player.posZ);
+                        return;
+                    }
+                }
+            }
+
             foreach (var entity in FindObjectsOfType<CharacterEntity>())
             {
                 if (entity.Data?.Id != save.player.controlledCharacterId) continue;
@@ -110,6 +156,26 @@ namespace LuoLuoTrip.Save
         private static Dictionary<string, CharacterSaveEntry> CollectCombatStates()
         {
             var lookup = new Dictionary<string, CharacterSaveEntry>();
+
+            if (CharacterRuntimeRegistry.Count > 0)
+            {
+                var all = CharacterRuntimeRegistry.AllCharacters;
+                for (int i = 0; i < all.Count; i++)
+                {
+                    var combatant = all[i].Combatant;
+                    if (combatant == null || all[i].Data == null) continue;
+                    var id = all[i].Data.Id;
+                    lookup[id] = new CharacterSaveEntry
+                    {
+                        id = id,
+                        currentHealth = combatant.CurrentHealth,
+                        currentStamina = combatant.CurrentStamina,
+                        currentPoise = combatant.CurrentPoise
+                    };
+                }
+                return lookup;
+            }
+
             foreach (var combatant in FindObjectsOfType<Combatant>())
             {
                 if (combatant.CharacterEntity?.Data == null) continue;
@@ -132,6 +198,19 @@ namespace LuoLuoTrip.Save
             {
                 if (entry.currentHealth >= 0f)
                     lookup[entry.id] = entry;
+            }
+
+            if (CharacterRuntimeRegistry.Count > 0)
+            {
+                var all = CharacterRuntimeRegistry.AllCharacters;
+                for (int i = 0; i < all.Count; i++)
+                {
+                    var combatant = all[i].Combatant;
+                    var id = all[i].Data?.Id;
+                    if (id != null && lookup.TryGetValue(id, out var entry) && combatant != null)
+                        combatant.RestoreRuntimeState(entry.currentHealth, entry.currentStamina, entry.currentPoise);
+                }
+                return;
             }
 
             foreach (var combatant in FindObjectsOfType<Combatant>())
