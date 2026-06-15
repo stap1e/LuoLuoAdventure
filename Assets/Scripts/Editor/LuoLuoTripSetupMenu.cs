@@ -4,6 +4,7 @@ using LuoLuoTrip.Combat;
 using LuoLuoTrip.Combat.Animation;
 using LuoLuoTrip.Combat.Feedback;
 using LuoLuoTrip.Save;
+using LuoLuoTrip.UI;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -14,6 +15,7 @@ namespace LuoLuoTrip.Editor
     {
         private const string BootstrapScenePath = "Assets/Scenes/Bootstrap.unity";
         private const string CombatScenePath = "Assets/Scenes/CombatPrototype.unity";
+        private const string CommanderScenePath = "Assets/Scenes/CommanderPrototype.unity";
         private const string FactionDataFolder = "Assets/Data/Factions";
         private const string DatabasePath = "Assets/Data/Factions/SubFactionDatabase.asset";
         private const string ResourcesDatabasePath = "Assets/Resources/SubFactionDatabase.asset";
@@ -91,6 +93,7 @@ namespace LuoLuoTrip.Editor
         {
             GenerateAllSubFactionConfigs();
             InitializeRegistryFromDatabase();
+            PlaceholderAssetGenerator.GenerateAll();
 
             EnsureFolder("Assets/Scenes");
             var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
@@ -108,6 +111,7 @@ namespace LuoLuoTrip.Editor
                 "Player",
                 new Vector3(0f, 0.5f, 0f),
                 CharacterData.Create("player_001", "流浪者", SubFactionId.MotorIronRiders, CharacterRole.Common),
+                PlaceholderAssetGenerator.PlayerCommanderPrefab,
                 isPlayer: true);
             saveManager.SetPlayerCharacterId("player_001");
 
@@ -115,6 +119,7 @@ namespace LuoLuoTrip.Editor
                 "Enemy_Beast",
                 new Vector3(5f, 0.5f, 3f),
                 CharacterData.Create("enemy_beast_001", "铁爪部·小兵", SubFactionId.BeastIronClaw, CharacterRole.Minion),
+                PlaceholderAssetGenerator.BeastMinionPrefab,
                 isPlayer: false);
 
             ApplyAnimatorToGameObject(player);
@@ -122,6 +127,149 @@ namespace LuoLuoTrip.Editor
             EditorSceneManager.SaveScene(scene, CombatScenePath);
             AssetDatabase.Refresh();
             Debug.Log($"[LuoLuoTrip] 战斗原型场景已创建: {CombatScenePath}");
+            Debug.Log("操作说明: WASD移动 | 鼠标左键攻击 | Space闪避 | Q锁定 | Tab切换目标 | F5存档 | F9读档");
+        }
+
+        [MenuItem("LuoLuoTrip/Setup/Create Commander Prototype Data")]
+        public static void CreateCommanderPrototypeData()
+        {
+            EnsureFolder("Assets/Data/Missions");
+            EnsureFolder("Assets/Data/Commander");
+
+            var mission = AssetDatabase.LoadAssetAtPath<MissionDefinitionSO>("Assets/Data/Missions/ConvoyEscort.asset");
+            if (mission == null)
+            {
+                mission = ScriptableObject.CreateInstance<MissionDefinitionSO>();
+                mission.MissionId = "convoy_escort_01";
+                mission.DisplayName = "护送机车族运输队";
+                mission.Description = "保护机车族运输队安全通过猛兽族领地，击退袭击者。";
+                mission.RecommendedCommanderLevel = 1;
+                mission.DefaultObjectives = new List<MissionObjective>
+                {
+                    new MissionObjective { ObjectiveId = "protect_convoy", Description = "保护运输队", RequiredProgress = 1 },
+                    new MissionObjective { ObjectiveId = "defeat_ambush", Description = "击退伏击", RequiredProgress = 3 }
+                };
+                AssetDatabase.CreateAsset(mission, "Assets/Data/Missions/ConvoyEscort.asset");
+            }
+
+            EditorUtility.SetDirty(mission);
+            AssetDatabase.SaveAssets();
+            Selection.activeObject = mission;
+            Debug.Log("[LuoLuoTrip] Commander Prototype Data 已创建");
+        }
+
+        [MenuItem("LuoLuoTrip/Setup/Create Mission Prototype Data")]
+        public static void CreateMissionPrototypeData()
+        {
+            CreateCommanderPrototypeData();
+
+            var raid = AssetDatabase.LoadAssetAtPath<MissionDefinitionSO>("Assets/Data/Missions/EnergyRaid.asset");
+            if (raid == null)
+            {
+                raid = ScriptableObject.CreateInstance<MissionDefinitionSO>();
+                raid.MissionId = "energy_raid_01";
+                raid.DisplayName = "猛兽族能源抢夺";
+                raid.Description = "帮助猛兽族从机车族控制区夺取能源。";
+                raid.RecommendedCommanderLevel = 3;
+                raid.DefaultObjectives = new List<MissionObjective>
+                {
+                    new MissionObjective { ObjectiveId = "reach_source", Description = "抵达能源点", RequiredProgress = 1 },
+                    new MissionObjective { ObjectiveId = "extract_energy", Description = "夺取能源", RequiredProgress = 2 }
+                };
+                AssetDatabase.CreateAsset(raid, "Assets/Data/Missions/EnergyRaid.asset");
+            }
+
+            var balance = AssetDatabase.LoadAssetAtPath<MissionDefinitionSO>("Assets/Data/Missions/BalanceAllocation.asset");
+            if (balance == null)
+            {
+                balance = ScriptableObject.CreateInstance<MissionDefinitionSO>();
+                balance.MissionId = "balance_alloc_01";
+                balance.DisplayName = "能源平衡分配";
+                balance.Description = "尝试在机车族和猛兽族之间平衡分配能源，避免冲突升级。";
+                balance.RecommendedCommanderLevel = 5;
+                balance.DefaultObjectives = new List<MissionObjective>
+                {
+                    new MissionObjective { ObjectiveId = "negotiate", Description = "谈判分配方案", RequiredProgress = 1 },
+                    new MissionObjective { ObjectiveId = "distribute", Description = "执行分配", RequiredProgress = 2 }
+                };
+                AssetDatabase.CreateAsset(balance, "Assets/Data/Missions/BalanceAllocation.asset");
+            }
+
+            EditorUtility.SetDirty(raid);
+            EditorUtility.SetDirty(balance);
+            AssetDatabase.SaveAssets();
+            Debug.Log("[LuoLuoTrip] Mission Prototype Data 已创建");
+        }
+
+        [MenuItem("LuoLuoTrip/Setup/Create Commander Mission Prototype Scene")]
+        public static void CreateCommanderMissionPrototypeScene()
+        {
+            GenerateAllSubFactionConfigs();
+            InitializeRegistryFromDatabase();
+            CreateCommanderPrototypeData();
+            CreateMissionPrototypeData();
+            CreateHitFeedbackProfile();
+            PlaceholderAssetGenerator.GenerateAll();
+
+            EnsureFolder("Assets/Scenes");
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+
+            var bootstrapGo = new GameObject("GameBootstrap");
+            bootstrapGo.AddComponent<GameBootstrap>();
+            var saveManager = bootstrapGo.AddComponent<SaveLoadManager>();
+            SetupHitFeedback(bootstrapGo);
+
+            var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            ground.name = "Ground";
+            ground.transform.localScale = new Vector3(5f, 1f, 5f);
+
+            var playerData = CharacterData.Create("player_cmd_001", "见习机战王", SubFactionId.MotorIronRiders, CharacterRole.Common);
+            playerData.CommandRank = 1;
+            var player = CreateCombatCharacter("Player_Commander", new Vector3(0f, 0.5f, 0f), playerData,
+                PlaceholderAssetGenerator.PlayerCommanderPrefab, isPlayer: true);
+            saveManager.SetPlayerCharacterId("player_cmd_001");
+
+            var mechaMinionData = CharacterData.Create("mecha_minion_001", "铁骑团·小兵", SubFactionId.MotorIronRiders, CharacterRole.Minion);
+            mechaMinionData.CommandRank = 1;
+            CreateCombatCharacter("Mecha_Minion", new Vector3(-3f, 0.5f, 2f), mechaMinionData,
+                PlaceholderAssetGenerator.MechaMinionPrefab, isPlayer: false);
+
+            var beastMinionData = CharacterData.Create("beast_minion_001", "铁爪部·小兵", SubFactionId.BeastIronClaw, CharacterRole.Minion);
+            beastMinionData.CommandRank = 1;
+            CreateCombatCharacter("Beast_Minion", new Vector3(5f, 0.5f, 3f), beastMinionData,
+                PlaceholderAssetGenerator.BeastMinionPrefab, isPlayer: false);
+
+            var highRankData = CharacterData.Create("city_lord_001", "铁骑团·城主", SubFactionId.MotorIronRiders, CharacterRole.CityLord);
+            CreateCombatCharacter("HighRank_CityLord", new Vector3(-6f, 0.5f, -2f), highRankData,
+                PlaceholderAssetGenerator.CityLordPrefab, isPlayer: false);
+
+            var warKingData = CharacterData.Create("war_king_001", "铁爪部·战王", SubFactionId.BeastIronClaw, CharacterRole.WarKing);
+            CreateCombatCharacter("HighRank_WarKing", new Vector3(8f, 0.5f, -3f), warKingData,
+                PlaceholderAssetGenerator.WarKingPrefab, isPlayer: false);
+
+            CreateObjective("Convoy_Objective", new Vector3(-2f, 0.3f, 5f),
+                PlaceholderAssetGenerator.ConvoyPrefab);
+
+            CreateObjective("Energy_Node", new Vector3(4f, 0.2f, -4f),
+                PlaceholderAssetGenerator.EnergyNodePrefab);
+
+            ApplyAnimatorToGameObject(player);
+
+            var commanderHud = new GameObject("CommanderDebugHud").AddComponent<CommanderDebugHud>();
+            var factionPanel = new GameObject("FactionStandingDebugPanel").AddComponent<FactionStandingDebugPanel>();
+            var missionPanel = new GameObject("MissionResultDebugPanel").AddComponent<MissionResultDebugPanel>();
+
+            var runtimeGo = new GameObject("CommanderPrototypeRuntime");
+            var runtime = runtimeGo.AddComponent<CommanderPrototypeRuntime>();
+            var runtimeSo = new SerializedObject(runtime);
+            runtimeSo.FindProperty("_commanderHud").objectReferenceValue = commanderHud;
+            runtimeSo.FindProperty("_factionPanel").objectReferenceValue = factionPanel;
+            runtimeSo.FindProperty("_missionPanel").objectReferenceValue = missionPanel;
+            runtimeSo.ApplyModifiedPropertiesWithoutUndo();
+
+            EditorSceneManager.SaveScene(scene, CommanderScenePath);
+            AssetDatabase.Refresh();
+            Debug.Log($"[LuoLuoTrip] Commander Mission Prototype Scene 已创建: {CommanderScenePath}");
             Debug.Log("操作说明: WASD移动 | 鼠标左键攻击 | Space闪避 | Q锁定 | Tab切换目标 | F5存档 | F9读档");
         }
 
@@ -187,6 +335,8 @@ namespace LuoLuoTrip.Editor
                 var s = pair.Value;
                 Debug.Log($"{s.Definition.DisplayName}: 领袖 {s.Leader.DisplayName} Lv.{s.Leader.Level}, 成员 {s.Members.Count}");
             }
+
+            Debug.Log($"Commander: Lv.{context.CommanderProfile.CommanderLevel}, Capacity: {context.CommanderProfile.CommandCapacity}");
         }
 
         private static void SetupHitFeedback(GameObject bootstrapGo)
@@ -207,20 +357,59 @@ namespace LuoLuoTrip.Editor
                 cam.gameObject.AddComponent<CameraShakeService>();
         }
 
-        private static GameObject CreateCombatCharacter(string name, Vector3 position, CharacterData data, bool isPlayer)
+        private static GameObject CreateCombatCharacter(string name, Vector3 position, CharacterData data, string prefabPath, bool isPlayer)
         {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            go.name = name;
-            go.transform.position = position;
+            var prefab = PlaceholderAssetGenerator.GetPrefab(prefabPath);
+            GameObject go;
 
-            var entity = go.AddComponent<CharacterEntity>();
+            if (prefab != null)
+            {
+                go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+                go.name = name;
+                go.transform.position = position;
+            }
+            else
+            {
+                go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+                go.name = name;
+                go.transform.position = position;
+
+                var existingCollider = go.GetComponent<Collider>();
+                if (existingCollider != null)
+                    Object.DestroyImmediate(existingCollider);
+
+                var capsule = go.AddComponent<CapsuleCollider>();
+                capsule.height = 2f;
+                capsule.radius = 0.5f;
+                capsule.center = new Vector3(0f, 1f, 0f);
+
+                var config = SubFactionRegistry.GetConfig(data.Faction);
+                if (config != null)
+                {
+                    var renderer = go.GetComponent<Renderer>();
+                    if (renderer != null)
+                        renderer.material.color = config.themeColor;
+                }
+            }
+
+            var entity = go.GetComponent<CharacterEntity>();
+            if (entity == null)
+                entity = go.AddComponent<CharacterEntity>();
             entity.Bind(data);
 
-            var combatant = go.GetComponent<Combatant>();
+            if (go.GetComponent<Combatant>() == null)
+                go.AddComponent<Combatant>();
+
             if (isPlayer)
-                go.AddComponent<CombatController>();
+            {
+                if (go.GetComponent<CombatController>() == null)
+                    go.AddComponent<CombatController>();
+            }
             else
-                go.AddComponent<SimpleCombatAI>();
+            {
+                if (go.GetComponent<SimpleCombatAI>() == null)
+                    go.AddComponent<SimpleCombatAI>();
+            }
 
             if (isPlayer)
             {
@@ -228,12 +417,26 @@ namespace LuoLuoTrip.Editor
                 hudGo.AddComponent<CombatDebugHUD>();
             }
 
-            var config = SubFactionRegistry.GetConfig(data.Faction);
-            if (config != null)
+            return go;
+        }
+
+        private static GameObject CreateObjective(string name, Vector3 position, string prefabPath)
+        {
+            var prefab = PlaceholderAssetGenerator.GetPrefab(prefabPath);
+            GameObject go;
+
+            if (prefab != null)
             {
-                var renderer = go.GetComponent<Renderer>();
-                if (renderer != null)
-                    renderer.material.color = config.themeColor;
+                go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+                go.name = name;
+                go.transform.position = position;
+            }
+            else
+            {
+                go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                go.name = name;
+                go.transform.position = position;
+                go.transform.localScale = new Vector3(0.6f, 0.2f, 0.6f);
             }
 
             return go;

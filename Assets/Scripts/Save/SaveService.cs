@@ -25,7 +25,20 @@ namespace LuoLuoTrip.Save
             var save = new GameSaveData
             {
                 savedAtUtc = DateTime.UtcNow.ToString("o"),
-                relationships = context.RelationshipService.SaveSnapshot()
+                relationships = context.RelationshipService.SaveSnapshot(),
+                commander = new CommanderSaveEntry
+                {
+                    commanderLevel = context.CommanderProfile.CommanderLevel,
+                    experience = context.CommanderProfile.Experience,
+                    commandCapacity = context.CommanderProfile.CommandCapacity,
+                    maxDirectControlRank = context.CommanderProfile.MaxDirectControlRank,
+                    maxTacticalCommandRank = context.CommanderProfile.MaxTacticalCommandRank,
+                    baseSyncRate = context.CommanderProfile.BaseSyncRate,
+                    mechaTrust = context.CommanderProfile.MechaTrust,
+                    beastTrust = context.CommanderProfile.BeastTrust,
+                    balanceScore = context.CommanderProfile.BalanceScore
+                },
+                factionPolitics = context.ReputationService.SaveSnapshot()
             };
 
             foreach (var character in context.AllCharacters)
@@ -37,7 +50,13 @@ namespace LuoLuoTrip.Save
                     faction = character.Faction,
                     role = character.Role,
                     level = character.Level,
-                    isAlive = character.IsAlive
+                    isAlive = character.IsAlive,
+                    commandRank = character.CommandRank,
+                    requiredCommanderLevel = character.RequiredCommanderLevel,
+                    trustToPlayer = character.TrustToPlayer,
+                    isHeroOrLeader = character.IsHeroOrLeader,
+                    allowDirectControl = character.AllowDirectControl,
+                    allowTacticalCommand = character.AllowTacticalCommand
                 };
 
                 if (combatStates != null && combatStates.TryGetValue(character.Id, out var combat))

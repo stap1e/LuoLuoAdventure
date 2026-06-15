@@ -23,18 +23,25 @@ namespace LuoLuoTrip
     public class LuoLuoTripGameContext
     {
         public FactionRelationshipService RelationshipService { get; }
+        public FactionReputationService ReputationService { get; }
+        public CommanderProfile CommanderProfile { get; }
+        public MissionService MissionService { get; }
         public Dictionary<SubFactionId, SubFactionState> FactionStates { get; } = new Dictionary<SubFactionId, SubFactionState>();
         public List<CharacterData> AllCharacters { get; } = new List<CharacterData>();
 
         public LuoLuoTripGameContext(FactionRelationshipService relationshipService = null)
         {
             RelationshipService = relationshipService ?? new FactionRelationshipService();
+            ReputationService = new FactionReputationService();
+            CommanderProfile = CommanderProfile.CreateDefault();
+            MissionService = new MissionService(ReputationService, CommanderProfile);
         }
 
         public void InitializeWorld(bool spawnMinionSquads = true, int minionsPerFaction = 5)
         {
             FactionStates.Clear();
             AllCharacters.Clear();
+            ReputationService.InitializeDefaultPolitics();
 
             foreach (var pair in SubFactionRegistry.All)
                 FactionStates[pair.Key] = new SubFactionState { Id = pair.Key };
@@ -68,13 +75,36 @@ namespace LuoLuoTrip
                     entry.role,
                     entry.level)
                 {
-                    IsAlive = entry.isAlive
+                    IsAlive = entry.isAlive,
+                    CommandRank = entry.commandRank,
+                    RequiredCommanderLevel = entry.requiredCommanderLevel,
+                    TrustToPlayer = entry.trustToPlayer,
+                    IsHeroOrLeader = entry.isHeroOrLeader,
+                    AllowDirectControl = entry.allowDirectControl,
+                    AllowTacticalCommand = entry.allowTacticalCommand
                 };
                 RegisterCharacter(character, IsLeaderRole(character.Role));
             }
 
             if (save.relationships?.Entries != null && save.relationships.Entries.Count > 0)
                 RelationshipService.LoadSnapshot(save.relationships);
+
+            if (save.factionPolitics?.Entries != null && save.factionPolitics.Entries.Count > 0)
+                ReputationService.LoadSnapshot(save.factionPolitics);
+
+            if (save.commander != null)
+            {
+                CommanderProfile.CommanderLevel = save.commander.commanderLevel;
+                CommanderProfile.Experience = save.commander.experience;
+                CommanderProfile.CommandCapacity = save.commander.commandCapacity;
+                CommanderProfile.MaxDirectControlRank = save.commander.maxDirectControlRank;
+                CommanderProfile.MaxTacticalCommandRank = save.commander.maxTacticalCommandRank;
+                CommanderProfile.BaseSyncRate = save.commander.baseSyncRate;
+                CommanderProfile.MechaTrust = save.commander.mechaTrust;
+                CommanderProfile.BeastTrust = save.commander.beastTrust;
+                CommanderProfile.BalanceScore = save.commander.balanceScore;
+                CommanderProfile.Clamp();
+            }
         }
 
         public GameSaveData ExportSave(

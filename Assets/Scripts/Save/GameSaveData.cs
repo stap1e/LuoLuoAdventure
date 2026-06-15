@@ -5,7 +5,7 @@ namespace LuoLuoTrip.Save
 {
     public static class SaveConstants
     {
-        public const int CurrentSaveVersion = 1;
+        public const int CurrentSaveVersion = 2;
         public const string DefaultSaveFileName = "luoluotrip_save.json";
     }
 
@@ -17,6 +17,9 @@ namespace LuoLuoTrip.Save
         public List<CharacterSaveEntry> characters = new List<CharacterSaveEntry>();
         public FactionRelationshipSnapshot relationships = new FactionRelationshipSnapshot();
         public PlayerSaveEntry player = new PlayerSaveEntry();
+        public CommanderSaveEntry commander = new CommanderSaveEntry();
+        public FactionPoliticsSnapshot factionPolitics = new FactionPoliticsSnapshot();
+        public List<MissionConsequenceSaveEntry> completedMissions = new List<MissionConsequenceSaveEntry>();
     }
 
     [Serializable]
@@ -31,6 +34,12 @@ namespace LuoLuoTrip.Save
         public float currentHealth = -1f;
         public float currentStamina = -1f;
         public float currentPoise = -1f;
+        public int commandRank = 1;
+        public int requiredCommanderLevel = 1;
+        public int trustToPlayer;
+        public bool isHeroOrLeader;
+        public bool allowDirectControl = true;
+        public bool allowTacticalCommand = true;
     }
 
     [Serializable]
@@ -40,5 +49,28 @@ namespace LuoLuoTrip.Save
         public float posX;
         public float posY;
         public float posZ;
+    }
+
+    [Serializable]
+    public class CommanderSaveEntry
+    {
+        public int commanderLevel = 1;
+        public int experience;
+        public int commandCapacity = 2;
+        public int maxDirectControlRank = 1;
+        public int maxTacticalCommandRank = 2;
+        public float baseSyncRate = 0.2f;
+        public int mechaTrust;
+        public int beastTrust;
+        public int balanceScore;
+    }
+
+    [Serializable]
+    public class MissionConsequenceSaveEntry
+    {
+        public string missionId;
+        public MissionOutcomeType outcome;
+        public int commanderExperienceDelta;
+        public string summaryText;
     }
 }

@@ -13,6 +13,13 @@ namespace LuoLuoTrip
         public int Level;
         public bool IsAlive = true;
 
+        public int CommandRank = 1;
+        public int RequiredCommanderLevel = 1;
+        public int TrustToPlayer;
+        public bool IsHeroOrLeader;
+        public bool AllowDirectControl = true;
+        public bool AllowTacticalCommand = true;
+
         public MainRace Race => GameConstants.GetMainRace(Faction);
 
         public CharacterData() { }
@@ -24,6 +31,7 @@ namespace LuoLuoTrip
             Faction = faction;
             Role = role;
             Level = level;
+            ApplyRoleDefaults();
         }
 
         public static CharacterData Create(string id, string displayName, SubFactionId faction, CharacterRole role)
@@ -34,6 +42,41 @@ namespace LuoLuoTrip
                 faction,
                 role,
                 GameConstants.GetInitialLevel(role));
+        }
+
+        private void ApplyRoleDefaults()
+        {
+            switch (Role)
+            {
+                case CharacterRole.Common:
+                    CommandRank = 1;
+                    RequiredCommanderLevel = 1;
+                    AllowDirectControl = true;
+                    AllowTacticalCommand = true;
+                    IsHeroOrLeader = false;
+                    break;
+                case CharacterRole.Minion:
+                    CommandRank = 1;
+                    RequiredCommanderLevel = 1;
+                    AllowDirectControl = true;
+                    AllowTacticalCommand = true;
+                    IsHeroOrLeader = false;
+                    break;
+                case CharacterRole.CityLord:
+                    CommandRank = 4;
+                    RequiredCommanderLevel = 35;
+                    AllowDirectControl = false;
+                    AllowTacticalCommand = true;
+                    IsHeroOrLeader = true;
+                    break;
+                case CharacterRole.WarKing:
+                    CommandRank = 5;
+                    RequiredCommanderLevel = 45;
+                    AllowDirectControl = false;
+                    AllowTacticalCommand = false;
+                    IsHeroOrLeader = true;
+                    break;
+            }
         }
     }
 }

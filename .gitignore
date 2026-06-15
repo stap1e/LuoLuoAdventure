@@ -33,3 +33,28 @@ crashlytics-build.properties
 /[Aa]ssets/AssetStoreTools*
 /[Aa]ssets/Plugins/Editor/JetBrains*
 .vs/
+
+# Non-project files (skills, submodules, tools)
+.gitmodules
+ppt-image-first/
+readpaper-skill/
+
+# Generated Unity assets (use LuoLuoTrip/Setup menu to regenerate)
+[Aa]ssets/Data/
+[Aa]ssets/Resources/
+[Aa]ssets/Art/Placeholders/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Packages (auto-resolved)
+[Pp]ackages/*/
+![Pp]ackages/manifest.json
+![Pp]ackages/packages-lock.json
