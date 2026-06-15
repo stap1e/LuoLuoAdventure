@@ -62,6 +62,12 @@ namespace LuoLuoTrip
             });
             _missionState.Objectives.Add(new MissionObjective
             {
+                ObjectiveId = "stop_beast_raid",
+                Description = "Stop the beast raid",
+                RequiredProgress = 1
+            });
+            _missionState.Objectives.Add(new MissionObjective
+            {
                 ObjectiveId = "share_energy",
                 Description = "Share energy at node",
                 RequiredProgress = 1
@@ -109,7 +115,9 @@ namespace LuoLuoTrip
             if (player == null) return;
 
             var inRange = Vector3.Distance(player.transform.position, _energyNode.transform.position) <= _energyNode.CaptureRadius;
-            if (inRange && Input.GetKey(KeyCode.E))
+            var commanderCtrl = player.GetComponent<CommanderControlController>();
+            var hasSelectedTarget = commanderCtrl != null && commanderCtrl.HasSelectedTarget();
+            if (inRange && Input.GetKey(KeyCode.E) && !hasSelectedTarget)
                 _energyNode.TickPlayerInteract(Time.deltaTime, true);
         }
 

@@ -5,7 +5,6 @@ namespace LuoLuoTrip
     public class MissionTriggerZone : MonoBehaviour
     {
         [SerializeField] private string _missionId = "convoy_energy_conflict";
-        [SerializeField] private Vector3 _zoneCenter = Vector3.zero;
         [SerializeField] private float _zoneRadius = 12f;
         [SerializeField] private bool _autoDetectPlayer = true;
 
@@ -24,7 +23,7 @@ namespace LuoLuoTrip
             var player = FindPlayerEntity();
             if (player == null) return;
 
-            var dist = Vector3.Distance(player.transform.position, _zoneCenter);
+            var dist = Vector3.Distance(player.transform.position, transform.position);
             if (dist <= _zoneRadius)
             {
                 _missionStarted = true;
@@ -51,7 +50,7 @@ namespace LuoLuoTrip
         {
             var player = FindPlayerEntity();
             if (player == null) return false;
-            return Vector3.Distance(player.transform.position, _zoneCenter) <= _zoneRadius;
+            return Vector3.Distance(player.transform.position, transform.position) <= _zoneRadius;
         }
 
         private CharacterEntity FindPlayerEntity()
@@ -66,7 +65,7 @@ namespace LuoLuoTrip
         private void OnDrawGizmosSelected()
         {
             Gizmos.color = _missionStarted ? Color.green : Color.yellow;
-            Gizmos.DrawWireSphere(_zoneCenter, _zoneRadius);
+            Gizmos.DrawWireSphere(transform.position, _zoneRadius);
         }
     }
 }

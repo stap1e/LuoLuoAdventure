@@ -48,6 +48,9 @@ namespace LuoLuoTrip.Combat
 
         public Func<Combatant[]> CombatantQuery { get; set; }
         public Combatant CurrentTarget => _target;
+        public Transform FollowTarget { get; set; }
+        public Vector3? HoldPosition { get; set; }
+        public Combatant ForcedAttackTarget { get; set; }
 
         private void Awake()
         {
@@ -62,11 +65,32 @@ namespace LuoLuoTrip.Combat
         {
             if (!_self.IsAlive) return;
 
+            if (FollowTarget != null)
+            {
+                ExecuteFollow();
+                return;
+            }
+
+            if (HoldPosition.HasValue)
+            {
+                ExecuteHoldPosition();
+                return;
+            }
+
             TickTimers();
             if (_thinkTimer > 0f) return;
             _thinkTimer = _thinkInterval;
 
-            RefreshTargetIfNeeded();
+            if (ForcedAttackTarget != null && ForcedAttackTarget.IsAlive)
+            {
+                _target = ForcedAttackTarget;
+            }
+            else
+            {
+                ForcedAttackTarget = null;
+                RefreshTargetIfNeeded();
+            }
+
             if (_target == null)
             {
                 IdlePatrol();
@@ -81,6 +105,28 @@ namespace LuoLuoTrip.Combat
             }
 
             ExecuteIntent(ChooseIntent(distance), distance);
+        }
+
+        private void ExecuteFollow()
+        {
+            if (FollowTarget == null) return;
+
+            var direction = FollowTarget.position - transform.position;
+            direction.y = 0f;
+            var dist = direction.magnitude;
+
+            if (dist > 2.5f)
+                MoveTowards(direction.normalized, _chaseSpeed * 0.8f);
+        }
+
+        private void ExecuteHoldPosition()
+        {
+            if (!HoldPosition.HasValue) return;
+
+            var offset = HoldPosition.Value - transform.position;
+            offset.y = 0f;
+            if (offset.magnitude > 1f)
+                MoveTowards(offset.normalized, _chaseSpeed * 0.5f);
         }
 
         private void TickTimers()

@@ -53,6 +53,8 @@ namespace LuoLuoTrip
             if (_state == null) return;
             _state.Tick(Time.deltaTime);
 
+            _state.SelectedTarget = _targetSelector.CurrentTarget;
+
             HandleTacticalCommandExecution();
 
             UpdatePredictedControl();
@@ -105,6 +107,11 @@ namespace LuoLuoTrip
                 default:
                     break;
             }
+        }
+
+        public bool HasSelectedTarget()
+        {
+            return _targetSelector != null && _targetSelector.CurrentTarget != null;
         }
 
         private ControlPermissionRequest BuildRequest(LuoLuoTripGameContext context, CharacterEntity target)
@@ -162,6 +169,7 @@ namespace LuoLuoTrip
         private void ApplySyncAssist(CharacterEntity target)
         {
             _state.ActivateSyncAssist(_syncAssistDuration);
+            _state.ApplySyncAssistBuff(target);
         }
 
         private void ReleaseControl()
@@ -204,10 +212,16 @@ namespace LuoLuoTrip
             switch (_state.ActiveCommand)
             {
                 case CommanderCommandType.FollowPlayer:
+                    ai.FollowTarget = _state.OriginalPlayerEntity?.transform;
                     break;
                 case CommanderCommandType.HoldPosition:
+                    ai.FollowTarget = null;
+                    ai.HoldPosition = target.transform.position;
                     break;
                 case CommanderCommandType.AttackCurrentTarget:
+                    ai.FollowTarget = null;
+                    ai.ForcedAttackTarget = _state.OriginalPlayerEntity?.GetComponent<LuoLuoTrip.Combat.Combatant>()
+                        ?? ai.CurrentTarget;
                     break;
             }
         }

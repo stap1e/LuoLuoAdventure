@@ -54,6 +54,12 @@ readpaper-skill/
 Thumbs.db
 desktop.ini
 
+# Project documentation (generated/updated by tooling)
+IMPLEMENTATION_SUMMARY.md
+UNITY_VERSION_COMPATIBILITY_REPORT.md
+CompatibilityCheck_Report.txt
+TestResults_*.xml
+
 # Packages (auto-resolved)
 [Pp]ackages/*/
 ![Pp]ackages/manifest.json

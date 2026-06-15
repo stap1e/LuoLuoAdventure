@@ -51,6 +51,8 @@ namespace LuoLuoTrip.Combat
         public bool IsAlive => _state != CombatState.Dead && _currentHealth > 0f;
         public bool IsInvulnerable => _state == CombatState.Dodging;
         public bool AutoTickEnabled { get; set; } = true;
+        public float SyncAssistAttackBonus { get; set; }
+        public float SyncAssistDefenseBonus { get; set; }
 
         private void Awake()
         {

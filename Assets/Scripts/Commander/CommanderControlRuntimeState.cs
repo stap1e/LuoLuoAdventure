@@ -1,4 +1,6 @@
 using System;
+using LuoLuoTrip.Combat;
+using UnityEngine;
 
 namespace LuoLuoTrip
 {
@@ -15,6 +17,10 @@ namespace LuoLuoTrip
         public float SyncAssistDamageBonus = 0.25f;
         public float SyncAssistDamageReduction = 0.15f;
 
+        private CharacterEntity _syncAssistTarget;
+        private float _originalAttackBonus;
+        private float _originalDefenseBonus;
+
         public bool IsDirectControllingOther => DirectControlledEntity != null
             && DirectControlledEntity != OriginalPlayerEntity;
 
@@ -27,8 +33,7 @@ namespace LuoLuoTrip
                 SyncAssistRemainingTime -= deltaTime;
                 if (SyncAssistRemainingTime <= 0f)
                 {
-                    IsSyncAssistActive = false;
-                    SyncAssistRemainingTime = 0f;
+                    DeactivateSyncAssist();
                 }
             }
         }
@@ -37,6 +42,43 @@ namespace LuoLuoTrip
         {
             IsSyncAssistActive = true;
             SyncAssistRemainingTime = duration;
+        }
+
+        public void ApplySyncAssistBuff(CharacterEntity target)
+        {
+            if (target == null || _syncAssistTarget == target) return;
+
+            RemoveSyncAssistBuff();
+
+            _syncAssistTarget = target;
+            var combatant = target.GetComponent<Combatant>();
+            if (combatant != null)
+            {
+                _originalAttackBonus = combatant.SyncAssistAttackBonus;
+                _originalDefenseBonus = combatant.SyncAssistDefenseBonus;
+                combatant.SyncAssistAttackBonus = SyncAssistDamageBonus;
+                combatant.SyncAssistDefenseBonus = SyncAssistDamageReduction;
+            }
+        }
+
+        public void RemoveSyncAssistBuff()
+        {
+            if (_syncAssistTarget == null) return;
+
+            var combatant = _syncAssistTarget.GetComponent<Combatant>();
+            if (combatant != null)
+            {
+                combatant.SyncAssistAttackBonus = _originalAttackBonus;
+                combatant.SyncAssistDefenseBonus = _originalDefenseBonus;
+            }
+            _syncAssistTarget = null;
+        }
+
+        private void DeactivateSyncAssist()
+        {
+            IsSyncAssistActive = false;
+            SyncAssistRemainingTime = 0f;
+            RemoveSyncAssistBuff();
         }
 
         public void SetDirectControl(CharacterEntity entity)
@@ -49,8 +91,8 @@ namespace LuoLuoTrip
             DirectControlledEntity = OriginalPlayerEntity;
             ActiveCommand = CommanderCommandType.None;
             CommandTarget = null;
-            IsSyncAssistActive = false;
-            SyncAssistRemainingTime = 0f;
+            if (IsSyncAssistActive)
+                DeactivateSyncAssist();
         }
 
         public void SetCommand(CommanderCommandType command, CharacterEntity target)

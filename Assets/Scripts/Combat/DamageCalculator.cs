@@ -19,8 +19,9 @@ namespace LuoLuoTrip.Combat
                 return new DamageResult();
             }
 
-            var atk = attacker.Stats.attackPower * attackMultiplier;
-            var raw = Math.Max(1f, atk - defender.Stats.defense * 0.5f);
+            var atk = attacker.Stats.attackPower * attackMultiplier * (1f + attacker.SyncAssistAttackBonus);
+            var defenseReduction = 1f - defender.SyncAssistDefenseBonus;
+            var raw = Math.Max(1f, atk - defender.Stats.defense * 0.5f) * Math.Max(0.1f, defenseReduction);
             var poiseDmg = attacker.Stats.poiseDamage * attackMultiplier;
 
             var wasPoiseBroken = defender.ApplyPoiseDamage(poiseDmg);
