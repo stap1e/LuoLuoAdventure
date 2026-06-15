@@ -1,3 +1,4 @@
+using LuoLuoTrip.Save;
 using NUnit.Framework;
 
 namespace LuoLuoTrip.Tests.EditMode

@@ -8,6 +8,12 @@ namespace LuoLuoTrip.Tests.PlayMode
 {
     public class SimpleCombatAITests
     {
+        [TearDown]
+        public void TearDown()
+        {
+            CharacterEntity.HostilityResolver = null;
+        }
+
         [UnityTest]
         public IEnumerator AI_IgnoresNonHostileTarget()
         {

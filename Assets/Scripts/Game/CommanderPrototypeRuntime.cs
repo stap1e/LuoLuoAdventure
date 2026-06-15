@@ -68,6 +68,9 @@ namespace LuoLuoTrip
             if (_commanderHud != null)
                 _commanderHud.SetProfile(GameBootstrap.Context?.CommanderProfile);
 
+            if (_factionPanel != null)
+                _factionPanel.SetService(GameBootstrap.Context?.ReputationService);
+
             Debug.Log($"[Commander] Mission complete: {consequence.Outcome}, XP: +{consequence.CommanderExperienceDelta}");
         }
     }

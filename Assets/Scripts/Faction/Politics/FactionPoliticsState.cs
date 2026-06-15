@@ -70,7 +70,16 @@ namespace LuoLuoTrip
         {
             _standings.Clear();
             foreach (var entry in snapshot.Entries)
-                _standings[entry.FactionId] = entry;
+            {
+                var standing = new FactionStanding(entry.FactionId);
+                standing.Trust = entry.Trust;
+                standing.Respect = entry.Respect;
+                standing.Fear = entry.Fear;
+                standing.Hostility = entry.Hostility;
+                standing.ResourcePressure = entry.ResourcePressure;
+                standing.WarExhaustion = entry.WarExhaustion;
+                _standings[entry.FactionId] = standing;
+            }
         }
     }
 

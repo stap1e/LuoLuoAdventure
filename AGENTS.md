@@ -1,4 +1,4 @@
-# AGENTS.md — LuoLuoAdventure
+﻿# AGENTS.md 鈥?LuoLuoAdventure
 
 Unity combat prototype (Soul-like) using **Unity 2022.3.62f3 LTS**. C# 9.0, .NET Framework 4.7.1, NetStandard 2.1. Root namespace: `LuoLuoTrip`.
 
@@ -19,34 +19,40 @@ New runtime scripts go under `Assets/Scripts/{domain}/`. New editor scripts go u
 
 Domains under `Assets/Scripts/`:
 
-- **Core** — enums/value types: `SubFactionId`, `CharacterRole`, `MainRace`, `RelationshipStance`, `GameConstants`
-- **Character** — `CharacterData` (with CommandRank/Trust fields), `CharacterEntity` (binds `CharacterData`), `CharacterInitializer`, `CharacterLevelSystem`
-- **Combat** — `Combatant` (HP/ST/Poise state machine), `CombatController` (player input), `SimpleCombatAI`, `DamageCalculator`, `CombatStats`/`CombatStatsCalculator`
-  - **Combat/Animation** — `ICombatAnimator`, `AnimatorCombatBridge`, `ProceduralCombatAnimator`, `CombatAnimationDriver`, `CombatAnimatorConfigSO`
-  - **Combat/Feedback** — `HitStopService`, `HitFeedbackProfileSO`, `CombatHitFeedbackHub`, `CameraShakeService`
-- **Commander** — `ControlMode`, `CommanderProfile`, `CommanderLevelSystem`, `ControlPermissionRequest`, `ControlPermissionResult`, `ControlPermissionService`, `SyncRateCalculator`
-- **Faction** — `SubFactionConfigSO`, `SubFactionDatabaseSO`, `SubFactionRegistry`, `FactionRelationshipMatrix`, `FactionRelationshipService`
-  - **Faction/Politics** — `FactionStanding`, `FactionStandingDelta`, `FactionPoliticsState`, `FactionReputationService`, `FactionConsequenceApplier`, `DynamicFactionHostilityService`
-- **Mission** — `MissionOutcomeType`, `MissionObjective`, `MissionRuntimeState`, `MissionConsequence`, `MissionDefinitionSO`, `MissionConsequenceResolver`, `MissionService`
-- **Save** — `SaveLoadManager` (MonoBehaviour), `SaveService` (static I/O), `GameSaveData` (with CommanderSaveEntry, FactionPoliticsSnapshot)
-- **Game** — `GameBootstrap` (entry point MonoBehaviour), `GameConfig`, `LuoLuoTripGameContext`, `CommanderPrototypeRuntime`
-- **UI** — `CommanderDebugHud`, `FactionStandingDebugPanel`, `MissionResultDebugPanel`
+- **Core** 鈥?enums/value types: `SubFactionId`, `CharacterRole`, `MainRace`, `RelationshipStance`, `GameConstants`
+- **Character** 鈥?`CharacterData` (with CommandRank/Trust fields), `CharacterEntity` (binds `CharacterData`), `CharacterInitializer`, `CharacterLevelSystem`
+- **Combat** 鈥?`Combatant` (HP/ST/Poise state machine), `CombatController` (player input), `SimpleCombatAI`, `DamageCalculator`, `CombatStats`/`CombatStatsCalculator`
+  - **Combat/Animation** 鈥?`ICombatAnimator`, `AnimatorCombatBridge`, `ProceduralCombatAnimator`, `CombatAnimationDriver`, `CombatAnimatorConfigSO`
+  - **Combat/Feedback** 鈥?`HitStopService`, `HitFeedbackProfileSO`, `CombatHitFeedbackHub`, `CameraShakeService`
+- **Commander** 鈥?`ControlMode`, `CommanderProfile`, `CommanderLevelSystem`, `ControlPermissionRequest`, `ControlPermissionResult`, `ControlPermissionService`, `SyncRateCalculator`, `CommanderCommandType`, `CommanderControlRuntimeState`, `CommanderTargetSelector`, `CommanderControlController`
+- **Faction** 鈥?`SubFactionConfigSO`, `SubFactionDatabaseSO`, `SubFactionRegistry`, `FactionRelationshipMatrix`, `FactionRelationshipService`
+  - **Faction/Politics** 鈥?`FactionStanding`, `FactionStandingDelta`, `FactionPoliticsState`, `FactionReputationService`, `FactionConsequenceApplier`, `DynamicFactionHostilityService`
+- **Mission** 鈥?`MissionOutcomeType`, `MissionObjective`, `MissionRuntimeState`, `MissionConsequence`, `MissionDefinitionSO`, `MissionConsequenceResolver`, `MissionService`
+  - **Mission/Runtime** 鈥?`MissionTriggerZone`, `ConvoyObjective`, `EnergyNodeObjective`, `ConvoyEnergyConflictRuntime`, `MissionObjectiveHud`
+- **Save** 鈥?`SaveLoadManager` (MonoBehaviour), `SaveService` (static I/O), `GameSaveData` (with CommanderSaveEntry, FactionPoliticsSnapshot)
+- **Game** 鈥?`GameBootstrap` (entry point MonoBehaviour), `GameConfig`, `LuoLuoTripGameContext`, `CommanderPrototypeRuntime`
+- **UI** 鈥?`CommanderDebugHud`, `FactionStandingDebugPanel`, `MissionResultDebugPanel`
 
-Entry point: `GameBootstrap.Awake()` → loads `SubFactionDatabase` from Resources → creates `LuoLuoTripGameContext` (includes CommanderProfile, ReputationService, MissionService) → initializes world or applies save.
+Entry point: `GameBootstrap.Awake()` 鈫?loads `SubFactionDatabase` from Resources 鈫?creates `LuoLuoTripGameContext` (includes CommanderProfile, ReputationService, MissionService) 鈫?initializes world or applies save.
 
 ## Required setup before first play
 
 All via Unity top menu **LuoLuoTrip/Setup/** (in order):
 
-1. `Generate All Sub Faction Configs` — creates `Assets/Data/Factions/*.asset` + `Assets/Resources/SubFactionDatabase.asset`
-2. `Create Hit Feedback Profile` — `Assets/Data/HitFeedbackProfile.asset`
-3. `Create Combat Animator Config` — `Assets/Data/Animation/CombatAnimatorConfig.asset`
-4. `Create Game Config Asset` — `Assets/Data/GameConfig.asset`
-5. `Create Combat Prototype Scene` — does all of the above + creates `Assets/Scenes/CombatPrototype.unity` with player/enemy/hud
-6. `Create Commander Prototype Data` — creates `Assets/Data/Missions/ConvoyEscort.asset`
-7. `Create Mission Prototype Data` — creates `Assets/Data/Missions/EnergyRaid.asset` + `BalanceAllocation.asset`
-8. `Create Commander Mission Prototype Scene` — does all of the above + creates `Assets/Scenes/CommanderPrototype.unity` with commander/faction/mission debug objects
-9. `Generate Placeholder Assets` — creates `Assets/Art/Placeholders/Prefabs/PH_*.prefab` + `Assets/Art/Placeholders/Materials/MAT_PH_*.mat`
+1. `Generate All Sub Faction Configs` 鈥?creates `Assets/Data/Factions/*.asset` + `Assets/Resources/SubFactionDatabase.asset`
+2. `Create Hit Feedback Profile` 鈥?`Assets/Data/HitFeedbackProfile.asset`
+3. `Create Combat Animator Config` 鈥?`Assets/Data/Animation/CombatAnimatorConfig.asset`
+4. `Create Game Config Asset` 鈥?`Assets/Data/GameConfig.asset`
+5. `Create Combat Prototype Scene` 鈥?does all of the above + creates `Assets/Scenes/CombatPrototype.unity` with player/enemy/hud
+6. `Create Commander Prototype Data` 鈥?creates `Assets/Data/Missions/ConvoyEscort.asset`
+7. `Create Mission Prototype Data` 鈥?creates `Assets/Data/Missions/EnergyRaid.asset` + `BalanceAllocation.asset`
+8. `Create Commander Mission Prototype Scene` 鈥?does all of the above + creates `Assets/Scenes/CommanderPrototype.unity` with commander/faction/mission debug objects
+9. `Generate Placeholder Assets` 鈥?creates `Assets/Art/Placeholders/Prefabs/PH_*.prefab` + `Assets/Art/Placeholders/Materials/MAT_PH_*.mat`
+
+Additional menu items:
+- `Create Bootstrap Scene` 鈥?creates `Assets/Scenes/Bootstrap.unity` with GameBootstrap + SaveLoadManager
+- `LuoLuoTrip/Debug/Print World Summary` 鈥?logs faction states and commander info to Console
+- `LuoLuoTrip/Tools/Compatibility/Run Project Compatibility Check` 鈥?audits Unity version, packages, asmdef, missing scripts, prefab hierarchy, orphaned .meta files
 
 If the `LuoLuoTrip` menu is missing, check Console for compile errors and confirm Unity version.
 
@@ -57,6 +63,9 @@ WASD move, Left-click attack, Space dodge, Q lock-on, Tab switch target, F5 quic
 
 ### CommanderPrototype scene
 Same combat controls, plus:
+- Tab: Select next target in range
+- E: Attempt to control/command/assist selected target
+- R: Release control back to original player unit
 - Key 1: Trigger MechaVictory test mission
 - Key 2: Trigger BeastVictory test mission
 - Key 3: Trigger BalancedResolution test mission
@@ -65,8 +74,8 @@ Same combat controls, plus:
 
 Tests run inside Unity via the Test Runner window (Window > General > Test Runner).
 
-- **Edit-mode**: `CombatMathTests.cs`, `FactionRelationshipMatrixTests.cs`, `CommanderAuthorityTests.cs`, `FactionPoliticsTests.cs`, `MissionConsequenceResolverTests.cs`, `SaveDataCommanderFactionTests.cs` — pure logic tests, no Play mode needed
-- **Play-mode**: `SimpleCombatAITests.cs`, `DynamicHostilityFlowTests.cs` — uses `[UnityTest]` + coroutines, requires Play mode
+- **Edit-mode**: `CombatMathTests.cs`, `FactionRelationshipMatrixTests.cs`, `CommanderAuthorityTests.cs`, `FactionPoliticsTests.cs`, `MissionConsequenceResolverTests.cs`, `SaveDataCommanderFactionTests.cs`, `CommanderControlRuntimeStateTests.cs`, `DynamicHostilityResolverTests.cs`, `ConvoyEnergyConflictLogicTests.cs` 鈥?pure logic tests, no Play mode needed
+- **Play-mode**: `SimpleCombatAITests.cs`, `DynamicHostilityFlowTests.cs`, `CommanderControlIntegrationTests.cs`, `DynamicHostilityIntegrationTests.cs`, `MissionGameplayFlowTests.cs` 鈥?uses `[UnityTest]` + coroutines, requires Play mode
 
 Edit-mode tests manually call `Combatant.Tick(deltaTime)` with `AutoTickEnabled = false` for deterministic timing. Play-mode tests set `CharacterEntity.HostilityResolver` to control faction hostility.
 
@@ -76,23 +85,23 @@ There is no CLI test runner configured. Tests must be run from the Unity Editor.
 
 The following are **generated** by editor menu items, not hand-authored:
 
-- `Assets/Data/Factions/*.asset` — `SubFactionConfigSO` per `SubFactionId` enum value
+- `Assets/Data/Factions/*.asset` 鈥?`SubFactionConfigSO` per `SubFactionId` enum value
 - `Assets/Data/Factions/SubFactionDatabase.asset`
-- `Assets/Resources/SubFactionDatabase.asset` — copy of the above for `Resources.Load`
+- `Assets/Resources/SubFactionDatabase.asset` 鈥?copy of the above for `Resources.Load`
 - `Assets/Data/HitFeedbackProfile.asset`
 - `Assets/Data/Animation/CombatAnimatorConfig.asset`
 - `Assets/Data/GameConfig.asset`
-- `Assets/Data/Missions/ConvoyEscort.asset` — `MissionDefinitionSO`
-- `Assets/Data/Missions/EnergyRaid.asset` — `MissionDefinitionSO`
-- `Assets/Data/Missions/BalanceAllocation.asset` — `MissionDefinitionSO`
-- `Assets/Art/Placeholders/Prefabs/PH_*.prefab` — Placeholder prefabs with `PH_` prefix
-- `Assets/Art/Placeholders/Materials/MAT_PH_*.mat` — Placeholder materials
+- `Assets/Data/Missions/ConvoyEscort.asset` 鈥?`MissionDefinitionSO`
+- `Assets/Data/Missions/EnergyRaid.asset` 鈥?`MissionDefinitionSO`
+- `Assets/Data/Missions/BalanceAllocation.asset` 鈥?`MissionDefinitionSO`
+- `Assets/Art/Placeholders/Prefabs/PH_*.prefab` 鈥?Placeholder prefabs with `PH_` prefix
+- `Assets/Art/Placeholders/Materials/MAT_PH_*.mat` 鈥?Placeholder materials
 
 Animator controllers are also generated at runtime by `CombatAnimatorControllerGenerator`. Do not hand-edit these.
 
 ## Key conventions
 
-- `CharacterEntity.Bind(CharacterData)` must be called before `Combatant` is usable — it initializes stats via `CombatStatsCalculator.Calculate`
+- `CharacterEntity.Bind(CharacterData)` must be called before `Combatant` is usable 鈥?it initializes stats via `CombatStatsCalculator.Calculate`
 - `SubFactionRegistry.Initialize(database)` must run before faction queries work; `GameBootstrap` does this in `Awake`
 - Faction hostility uses `CharacterEntity.IsHostileTo()` which checks `FactionRelationshipService`; Play-mode tests inject `CharacterEntity.HostilityResolver` to override
 - `FactionReputationService.InitializeDefaultPolitics()` must run before dynamic standing queries work; `LuoLuoTripGameContext.InitializeWorld()` does this
@@ -100,7 +109,7 @@ Animator controllers are also generated at runtime by `CombatAnimatorControllerG
 - Mission consequences are resolved by `MissionConsequenceResolver.Resolve()` which returns `MissionConsequence` with faction deltas and XP
 - Save files go to `Application.persistentDataPath`; `SaveService` is static, `SaveLoadManager` is the MonoBehaviour wrapper
 - Save version is 2; old v1 saves load with default values for new fields (commander, factionPolitics, extended character data)
-- `.csproj` / `.sln` files are auto-generated by Unity — do not edit, they are gitignored
+- `.csproj` / `.sln` files are auto-generated by Unity 鈥?do not edit, they are gitignored
 
 ## File locations quick reference
 
@@ -117,268 +126,35 @@ Animator controllers are also generated at runtime by `CombatAnimatorControllerG
 - Placeholder assets: `Assets/Scripts/Editor/PlaceholderAssetGenerator.cs`
 - Asset replacement guide: `Assets/Docs/ASSET_REPLACEMENT_GUIDE.md`
 
-## Roadmap — Next Steps
-
-Current status: Vertical Slice 完成，Commander/Faction/Mission 纯逻辑系统已实现，但未接入实际控制流程。以下是按优先级排列的后续计划：
-
-### Step 1: Unity 编译验证 ✅ (代码审查通过，待 Unity 内实际编译)
-- 在 Unity Editor 中打开项目，确认无编译错误
-- 运行全部 EditMode / PlayMode 测试
-- 验证 CombatPrototype 和 CommanderPrototype 场景可正常进入 Play Mode
-
-### Step 2: 接入 ControlPermissionService 到实际控制流程
-- 修改 `CombatController` 使其在尝试控制单位前调用 `ControlPermissionService.Evaluate()`
-- 根据返回的 `ControlMode` 决定：DirectControl 正常操作 / TacticalCommand 限制操作 / SyncAssist 短时辅助 / Denied 禁止
-- 在 `CommanderDebugHud` 中实时显示当前控制结果和拒绝原因
-- 需要决定：玩家"尝试控制"的触发方式（锁定目标时按 E？靠近时自动评估？）
-
-### Step 3: 接入 DynamicFactionHostilityService 到 AI 敌我判断
-- 修改 `CharacterEntity.IsHostileTo()` 或 `SimpleCombatAI` 的目标选择逻辑
-- 结合 `DynamicFactionHostilityService.ShouldAttackPlayer()` 判断动态敌意
-- 任务后果改变 FactionStanding 后，AI 行为实时变化
-- PlayMode 测试验证：完成任务后，先前中立的派系变为敌对
-
-### Step 4: 实现真实 ConvoyEnergyConflict 小任务
-- 替代当前的按键 1/2/3 直接结算
-- 场景中放置 Convoy（PH_Convoy_Cylinder）和 EnergyNode（PH_EnergyNode_Cylinder）
-- 玩家选择：保护运输队 vs 帮猛兽族抢能源 vs 平衡分配
-- 根据玩家实际战斗行为（击杀哪方、保护/破坏目标）自动判定 MissionOutcomeType
-- 触发 MissionConsequenceResolver 产生后果
-
-### Step 5: 生成圆柱体 Placeholder Prefab Library ✅ (PlaceholderAssetGenerator 已实现)
-- `LuoLuoTrip/Setup/Generate Placeholder Assets` 菜单已可用
-- 8 个 PH_*.prefab + 7 个 MAT_PH_*.mat
-- Prefab 层级：PrefabRoot / Visual / Collision / Marker
-
-### Step 6: 维护 ASSET_REPLACEMENT_GUIDE.md ✅ (已创建)
-- `Assets/Docs/ASSET_REPLACEMENT_GUIDE.md` 已编写
-- 包含替换流程、验证清单、常见错误
-- 每次替换资产后更新验证结果
-
-### Step 7: 逐步换模型、动画和技能表现
-- 按 ASSET_REPLACEMENT_GUIDE 的替换优先级执行
-- 仅替换 Visual 子对象，不动 PrefabRoot 逻辑组件
-- 接入真实 Animator 和 AnimatorCombatBridge
-- 为不同 ControlMode 设计不同技能/操作表现
-- 目标目录：`Assets/Art/Characters/Mecha/`、`Assets/Art/Characters/Beast/` 等
-- Placeholder assets: `Assets/Scripts/Editor/PlaceholderAssetGenerator.cs`
-- Asset replacement guide: `Assets/Docs/ASSET_REPLACEMENT_GUIDE.md`
 
 ## Roadmap — Next Steps
 
-Current status: Vertical Slice 完成，Commander/Faction/Mission 纯逻辑系统已实现，但未接入实际控制流程。以下是按优先级排列的后续计划：
+Current status: Vertical Slice 完成，Commander/Faction/Mission 已接入实际控制流程和动态敌意，ConvoyEnergyConflict 任务闭环已实现。以下是按优先级排列的后续计划：
 
-### Step 1: Unity 编译验证 ✅ (代码审查通过，待 Unity 内实际编译)
+### Step 1: Unity 编译验证 ✅ (Unity 2022.3.62f3 batchmode 编译通过)
 - 在 Unity Editor 中打开项目，确认无编译错误
 - 运行全部 EditMode / PlayMode 测试
 - 验证 CombatPrototype 和 CommanderPrototype 场景可正常进入 Play Mode
+- 兼容性审计已完成，详见 `UNITY_VERSION_COMPATIBILITY_REPORT.md`
 
-### Step 2: 接入 ControlPermissionService 到实际控制流程
-- 修改 `CombatController` 使其在尝试控制单位前调用 `ControlPermissionService.Evaluate()`
-- 根据返回的 `ControlMode` 决定：DirectControl 正常操作 / TacticalCommand 限制操作 / SyncAssist 短时辅助 / Denied 禁止
-- 在 `CommanderDebugHud` 中实时显示当前控制结果和拒绝原因
-- 需要决定：玩家"尝试控制"的触发方式（锁定目标时按 E？靠近时自动评估？）
+### Step 2: 接入 ControlPermissionService 到实际控制流程 ✅
+- `CommanderControlController` 按 E 调用 `ControlPermissionService.Evaluate()`
+- 根据 `ControlMode` 执行 DirectControl / TacticalCommand / SyncAssist / Denied
+- `CommanderDebugHud` 实时显示当前控制结果和拒绝原因
+- 玩家按 E 触发控制，按 R 释放控制
 
-### Step 3: 接入 DynamicFactionHostilityService 到 AI 敌我判断
-- 修改 `CharacterEntity.IsHostileTo()` 或 `SimpleCombatAI` 的目标选择逻辑
-- 结合 `DynamicFactionHostilityService.ShouldAttackPlayer()` 判断动态敌意
+### Step 3: 接入 DynamicFactionHostilityService 到 AI 敌我判断 ✅
+- `CommanderControlController` 在 Start 中注入 `CharacterEntity.HostilityResolver`
+- resolver 结合静态 FactionRelationshipService + 动态 FactionPoliticsState
 - 任务后果改变 FactionStanding 后，AI 行为实时变化
 - PlayMode 测试验证：完成任务后，先前中立的派系变为敌对
 
-### Step 4: 实现真实 ConvoyEnergyConflict 小任务
-- 替代当前的按键 1/2/3 直接结算
-- 场景中放置 Convoy（PH_Convoy_Cylinder）和 EnergyNode（PH_EnergyNode_Cylinder）
-- 玩家选择：保护运输队 vs 帮猛兽族抢能源 vs 平衡分配
-- 根据玩家实际战斗行为（击杀哪方、保护/破坏目标）自动判定 MissionOutcomeType
-- 触发 MissionConsequenceResolver 产生后果
-
-### Step 5: 生成圆柱体 Placeholder Prefab Library ✅ (PlaceholderAssetGenerator 已实现)
-- `LuoLuoTrip/Setup/Generate Placeholder Assets` 菜单已可用
-- 8 个 PH_*.prefab + 7 个 MAT_PH_*.mat
-- Prefab 层级：PrefabRoot / Visual / Collision / Marker
-
-### Step 6: 维护 ASSET_REPLACEMENT_GUIDE.md ✅ (已创建)
-- `Assets/Docs/ASSET_REPLACEMENT_GUIDE.md` 已编写
-- 包含替换流程、验证清单、常见错误
-- 每次替换资产后更新验证结果
-
-### Step 7: 逐步换模型、动画和技能表现
-- 按 ASSET_REPLACEMENT_GUIDE 的替换优先级执行
-- 仅替换 Visual 子对象，不动 PrefabRoot 逻辑组件
-- 接入真实 Animator 和 AnimatorCombatBridge
-- 为不同 ControlMode 设计不同技能/操作表现
-- 目标目录：`Assets/Art/Characters/Mecha/`、`Assets/Art/Characters/Beast/` 等
-- Placeholder assets: `Assets/Scripts/Editor/PlaceholderAssetGenerator.cs`
-- Asset replacement guide: `Assets/Docs/ASSET_REPLACEMENT_GUIDE.md`
-
-## Roadmap — Next Steps
-
-Current status: Vertical Slice 完成，Commander/Faction/Mission 纯逻辑系统已实现，但未接入实际控制流程。以下是按优先级排列的后续计划：
-
-### Step 1: Unity 编译验证 ✅ (代码审查通过，待 Unity 内实际编译)
-- 在 Unity Editor 中打开项目，确认无编译错误
-- 运行全部 EditMode / PlayMode 测试
-- 验证 CombatPrototype 和 CommanderPrototype 场景可正常进入 Play Mode
-
-### Step 2: 接入 ControlPermissionService 到实际控制流程
-- 修改 `CombatController` 使其在尝试控制单位前调用 `ControlPermissionService.Evaluate()`
-- 根据返回的 `ControlMode` 决定：DirectControl 正常操作 / TacticalCommand 限制操作 / SyncAssist 短时辅助 / Denied 禁止
-- 在 `CommanderDebugHud` 中实时显示当前控制结果和拒绝原因
-- 需要决定：玩家"尝试控制"的触发方式（锁定目标时按 E？靠近时自动评估？）
-
-### Step 3: 接入 DynamicFactionHostilityService 到 AI 敌我判断
-- 修改 `CharacterEntity.IsHostileTo()` 或 `SimpleCombatAI` 的目标选择逻辑
-- 结合 `DynamicFactionHostilityService.ShouldAttackPlayer()` 判断动态敌意
-- 任务后果改变 FactionStanding 后，AI 行为实时变化
-- PlayMode 测试验证：完成任务后，先前中立的派系变为敌对
-
-### Step 4: 实现真实 ConvoyEnergyConflict 小任务
-- 替代当前的按键 1/2/3 直接结算
-- 场景中放置 Convoy（PH_Convoy_Cylinder）和 EnergyNode（PH_EnergyNode_Cylinder）
-- 玩家选择：保护运输队 vs 帮猛兽族抢能源 vs 平衡分配
-- 根据玩家实际战斗行为（击杀哪方、保护/破坏目标）自动判定 MissionOutcomeType
-- 触发 MissionConsequenceResolver 产生后果
-
-### Step 5: 生成圆柱体 Placeholder Prefab Library ✅ (PlaceholderAssetGenerator 已实现)
-- `LuoLuoTrip/Setup/Generate Placeholder Assets` 菜单已可用
-- 8 个 PH_*.prefab + 7 个 MAT_PH_*.mat
-- Prefab 层级：PrefabRoot / Visual / Collision / Marker
-
-### Step 6: 维护 ASSET_REPLACEMENT_GUIDE.md ✅ (已创建)
-- `Assets/Docs/ASSET_REPLACEMENT_GUIDE.md` 已编写
-- 包含替换流程、验证清单、常见错误
-- 每次替换资产后更新验证结果
-
-### Step 7: 逐步换模型、动画和技能表现
-- 按 ASSET_REPLACEMENT_GUIDE 的替换优先级执行
-- 仅替换 Visual 子对象，不动 PrefabRoot 逻辑组件
-- 接入真实 Animator 和 AnimatorCombatBridge
-- 为不同 ControlMode 设计不同技能/操作表现
-- 目标目录：`Assets/Art/Characters/Mecha/`、`Assets/Art/Characters/Beast/` 等
-- Placeholder assets: `Assets/Scripts/Editor/PlaceholderAssetGenerator.cs`
-- Asset replacement guide: `Assets/Docs/ASSET_REPLACEMENT_GUIDE.md`
-
-## Roadmap — Next Steps
-
-Current status: Vertical Slice 完成，Commander/Faction/Mission 纯逻辑系统已实现，但未接入实际控制流程。以下是按优先级排列的后续计划：
-
-### Step 1: Unity 编译验证 ✅ (代码审查通过，待 Unity 内实际编译)
-- 在 Unity Editor 中打开项目，确认无编译错误
-- 运行全部 EditMode / PlayMode 测试
-- 验证 CombatPrototype 和 CommanderPrototype 场景可正常进入 Play Mode
-
-### Step 2: 接入 ControlPermissionService 到实际控制流程
-- 修改 `CombatController` 使其在尝试控制单位前调用 `ControlPermissionService.Evaluate()`
-- 根据返回的 `ControlMode` 决定：DirectControl 正常操作 / TacticalCommand 限制操作 / SyncAssist 短时辅助 / Denied 禁止
-- 在 `CommanderDebugHud` 中实时显示当前控制结果和拒绝原因
-- 需要决定：玩家"尝试控制"的触发方式（锁定目标时按 E？靠近时自动评估？）
-
-### Step 3: 接入 DynamicFactionHostilityService 到 AI 敌我判断
-- 修改 `CharacterEntity.IsHostileTo()` 或 `SimpleCombatAI` 的目标选择逻辑
-- 结合 `DynamicFactionHostilityService.ShouldAttackPlayer()` 判断动态敌意
-- 任务后果改变 FactionStanding 后，AI 行为实时变化
-- PlayMode 测试验证：完成任务后，先前中立的派系变为敌对
-
-### Step 4: 实现真实 ConvoyEnergyConflict 小任务
-- 替代当前的按键 1/2/3 直接结算
-- 场景中放置 Convoy（PH_Convoy_Cylinder）和 EnergyNode（PH_EnergyNode_Cylinder）
-- 玩家选择：保护运输队 vs 帮猛兽族抢能源 vs 平衡分配
-- 根据玩家实际战斗行为（击杀哪方、保护/破坏目标）自动判定 MissionOutcomeType
-- 触发 MissionConsequenceResolver 产生后果
-
-### Step 5: 生成圆柱体 Placeholder Prefab Library ✅ (PlaceholderAssetGenerator 已实现)
-- `LuoLuoTrip/Setup/Generate Placeholder Assets` 菜单已可用
-- 8 个 PH_*.prefab + 7 个 MAT_PH_*.mat
-- Prefab 层级：PrefabRoot / Visual / Collision / Marker
-
-### Step 6: 维护 ASSET_REPLACEMENT_GUIDE.md ✅ (已创建)
-- `Assets/Docs/ASSET_REPLACEMENT_GUIDE.md` 已编写
-- 包含替换流程、验证清单、常见错误
-- 每次替换资产后更新验证结果
-
-### Step 7: 逐步换模型、动画和技能表现
-- 按 ASSET_REPLACEMENT_GUIDE 的替换优先级执行
-- 仅替换 Visual 子对象，不动 PrefabRoot 逻辑组件
-- 接入真实 Animator 和 AnimatorCombatBridge
-- 为不同 ControlMode 设计不同技能/操作表现
-- 目标目录：`Assets/Art/Characters/Mecha/`、`Assets/Art/Characters/Beast/` 等
-- Placeholder assets: `Assets/Scripts/Editor/PlaceholderAssetGenerator.cs`
-- Asset replacement guide: `Assets/Docs/ASSET_REPLACEMENT_GUIDE.md`
-
-## Roadmap — Next Steps
-
-Current status: Vertical Slice 完成，Commander/Faction/Mission 纯逻辑系统已实现，但未接入实际控制流程。以下是按优先级排列的后续计划：
-
-### Step 1: Unity 编译验证 ✅ (代码审查通过，待 Unity 内实际编译)
-- 在 Unity Editor 中打开项目，确认无编译错误
-- 运行全部 EditMode / PlayMode 测试
-- 验证 CombatPrototype 和 CommanderPrototype 场景可正常进入 Play Mode
-
-### Step 2: 接入 ControlPermissionService 到实际控制流程
-- 修改 `CombatController` 使其在尝试控制单位前调用 `ControlPermissionService.Evaluate()`
-- 根据返回的 `ControlMode` 决定：DirectControl 正常操作 / TacticalCommand 限制操作 / SyncAssist 短时辅助 / Denied 禁止
-- 在 `CommanderDebugHud` 中实时显示当前控制结果和拒绝原因
-- 需要决定：玩家"尝试控制"的触发方式（锁定目标时按 E？靠近时自动评估？）
-
-### Step 3: 接入 DynamicFactionHostilityService 到 AI 敌我判断
-- 修改 `CharacterEntity.IsHostileTo()` 或 `SimpleCombatAI` 的目标选择逻辑
-- 结合 `DynamicFactionHostilityService.ShouldAttackPlayer()` 判断动态敌意
-- 任务后果改变 FactionStanding 后，AI 行为实时变化
-- PlayMode 测试验证：完成任务后，先前中立的派系变为敌对
-
-### Step 4: 实现真实 ConvoyEnergyConflict 小任务
-- 替代当前的按键 1/2/3 直接结算
-- 场景中放置 Convoy（PH_Convoy_Cylinder）和 EnergyNode（PH_EnergyNode_Cylinder）
-- 玩家选择：保护运输队 vs 帮猛兽族抢能源 vs 平衡分配
-- 根据玩家实际战斗行为（击杀哪方、保护/破坏目标）自动判定 MissionOutcomeType
-- 触发 MissionConsequenceResolver 产生后果
-
-### Step 5: 生成圆柱体 Placeholder Prefab Library ✅ (PlaceholderAssetGenerator 已实现)
-- `LuoLuoTrip/Setup/Generate Placeholder Assets` 菜单已可用
-- 8 个 PH_*.prefab + 7 个 MAT_PH_*.mat
-- Prefab 层级：PrefabRoot / Visual / Collision / Marker
-
-### Step 6: 维护 ASSET_REPLACEMENT_GUIDE.md ✅ (已创建)
-- `Assets/Docs/ASSET_REPLACEMENT_GUIDE.md` 已编写
-- 包含替换流程、验证清单、常见错误
-- 每次替换资产后更新验证结果
-
-### Step 7: 逐步换模型、动画和技能表现
-- 按 ASSET_REPLACEMENT_GUIDE 的替换优先级执行
-- 仅替换 Visual 子对象，不动 PrefabRoot 逻辑组件
-- 接入真实 Animator 和 AnimatorCombatBridge
-- 为不同 ControlMode 设计不同技能/操作表现
-- 目标目录：`Assets/Art/Characters/Mecha/`、`Assets/Art/Characters/Beast/` 等
-- Placeholder assets: `Assets/Scripts/Editor/PlaceholderAssetGenerator.cs`
-- Asset replacement guide: `Assets/Docs/ASSET_REPLACEMENT_GUIDE.md`
-
-## Roadmap — Next Steps
-
-Current status: Vertical Slice 完成，Commander/Faction/Mission 纯逻辑系统已实现，但未接入实际控制流程。以下是按优先级排列的后续计划：
-
-### Step 1: Unity 编译验证 ✅ (代码审查通过，待 Unity 内实际编译)
-- 在 Unity Editor 中打开项目，确认无编译错误
-- 运行全部 EditMode / PlayMode 测试
-- 验证 CombatPrototype 和 CommanderPrototype 场景可正常进入 Play Mode
-
-### Step 2: 接入 ControlPermissionService 到实际控制流程
-- 修改 `CombatController` 使其在尝试控制单位前调用 `ControlPermissionService.Evaluate()`
-- 根据返回的 `ControlMode` 决定：DirectControl 正常操作 / TacticalCommand 限制操作 / SyncAssist 短时辅助 / Denied 禁止
-- 在 `CommanderDebugHud` 中实时显示当前控制结果和拒绝原因
-- 需要决定：玩家"尝试控制"的触发方式（锁定目标时按 E？靠近时自动评估？）
-
-### Step 3: 接入 DynamicFactionHostilityService 到 AI 敌我判断
-- 修改 `CharacterEntity.IsHostileTo()` 或 `SimpleCombatAI` 的目标选择逻辑
-- 结合 `DynamicFactionHostilityService.ShouldAttackPlayer()` 判断动态敌意
-- 任务后果改变 FactionStanding 后，AI 行为实时变化
-- PlayMode 测试验证：完成任务后，先前中立的派系变为敌对
-
-### Step 4: 实现真实 ConvoyEnergyConflict 小任务
-- 替代当前的按键 1/2/3 直接结算
-- 场景中放置 Convoy（PH_Convoy_Cylinder）和 EnergyNode（PH_EnergyNode_Cylinder）
-- 玩家选择：保护运输队 vs 帮猛兽族抢能源 vs 平衡分配
-- 根据玩家实际战斗行为（击杀哪方、保护/破坏目标）自动判定 MissionOutcomeType
-- 触发 MissionConsequenceResolver 产生后果
+### Step 4: 实现真实 ConvoyEnergyConflict 小任务 ✅
+- `ConvoyEnergyConflictRuntime` 管理完整任务流程
+- `MissionTriggerZone` 检测玩家进入区域自动启动任务
+- `ConvoyObjective` 追踪运输队血量
+- `EnergyNodeObjective` 追踪猛兽族占领进度和玩家共享进度
+- MechaVictory / BeastVictory / BalancedResolution / Failed 自动判定
 
 ### Step 5: 生成圆柱体 Placeholder Prefab Library ✅ (PlaceholderAssetGenerator 已实现)
 - `LuoLuoTrip/Setup/Generate Placeholder Assets` 菜单已可用

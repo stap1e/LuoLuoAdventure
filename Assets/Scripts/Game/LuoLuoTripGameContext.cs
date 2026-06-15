@@ -24,6 +24,7 @@ namespace LuoLuoTrip
     {
         public FactionRelationshipService RelationshipService { get; }
         public FactionReputationService ReputationService { get; }
+        public DynamicFactionHostilityService DynamicHostilityService { get; }
         public CommanderProfile CommanderProfile { get; }
         public MissionService MissionService { get; }
         public Dictionary<SubFactionId, SubFactionState> FactionStates { get; } = new Dictionary<SubFactionId, SubFactionState>();
@@ -33,6 +34,7 @@ namespace LuoLuoTrip
         {
             RelationshipService = relationshipService ?? new FactionRelationshipService();
             ReputationService = new FactionReputationService();
+            DynamicHostilityService = new DynamicFactionHostilityService(ReputationService, RelationshipService);
             CommanderProfile = CommanderProfile.CreateDefault();
             MissionService = new MissionService(ReputationService, CommanderProfile);
         }

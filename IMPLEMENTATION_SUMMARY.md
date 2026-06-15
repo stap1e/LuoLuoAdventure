@@ -192,14 +192,128 @@ A placeholder asset pipeline has been implemented following the Asset Replacemen
 - **ASSET_REPLACEMENT_GUIDE.md**: Documents the replacement workflow, hierarchy conventions, verification checklist, and common mistakes
 - **Menu item**: `LuoLuoTrip/Setup/Generate Placeholder Assets` generates all placeholder assets
 
-## 12. Next Steps Roadmap
+## 12. Commander Control Integration
+
+### New Files
+- `Assets/Scripts/Commander/CommanderCommandType.cs` — Enum: FollowPlayer, HoldPosition, AttackCurrentTarget
+- `Assets/Scripts/Commander/CommanderControlRuntimeState.cs` — Runtime state: DirectControl tracking, TacticalCommand, SyncAssist timer, buff values
+- `Assets/Scripts/Commander/CommanderTargetSelector.cs` — MonoBehaviour: scans nearby CharacterEntities, Tab to cycle, provides CurrentTarget + CharacterControlInfo
+- `Assets/Scripts/Commander/CommanderControlController.cs` — MonoBehaviour: E to interact (evaluate + apply control mode), R to release, wires up HostilityResolver
+
+### Input Controls
+- **Tab**: Select next target in range
+- **E**: Attempt to control/command/assist selected target
+- **R**: Release control back to original player unit
+- **1/2/3**: Debug mission triggers (preserved)
+
+### ControlMode Behaviors
+- **DirectControl**: Disables CombatController on original player, enables it on target. Target AI disabled. Original player goes idle.
+- **TacticalCommand**: Sets command type (FollowPlayer/HoldPosition/AttackCurrentTarget) on target. Does not switch direct control.
+- **SyncAssist**: Activates 3-second buff (+25% damage, +15% damage reduction). Timer shown on HUD. Ends automatically.
+- **Denied**: No action. Reason shown on HUD.
+
+### Known Limitations
+- TacticalCommand execution is minimal (command stored but no deep AI integration beyond setting state)
+- SyncAssist buff is tracked in runtime state only; does not modify CombatStats or CharacterData
+- Camera does not follow newly controlled unit (no camera abstraction)
+- CommanderTargetSelector uses FindObjectsOfType (not production-optimal)
+
+## 13. Dynamic Hostility Integration
+
+### How HostilityResolver is Injected
+- `CommanderControlController.SetupDynamicHostility()` sets `CharacterEntity.HostilityResolver` to a delegate that combines:
+  1. `DynamicFactionHostilityService.IsHostileToPlayer()` — checks if either faction's dynamic standing.Hostility >= 40
+  2. `FactionRelationshipService.Matrix.IsHostile()` — original static faction matrix
+- The resolver is set on `Start()` and cleared on `OnDestroy()`
+- Tests use local resolver injection and restore afterwards
+
+### MissionConsequence → AI Impact
+- When `MissionService.ResolveAndApply()` applies FactionStandingDeltas, the `FactionPoliticsState` is updated immediately
+- `DynamicFactionHostilityService` reads from the same `FactionReputationService`, so hostility changes are instant
+- `CharacterEntity.IsHostileTo()` checks `HostilityResolver` (static delegate), which calls `DynamicFactionHostilityService`
+- After MechaVictory: BeastTribe factions get +15 Hostility → their units may become hostile
+- After BeastVictory: MotorTribe factions get +15 Hostility → their units may become hostile
+- After BalancedResolution: all factions get -5 Hostility → reduced aggression
+
+### Test Coverage
+- EditMode: DynamicHostilityResolverTests (5 tests)
+- PlayMode: DynamicHostilityIntegrationTests (3 tests)
+
+## 14. ConvoyEnergyConflict Mission Loop
+
+### New Files
+- `Assets/Scripts/Mission/Runtime/MissionTriggerZone.cs` — MonoBehaviour: detects player entering radius, starts mission
+- `Assets/Scripts/Mission/Runtime/ConvoyObjective.cs` — MonoBehaviour: convoy health tracking, TakeDamage/IsDestroyed
+- `Assets/Scripts/Mission/Runtime/EnergyNodeObjective.cs` — MonoBehaviour: beast capture progress, player share progress
+- `Assets/Scripts/Mission/Runtime/ConvoyEnergyConflictRuntime.cs` — MonoBehaviour: full mission loop controller
+- `Assets/Scripts/Mission/Runtime/MissionObjectiveHud.cs` — OnGUI HUD for active mission objectives
+
+### Mission Trigger
+- Player walks into MissionTriggerZone radius → mission starts automatically
+- MissionTriggerZone placed at scene center with 12m radius
+
+### Mission Rules
+- **MechaVictory**: All beast units dead + convoy alive
+- **BeastVictory**: Convoy destroyed OR beast units occupy EnergyNode for 5 seconds
+- **BalancedResolution**: Player at EnergyNode presses E + total casualties <= 1
+- **PartialSuccess**: Player shares energy but casualties > 1
+- **Failed**: Player leaves zone for 10 seconds (retreat)
+
+### Manual Verification
+1. Walk into mission area → objectives appear
+2. Kill beast units → MechaVictory
+3. Let beasts reach EnergyNode → BeastVictory
+4. Stand at EnergyNode and press E with low casualties → BalancedResolution
+5. Leave area for 10s → Failed
+
+## 15. Updated Manual Validation
+
+1. Open Unity 2022.3.62f3 LTS
+2. Execute **LuoLuoTrip/Setup/Create Commander Mission Prototype Scene**
+3. Open `Assets/Scenes/CommanderPrototype.unity`
+4. Play
+5. **Tab** to select nearby target → CommanderDebugHud shows target info + predicted ControlMode
+6. **E** to attempt control/command/assist → result shown on HUD
+7. **R** to release control → returns to original player
+8. Walk into mission area → ConvoyEnergyConflict starts automatically
+9. Complete mission via combat/sharing energy → MissionResultDebugPanel shows outcome + faction changes
+10. **1/2/3** still work for instant debug mission triggers
+11. **F5/F9** for save/load verification
+12. Run EditMode/PlayMode tests in Test Runner
+
+## 16. Unity Version Compatibility
+
+### Audit Date: 2026-06-16
+
+**Target Version**: Unity 2022.3.62f3 LTS
+
+**Compilation**: Verified successfully in Unity 2022.3.62f3 batchmode (exit code 0).
+
+### Fixes Applied
+- **FactionPoliticsState.RestoreFromSnapshot** — Fixed type mismatch: `FactionPoliticsEntry` was incorrectly assigned to `Dictionary<SubFactionId, FactionStanding>`. Now properly converts entry fields to `FactionStanding` struct.
+- **SaveDataCommanderFactionTests** — Added missing `using LuoLuoTrip.Save;` directive (GameSaveData is in LuoLuoTrip.Save namespace).
+- **SimpleCombatAITests** — Added `[TearDown]` method to reset `CharacterEntity.HostilityResolver` as safety net.
+- **MissionObjectiveHud** — Removed duplicate from `Assets/Scripts/UI/` (was causing namespace conflict).
+- **ProjectCompatibilityChecker** — New editor tool: `LuoLuoTrip/Tools/Compatibility/Run Project Compatibility Check`.
+
+### Audit Results
+- No Unity 6-only API usage found
+- No UnityEditor references in runtime code
+- All assembly definitions correctly configured
+- All packages compatible with Unity 2022.3.62f3
+- No Unity 6 upgrade recommended at this time
+- CommanderPrototype scene and placeholder assets must be generated via Editor setup menus
+
+Full report: `UNITY_VERSION_COMPATIBILITY_REPORT.md`
+
+## 17. Next Steps Roadmap
 
 See **AGENTS.md → Roadmap — Next Steps** for the full prioritized plan. Summary:
 
-1. ✅ Unity 编译验证 (代码审查通过，待 Unity 内实际编译)
-2. 接入 ControlPermissionService 到 CombatController 实际控制流程
-3. 接入 DynamicFactionHostilityService 到 AI 敌我判断
-4. 实现真实 ConvoyEnergyConflict 小任务 (替代按键 1/2/3 直接结算)
+1. ✅ Unity 编译验证
+2. ✅ 接入 ControlPermissionService 到 CombatController 实际控制流程
+3. ✅ 接入 DynamicFactionHostilityService 到 AI 敌我判断
+4. ✅ 实现真实 ConvoyEnergyConflict 小任务
 5. ✅ 生成圆柱体 Placeholder Prefab Library
 6. ✅ 维护 ASSET_REPLACEMENT_GUIDE.md
 7. 逐步换模型、动画和技能表现

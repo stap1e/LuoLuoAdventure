@@ -247,17 +247,35 @@ namespace LuoLuoTrip.Editor
             CreateCombatCharacter("HighRank_WarKing", new Vector3(8f, 0.5f, -3f), warKingData,
                 PlaceholderAssetGenerator.WarKingPrefab, isPlayer: false);
 
-            CreateObjective("Convoy_Objective", new Vector3(-2f, 0.3f, 5f),
+            var convoyObj = CreateObjective("Convoy_Objective", new Vector3(-2f, 0.3f, 5f),
                 PlaceholderAssetGenerator.ConvoyPrefab);
+            var convoyComponent = convoyObj.AddComponent<ConvoyObjective>();
 
-            CreateObjective("Energy_Node", new Vector3(4f, 0.2f, -4f),
+            var energyObj = CreateObjective("Energy_Node", new Vector3(4f, 0.2f, -4f),
                 PlaceholderAssetGenerator.EnergyNodePrefab);
+            var energyComponent = energyObj.AddComponent<EnergyNodeObjective>();
+
+            var triggerGo = new GameObject("MissionTriggerZone");
+            triggerGo.transform.position = new Vector3(0f, 0f, 2f);
+            var triggerZone = triggerGo.AddComponent<MissionTriggerZone>();
 
             ApplyAnimatorToGameObject(player);
+
+            player.AddComponent<CommanderControlController>();
 
             var commanderHud = new GameObject("CommanderDebugHud").AddComponent<CommanderDebugHud>();
             var factionPanel = new GameObject("FactionStandingDebugPanel").AddComponent<FactionStandingDebugPanel>();
             var missionPanel = new GameObject("MissionResultDebugPanel").AddComponent<MissionResultDebugPanel>();
+            var objectiveHud = new GameObject("MissionObjectiveHud").AddComponent<MissionObjectiveHud>();
+
+            var conflictGo = new GameObject("ConvoyEnergyConflict");
+            var conflict = conflictGo.AddComponent<ConvoyEnergyConflictRuntime>();
+            var conflictSo = new SerializedObject(conflict);
+            conflictSo.FindProperty("_convoy").objectReferenceValue = convoyComponent;
+            conflictSo.FindProperty("_energyNode").objectReferenceValue = energyComponent;
+            conflictSo.FindProperty("_triggerZone").objectReferenceValue = triggerZone;
+            conflictSo.FindProperty("_objectiveHud").objectReferenceValue = objectiveHud;
+            conflictSo.ApplyModifiedPropertiesWithoutUndo();
 
             var runtimeGo = new GameObject("CommanderPrototypeRuntime");
             var runtime = runtimeGo.AddComponent<CommanderPrototypeRuntime>();
@@ -270,7 +288,7 @@ namespace LuoLuoTrip.Editor
             EditorSceneManager.SaveScene(scene, CommanderScenePath);
             AssetDatabase.Refresh();
             Debug.Log($"[LuoLuoTrip] Commander Mission Prototype Scene 已创建: {CommanderScenePath}");
-            Debug.Log("操作说明: WASD移动 | 鼠标左键攻击 | Space闪避 | Q锁定 | Tab切换目标 | F5存档 | F9读档");
+            Debug.Log("Controls: WASD move | LClick attack | Space dodge | Q lock-on | Tab select target | E interact | R release control | 1/2/3 test missions | F5 save | F9 load");
         }
 
         [MenuItem("LuoLuoTrip/Setup/Create Hit Feedback Profile")]
