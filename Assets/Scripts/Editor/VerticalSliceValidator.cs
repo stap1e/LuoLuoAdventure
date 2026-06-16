@@ -48,6 +48,9 @@ namespace LuoLuoTrip.Editor
             CheckEncounterWaveConfig(report, ref warnings);
             CheckInputOwnership(report, ref warnings);
             CheckRootMovement(report, ref warnings);
+            CheckAnimationClipBindings(report, ref warnings);
+            CheckGameplayScriptAttachment(report, ref warnings);
+            CheckCombatReadability(report, ref errors, ref warnings);
 
             report.Add("");
             report.Add("========================================");
@@ -1150,6 +1153,207 @@ namespace LuoLuoTrip.Editor
             if (gravityOn == 0) report.Add("  OK: No prototype Rigidbody with gravity+non-kinematic");
             if (controllerOnVisual == 0 && aiOnVisual == 0) report.Add("  OK: All controllers on PrefabRoot, not Visual");
             if (visualOffsetIssues == 0) report.Add("  OK: No Visual children sunken below -0.5y");
+        }
+
+        private static void CheckAnimationClipBindings(List<string> report, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- Animation Clip Bindings ---");
+
+            var clipGuids = AssetDatabase.FindAssets("t:AnimationClip");
+            int clipsScanned = 0;
+            int rootBindingViolations = 0;
+            var problems = new List<string>();
+
+            foreach (var guid in clipGuids)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(guid);
+                if (string.IsNullOrEmpty(path)) continue;
+                if (!path.StartsWith("Assets/")) continue;
+
+                var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(path);
+                if (clip == null) continue;
+                clipsScanned++;
+
+                var bindings = AnimationUtility.GetCurveBindings(clip);
+                foreach (var b in bindings)
+                {
+                    if (b.type != typeof(Transform)) continue;
+                    var prop = b.propertyName;
+                    bool isPositionOrEuler =
+                        prop.StartsWith("localPosition") ||
+                        prop.StartsWith("m_LocalPosition") ||
+                        prop.StartsWith("localEulerAngles") ||
+                        prop.StartsWith("m_LocalEulerAngles");
+                    if (!isPositionOrEuler) continue;
+
+                    if (string.IsNullOrEmpty(b.path))
+                    {
+                        rootBindingViolations++;
+                        problems.Add($"    {path} :: '{prop}' bound to ROOT (path='') — must be bound to 'Visual' or another child");
+                    }
+                }
+            }
+
+            report.Add($"  Scanned {clipsScanned} AnimationClip asset(s)");
+            if (rootBindingViolations == 0)
+            {
+                report.Add("  OK: No animation clip binds Transform position/rotation to root path");
+            }
+            else
+            {
+                report.Add($"  WARNING: {rootBindingViolations} root-path binding(s) found:");
+                foreach (var p in problems)
+                    report.Add(p);
+                warnings += rootBindingViolations;
+            }
+        }
+
+        private static void CheckGameplayScriptAttachment(List<string> report, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- Gameplay Script Attachment ---");
+
+            var combatCtrlType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "CombatController");
+            var aiType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "SimpleCombatAI");
+            var combatantType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "Combatant");
+            var navBridgeType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "NavigationAgentBridge");
+
+            int violations = 0;
+            var localReport = report;
+
+            System.Action<System.Type, string> checkType = (t, label) =>
+            {
+                if (t == null) return;
+                foreach (var obj in Object.FindObjectsOfType(t))
+                {
+                    var mono = obj as MonoBehaviour;
+                    if (mono == null) continue;
+                    var go = mono.gameObject;
+                    if (go.name == "Visual" || go.name == "Collision" || go.name == "Marker")
+                    {
+                        localReport.Add($"  WARNING: {label} attached to '{go.transform.parent?.name}/{go.name}' — must be on PrefabRoot, not child");
+                        violations++;
+                    }
+                }
+            };
+
+            checkType(combatCtrlType, "CombatController");
+            checkType(aiType, "SimpleCombatAI");
+            checkType(combatantType, "Combatant");
+            checkType(navBridgeType, "NavigationAgentBridge");
+
+            warnings += violations;
+
+            if (violations == 0)
+                report.Add("  OK: All gameplay scripts attached to PrefabRoot, not Visual/Collision/Marker children");
+        }
+
+        private static void CheckCombatReadability(List<string> report, ref int errors, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- Combat Readability ---");
+
+            // 1. Type existence (compile-level)
+            var presenterType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "CombatantHealthBarPresenter");
+            var damageNumType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "DamageNumberFeedback");
+            var hitFlashType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "HitFlashFeedback");
+            var broadcasterType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "CombatFeedbackBroadcaster");
+
+            if (presenterType == null) { report.Add("  ERROR: CombatantHealthBarPresenter type missing"); errors++; }
+            else report.Add("  OK: CombatantHealthBarPresenter type exists");
+
+            if (damageNumType == null) { report.Add("  ERROR: DamageNumberFeedback type missing"); errors++; }
+            else report.Add("  OK: DamageNumberFeedback type exists");
+
+            if (hitFlashType == null) { report.Add("  ERROR: HitFlashFeedback type missing"); errors++; }
+            else report.Add("  OK: HitFlashFeedback type exists");
+
+            if (broadcasterType == null) { report.Add("  ERROR: CombatFeedbackBroadcaster type missing"); errors++; }
+            else report.Add("  OK: CombatFeedbackBroadcaster type exists");
+
+            // 2. CombatPrototype: enemies have presenter
+            CheckSceneEnemiesHaveHealthBar("Assets/Scenes/CombatPrototype.unity", "CombatPrototype", report, ref warnings);
+            CheckSceneEnemiesHaveHealthBar("Assets/Scenes/CommanderPrototype.unity", "CommanderPrototype", report, ref warnings);
+        }
+
+        private static void CheckSceneEnemiesHaveHealthBar(string scenePath, string label, List<string> report, ref int warnings)
+        {
+            if (!File.Exists(scenePath))
+            {
+                report.Add($"  SKIP: {label} scene not found at {scenePath}");
+                return;
+            }
+
+            var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
+            try
+            {
+                int enemiesChecked = 0;
+                int enemiesMissing = 0;
+                int maxHpZero = 0;
+                foreach (var go in scene.GetRootGameObjects())
+                {
+                    foreach (var ai in go.GetComponentsInChildren<MonoBehaviour>(true))
+                    {
+                        if (ai == null) continue;
+                        if (ai.GetType().Name != "SimpleCombatAI") continue;
+                        enemiesChecked++;
+                        var presenter = ai.GetComponent("CombatantHealthBarPresenter");
+                        if (presenter == null) enemiesMissing++;
+
+                        var combatantComp = ai.GetComponent("Combatant") as MonoBehaviour;
+                        if (combatantComp != null)
+                        {
+                            var stats = combatantComp.GetType().GetProperty("Stats");
+                            if (stats != null)
+                            {
+                                var statsVal = stats.GetValue(combatantComp);
+                                var maxHp = statsVal?.GetType().GetField("maxHealth")?.GetValue(statsVal);
+                                if (maxHp is float hp && hp <= 0f) maxHpZero++;
+                            }
+                        }
+                    }
+                }
+                if (enemiesChecked == 0)
+                {
+                    report.Add($"  WARNING: {label} has no AI units");
+                    warnings++;
+                }
+                else if (enemiesMissing > 0)
+                {
+                    report.Add($"  WARNING: {label} {enemiesMissing}/{enemiesChecked} enemies missing CombatantHealthBarPresenter");
+                    warnings++;
+                }
+                else
+                {
+                    report.Add($"  OK: {label} all {enemiesChecked} enemies have health bar");
+                }
+
+                if (maxHpZero > 0)
+                {
+                    report.Add($"  WARNING: {label} {maxHpZero} units have maxHealth=0 at edit-time (will calc at runtime)");
+                }
+            }
+            finally
+            {
+                EditorSceneManager.CloseScene(scene, true);
+            }
         }
     }
 }

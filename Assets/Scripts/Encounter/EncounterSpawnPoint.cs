@@ -57,6 +57,11 @@ namespace LuoLuoTrip
             var entity = unitGo.GetComponent<CharacterEntity>();
             if (entity == null)
                 entity = unitGo.AddComponent<CharacterEntity>();
+
+            // Guard runs BEFORE Bind() so Combatant.Awake (triggered via EnsureCombatant)
+            // can grab the motor/rigidbody.
+            CharacterRuntimeComponentGuard.EnsureForAI(unitGo);
+
             entity.Bind(data);
 
             if (unitGo.GetComponent<Combatant>() == null)

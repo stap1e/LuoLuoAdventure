@@ -38,6 +38,11 @@ namespace LuoLuoTrip.Combat
         private float _dodgeInvulnerableTimer;
         private Vector3 _dodgeDirection;
         private Collider _hitCollider;
+        private Combatant _pendingAttackTarget;
+        private bool _activeHitConsumed;
+        private float _attackMultiplier = 1f;
+        private float _lastHitDamage;
+        private bool _showAttackDebug;
 
         public event Action<CombatHitEvent> OnHitLanded;
         public event Action<CombatHitEvent> OnHitReceived;
@@ -57,7 +62,12 @@ namespace LuoLuoTrip.Combat
         public float SyncAssistDefenseBonus { get; set; }
         public float AttackRecovery => _attackRecovery;
         public float AttackWindup => _attackWindup;
+        public float AttackActive => _attackActive;
         public float StateTimer => _stateTimer;
+        public Combatant PendingAttackTarget => _pendingAttackTarget;
+        public bool IsAttackActiveWindow => _state == CombatState.Attacking;
+        public float LastHitDamage => _lastHitDamage;
+        public bool ShowAttackDebug { get => _showAttackDebug; set => _showAttackDebug = value; }
 
         public void ApplyTuning(CombatTuningConfigSO config)
         {
@@ -149,23 +159,55 @@ namespace LuoLuoTrip.Combat
             _stateTimer = _attackWindup;
             _attackCooldownTimer = _stats.attackCooldown + _attackWindup + _attackActive + _attackRecovery;
 
-            AudioFeedbackService.Play(AudioEventId.AttackStart, transform.position);
+            // Cache target + reset hit dedup; resolve damage later when entering active window.
+            _pendingAttackTarget = target;
+            _activeHitConsumed = false;
+            _attackMultiplier = 1f;
 
-            if (target != null && IsInRange(target))
+            AudioFeedbackService.Play(AudioEventId.AttackStart, transform.position);
+            return true;
+        }
+
+        /// <summary>
+        /// Resolve a single hit on the cached target during the Attacking active window.
+        /// Idempotent: calling twice in the same attack does nothing the second time.
+        /// </summary>
+        private void ResolveActiveHitOnce()
+        {
+            if (_activeHitConsumed) return;
+            _activeHitConsumed = true;
+
+            var target = _pendingAttackTarget;
+            if (target == null || !target.IsAlive)
             {
-                var result = DamageCalculator.Calculate(this, target);
-                var hitEvent = new CombatHitEvent
-                {
-                    Attacker = this,
-                    Defender = target,
-                    Result = result
-                };
-                target.NotifyHitReceived(hitEvent);
-                OnHitLanded?.Invoke(hitEvent);
-                AudioFeedbackService.Play(AudioEventId.Hit, target.transform.position);
+                if (_showAttackDebug)
+                    Debug.Log($"[Combatant] {name} attack MISS (no live target)");
+                OnHitLanded?.Invoke(new CombatHitEvent { Attacker = this, Defender = target, Result = default });
+                return;
             }
 
-            return true;
+            if (!IsInRange(target))
+            {
+                if (_showAttackDebug)
+                    Debug.Log($"[Combatant] {name} attack MISS (out of range)");
+                OnHitLanded?.Invoke(new CombatHitEvent { Attacker = this, Defender = target, Result = default });
+                return;
+            }
+
+            var result = DamageCalculator.Calculate(this, target, _attackMultiplier);
+            _lastHitDamage = result.finalDamage;
+            var hitEvent = new CombatHitEvent
+            {
+                Attacker = this,
+                Defender = target,
+                Result = result
+            };
+            target.NotifyHitReceived(hitEvent);
+            OnHitLanded?.Invoke(hitEvent);
+            AudioFeedbackService.Play(AudioEventId.Hit, target.transform.position);
+
+            if (_showAttackDebug)
+                Debug.Log($"[Combatant] {name} HIT {target.name} dmg={result.finalDamage:F1} fatal={result.wasFatal}");
         }
 
         public bool TryDodge(Vector3 direction)
@@ -187,7 +229,11 @@ namespace LuoLuoTrip.Combat
             OnHitReceived?.Invoke(hitEvent);
         }
 
-        public void AnimEvent_OnAttackActive() { }
+        public void AnimEvent_OnAttackActive()
+        {
+            if (_state == CombatState.AttackWindup || _state == CombatState.Attacking)
+                ResolveActiveHitOnce();
+        }
 
         public void AnimEvent_OnAttackEnd()
         {
@@ -232,6 +278,7 @@ namespace LuoLuoTrip.Combat
         private void Die()
         {
             _currentHealth = 0f;
+            _pendingAttackTarget = null;
             SetState(CombatState.Dead);
             if (_entity?.Data != null)
                 _entity.Data.IsAlive = false;
@@ -279,6 +326,7 @@ namespace LuoLuoTrip.Combat
                 {
                     SetState(CombatState.Attacking);
                     _stateTimer = _attackActive;
+                    ResolveActiveHitOnce();
                     return;
                 }
 
@@ -286,6 +334,7 @@ namespace LuoLuoTrip.Combat
                 {
                     SetState(CombatState.AttackRecovery);
                     _stateTimer = _attackRecovery;
+                    _pendingAttackTarget = null;
                     return;
                 }
 
@@ -320,6 +369,28 @@ namespace LuoLuoTrip.Combat
         {
             Gizmos.color = Color.red;
             Gizmos.DrawWireSphere(transform.position, _stats.attackRange);
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawLine(transform.position, transform.position + transform.forward * Mathf.Max(0.5f, _stats.attackRange));
+        }
+
+        private void OnDrawGizmos()
+        {
+            if (!_showAttackDebug || !Application.isPlaying) return;
+            switch (_state)
+            {
+                case CombatState.AttackWindup:
+                    Gizmos.color = new Color(1f, 0.7f, 0f, 0.6f);
+                    Gizmos.DrawWireSphere(transform.position, _stats.attackRange);
+                    break;
+                case CombatState.Attacking:
+                    Gizmos.color = new Color(1f, 0f, 0f, 0.8f);
+                    Gizmos.DrawWireSphere(transform.position, _stats.attackRange);
+                    break;
+                case CombatState.AttackRecovery:
+                    Gizmos.color = new Color(0.4f, 0.4f, 1f, 0.5f);
+                    Gizmos.DrawWireSphere(transform.position, _stats.attackRange);
+                    break;
+            }
         }
     }
 }

@@ -6,6 +6,7 @@ namespace LuoLuoTrip.Combat
     {
         [SerializeField] private Combatant _target;
         [SerializeField] private bool _autoFindPlayer = true;
+        [SerializeField] private bool _showAttackDebug = true;
 
         private Combatant _player;
         private CombatController _playerCombat;
@@ -24,6 +25,7 @@ namespace LuoLuoTrip.Combat
                     }
                 }
             }
+            if (_showAttackDebug && _player != null) _player.ShowAttackDebug = true;
         }
 
         private void OnGUI()
@@ -39,13 +41,44 @@ namespace LuoLuoTrip.Combat
             y += 18;
             DrawBar(10, y, 200, 12, combatant.CurrentPoise / stats.maxPoise, Color.cyan, "Poise");
             y += 24;
+
+            var stateColor = StateColor(combatant.State);
+            var prev = GUI.color;
+            GUI.color = stateColor;
             GUI.Label(new Rect(10, y, 400, 20), $"State: {combatant.State}");
+            GUI.color = prev;
+            y += 20;
+
+            if (combatant.State == CombatState.Attacking)
+            {
+                GUI.color = Color.red;
+                GUI.Label(new Rect(10, y, 400, 20), "ATTACK ACTIVE");
+                GUI.color = prev;
+                y += 20;
+            }
+
+            GUI.Label(new Rect(10, y, 400, 20),
+                $"AtkRange: {stats.attackRange:F1}  Dmg: {stats.attackPower:F0}  Last: {combatant.LastHitDamage:F0}");
             y += 20;
 
             if (_playerCombat != null)
             {
                 GUI.Label(new Rect(10, y, 400, 20),
                     $"Input: {(_playerCombat.IsInputEnabled ? "ON" : "OFF")} | Speed: {_playerCombat.MoveSpeed:F1}");
+            }
+        }
+
+        private static Color StateColor(CombatState s)
+        {
+            switch (s)
+            {
+                case CombatState.AttackWindup: return new Color(1f, 0.7f, 0f);
+                case CombatState.Attacking: return Color.red;
+                case CombatState.AttackRecovery: return new Color(0.5f, 0.5f, 1f);
+                case CombatState.Staggered: return Color.magenta;
+                case CombatState.Dodging: return Color.green;
+                case CombatState.Dead: return Color.gray;
+                default: return Color.white;
             }
         }
 

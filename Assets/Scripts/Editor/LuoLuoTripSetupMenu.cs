@@ -607,6 +607,12 @@ namespace LuoLuoTrip.Editor
                 so.FindProperty("_profile").objectReferenceValue = profile;
                 so.ApplyModifiedPropertiesWithoutUndo();
             }
+
+            // Combat readability stack: damage numbers + central feedback broadcaster.
+            if (bootstrapGo.GetComponent<DamageNumberFeedback>() == null)
+                bootstrapGo.AddComponent<DamageNumberFeedback>();
+            if (bootstrapGo.GetComponent<CombatFeedbackBroadcaster>() == null)
+                bootstrapGo.AddComponent<CombatFeedbackBroadcaster>();
         }
 
         private static GameObject CreateCombatCharacter(string name, Vector3 position, CharacterData data, string prefabPath, bool isPlayer)
@@ -648,10 +654,12 @@ namespace LuoLuoTrip.Editor
             if (entity == null)
                 entity = go.AddComponent<CharacterEntity>();
 
-            // Add motor BEFORE Bind() so Combatant.Awake (triggered by EnsureCombatant)
-            // can grab it via GetComponent. Order matters: motor → bind → combatant/controller.
-            if (go.GetComponent<CharacterMovementMotor>() == null)
-                go.AddComponent<CharacterMovementMotor>();
+            // Run runtime component guard BEFORE Bind() so Combatant.Awake can pick up
+            // motor/rigidbody/collider in a deterministic order.
+            if (isPlayer)
+                CharacterRuntimeComponentGuard.EnsureForPlayer(go);
+            else
+                CharacterRuntimeComponentGuard.EnsureForAI(go);
 
             entity.Bind(data);
 
@@ -662,14 +670,6 @@ namespace LuoLuoTrip.Editor
             {
                 if (go.GetComponent<CombatController>() == null)
                     go.AddComponent<CombatController>();
-
-                if (go.GetComponent<Rigidbody>() == null)
-                {
-                    var rb = go.AddComponent<Rigidbody>();
-                    rb.isKinematic = true;
-                    rb.useGravity = false;
-                    rb.constraints = RigidbodyConstraints.FreezeRotation;
-                }
             }
             else
             {
@@ -679,15 +679,16 @@ namespace LuoLuoTrip.Editor
                 if (navAgent == null)
                     go.AddComponent<UnityEngine.AI.NavMeshAgent>();
 
-                // Match player Rigidbody config so AI fallback movement is not blocked by physics.
-                if (go.GetComponent<Rigidbody>() == null)
-                {
-                    var rb = go.AddComponent<Rigidbody>();
-                    rb.isKinematic = true;
-                    rb.useGravity = false;
-                    rb.constraints = RigidbodyConstraints.FreezeRotation;
-                }
+                // Combat readability: enemies always get a health bar + hit flash.
+                if (go.GetComponent<CombatantHealthBarPresenter>() == null)
+                    go.AddComponent<CombatantHealthBarPresenter>();
+                if (go.GetComponent<HitFlashFeedback>() == null)
+                    go.AddComponent<HitFlashFeedback>();
             }
+
+            // Player optionally gets HitFlashFeedback too (visible when hit).
+            if (isPlayer && go.GetComponent<HitFlashFeedback>() == null)
+                go.AddComponent<HitFlashFeedback>();
 
             if (isPlayer)
             {

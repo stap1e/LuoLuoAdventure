@@ -13,6 +13,7 @@ namespace LuoLuoTrip.Combat.Animation
         [SerializeField] private float _attackLunge = 0.35f;
         [SerializeField] private float _hitKickback = 0.2f;
         [SerializeField] private float _dodgeTilt = 15f;
+        [SerializeField] private bool _strictVisualOnly = true;
 
         private Vector3 _baseLocalPos;
         private Vector3 _baseScale;
@@ -21,6 +22,11 @@ namespace LuoLuoTrip.Combat.Animation
         private Renderer _renderer;
         private Color _baseColor;
         private CombatState _currentState = CombatState.Idle;
+        private bool _disabled;
+
+        public Transform VisualRoot => _visualRoot;
+        public bool IsOperatingOnVisualOnly => _visualRoot != null && _visualRoot != transform;
+        public bool IsDisabled => _disabled;
 
         private void Awake()
         {
@@ -29,11 +35,22 @@ namespace LuoLuoTrip.Combat.Animation
             if (_visualRoot == null)
             {
                 var visualChild = transform.Find("Visual");
-                _visualRoot = visualChild != null ? visualChild : transform;
+                _visualRoot = visualChild != null ? visualChild : null;
             }
 
-            if (_visualRoot == transform)
+            if (_visualRoot == null || _visualRoot == transform)
+            {
+                if (_strictVisualOnly)
+                {
+                    Debug.LogWarning($"[ProceduralCombatAnimator] '{name}' has no 'Visual' child — disabling procedural animator to protect root transform from being driven.");
+                    _disabled = true;
+                    enabled = false;
+                    return;
+                }
+
                 Debug.LogWarning($"[ProceduralCombatAnimator] '{name}' has no 'Visual' child; falling back to root transform. Attack/dodge visuals may collide with gameplay movement.");
+                _visualRoot = transform;
+            }
 
             _baseLocalPos = _visualRoot.localPosition;
             _baseScale = _visualRoot.localScale;
@@ -43,10 +60,15 @@ namespace LuoLuoTrip.Combat.Animation
                 _baseColor = _renderer.material.color;
         }
 
-        public void PlayIdle() => ResetVisual();
+        public void PlayIdle()
+        {
+            if (_disabled) return;
+            ResetVisual();
+        }
 
         public void PlayMove(float normalizedSpeed)
         {
+            if (_disabled) return;
             if (_currentState != CombatState.Idle) return;
             var bob = Mathf.Sin(Time.time * 8f * Mathf.Clamp01(normalizedSpeed)) * 0.03f * normalizedSpeed;
             _visualRoot.localPosition = _baseLocalPos + Vector3.up * bob;
@@ -54,32 +76,38 @@ namespace LuoLuoTrip.Combat.Animation
 
         public void PlayLightAttack()
         {
+            if (_disabled) return;
             RunRoutine(AttackRoutine(_attackLunge, 0.12f));
         }
 
         public void PlayDodge()
         {
+            if (_disabled) return;
             RunRoutine(DodgeRoutine());
         }
 
         public void PlayStagger()
         {
+            if (_disabled) return;
             RunRoutine(StaggerRoutine());
         }
 
         public void PlayHitReact(bool isHeavy)
         {
+            if (_disabled) return;
             RunRoutine(HitRoutine(isHeavy ? _hitKickback * 1.6f : _hitKickback));
         }
 
         public void PlayDeath()
         {
+            if (_disabled) return;
             RunRoutine(DeathRoutine());
         }
 
         public void SetCombatState(CombatState state)
         {
             _currentState = state;
+            if (_disabled) return;
             switch (state)
             {
                 case CombatState.Idle:
