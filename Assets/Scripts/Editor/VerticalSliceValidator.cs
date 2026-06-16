@@ -46,6 +46,7 @@ namespace LuoLuoTrip.Editor
             CheckServiceLifecycle(report, ref warnings);
             CheckNavMeshSetup(report, ref warnings);
             CheckEncounterWaveConfig(report, ref warnings);
+            CheckInputOwnership(report, ref warnings);
 
             report.Add("");
             report.Add("========================================");
@@ -906,6 +907,93 @@ namespace LuoLuoTrip.Editor
                         report.Add($"    OK: {sps.Count} spawn point(s)");
                     else
                         report.Add("    INFO: No spawn points — wave spawning will have nowhere to place units");
+                }
+            }
+        }
+
+        private static void CheckInputOwnership(List<string> report, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- Input Ownership ---");
+
+            var combatCtrlType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "CombatController");
+            if (combatCtrlType == null)
+            {
+                report.Add("  WARNING: CombatController type not found");
+                warnings++;
+                return;
+            }
+
+            var inputEnabledProp = combatCtrlType.GetProperty("IsInputEnabled");
+            var allCombatCtrls = Object.FindObjectsOfType(combatCtrlType);
+            var aiType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "SimpleCombatAI");
+
+            int inputEnabledCount = 0;
+            int inputDisabledCount = 0;
+            foreach (var ctrl in allCombatCtrls)
+            {
+                var mono = ctrl as MonoBehaviour;
+                if (mono == null) continue;
+
+                var hasAI = aiType != null ? mono.GetComponent(aiType) : null;
+                bool? inputEnabled = inputEnabledProp?.GetValue(ctrl) as bool?;
+
+                if (hasAI != null && ((MonoBehaviour)hasAI).enabled && inputEnabled == true)
+                {
+                    report.Add($"  WARNING: '{mono.gameObject.name}' has both CombatController input enabled AND SimpleCombatAI active — only one should control input");
+                    warnings++;
+                }
+                else if (inputEnabled == true)
+                {
+                    inputEnabledCount++;
+                }
+                else
+                {
+                    inputDisabledCount++;
+                }
+            }
+
+            if (inputEnabledCount > 1)
+            {
+                report.Add($"  WARNING: {inputEnabledCount} CombatController(s) with input enabled — typically only 1 should accept player input");
+                warnings++;
+            }
+            else if (inputEnabledCount == 1)
+            {
+                report.Add($"  OK: 1 CombatController with input enabled, {inputDisabledCount} disabled");
+            }
+            else if (allCombatCtrls.Length > 0)
+            {
+                report.Add("  WARNING: No CombatController has input enabled — player cannot move");
+                warnings++;
+            }
+
+            var commanderCtrlType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "CommanderControlController");
+            if (commanderCtrlType != null)
+            {
+                var commanders = Object.FindObjectsOfType(commanderCtrlType);
+                if (commanders.Length > 0)
+                {
+                    var stateProp = commanderCtrlType.GetProperty("State");
+                    if (stateProp != null)
+                    {
+                        foreach (var cmd in commanders)
+                        {
+                            var state = stateProp.GetValue(cmd);
+                            if (state == null) continue;
+                            var isDirectOther = state.GetType().GetProperty("IsDirectControllingOther")?.GetValue(state) as bool?;
+                            if (isDirectOther == true)
+                                report.Add("  OK: CommanderPrototype — DirectControl active, controlled unit should have input enabled");
+                            else
+                                report.Add("  OK: CommanderPrototype — original player has input");
+                        }
+                    }
                 }
             }
         }
