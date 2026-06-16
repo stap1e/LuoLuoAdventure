@@ -11,9 +11,6 @@ namespace LuoLuoTrip.Combat
         public DamageResult Result;
     }
 
-    /// <summary>
-    /// Soul-like 战斗组件原型：生命/耐力/架势、轻攻击、闪避、受击硬直。
-    /// </summary>
     [RequireComponent(typeof(CharacterEntity))]
     public class Combatant : MonoBehaviour
     {
@@ -27,6 +24,8 @@ namespace LuoLuoTrip.Combat
         [SerializeField] private float _staggerDuration = 1.2f;
         [SerializeField] private float _attackWindup = 0.25f;
         [SerializeField] private float _attackActive = 0.2f;
+        [SerializeField] private float _attackRecovery = 0.3f;
+        [SerializeField] private float _dodgeInvulnerableDuration = 0.3f;
 
         private CharacterEntity _entity;
         private float _currentHealth;
@@ -34,6 +33,7 @@ namespace LuoLuoTrip.Combat
         private float _currentPoise;
         private float _stateTimer;
         private float _attackCooldownTimer;
+        private float _dodgeInvulnerableTimer;
         private Vector3 _dodgeDirection;
         private Collider _hitCollider;
 
@@ -49,10 +49,25 @@ namespace LuoLuoTrip.Combat
         public float CurrentStamina => _currentStamina;
         public float CurrentPoise => _currentPoise;
         public bool IsAlive => _state != CombatState.Dead && _currentHealth > 0f;
-        public bool IsInvulnerable => _state == CombatState.Dodging;
+        public bool IsInvulnerable => _state == CombatState.Dodging || _dodgeInvulnerableTimer > 0f;
         public bool AutoTickEnabled { get; set; } = true;
         public float SyncAssistAttackBonus { get; set; }
         public float SyncAssistDefenseBonus { get; set; }
+        public float AttackRecovery => _attackRecovery;
+        public float AttackWindup => _attackWindup;
+        public float StateTimer => _stateTimer;
+
+        public void ApplyTuning(CombatTuningConfigSO config)
+        {
+            if (config == null) return;
+            _attackWindup = config.playerAttackWindup;
+            _attackActive = config.playerAttackActive;
+            _attackRecovery = config.playerAttackRecovery;
+            _dodgeDuration = config.dodgeDuration;
+            _dodgeDistance = config.dodgeDistance;
+            _dodgeInvulnerableDuration = config.dodgeInvulnerableDuration;
+            _staggerDuration = config.staggerDuration;
+        }
 
         private void Awake()
         {
@@ -63,6 +78,8 @@ namespace LuoLuoTrip.Combat
 
         private void Start()
         {
+            var tuning = CombatTuningConfigSO.LoadOrDefault();
+            ApplyTuning(tuning);
             CombatHitFeedbackHub.Instance?.Register(this);
         }
 
@@ -95,6 +112,7 @@ namespace LuoLuoTrip.Combat
             _currentPoise = poise >= 0 ? poise : _stats.maxPoise;
             _attackCooldownTimer = 0f;
             _stateTimer = 0f;
+            _dodgeInvulnerableTimer = 0f;
 
             if (_currentHealth <= 0f)
                 SetState(CombatState.Dead);
@@ -109,6 +127,7 @@ namespace LuoLuoTrip.Combat
             RecoverResources(deltaTime);
             UpdateStateTimer(deltaTime);
             _attackCooldownTimer = Math.Max(0f, _attackCooldownTimer - deltaTime);
+            _dodgeInvulnerableTimer = Math.Max(0f, _dodgeInvulnerableTimer - deltaTime);
         }
 
         private void Update()
@@ -123,9 +142,9 @@ namespace LuoLuoTrip.Combat
             if (_currentStamina < 10f) return false;
 
             _currentStamina -= 10f;
-            SetState(CombatState.Attacking);
-            _stateTimer = _attackWindup + _attackActive;
-            _attackCooldownTimer = _stats.attackCooldown;
+            SetState(CombatState.AttackWindup);
+            _stateTimer = _attackWindup;
+            _attackCooldownTimer = _stats.attackCooldown + _attackWindup + _attackActive + _attackRecovery;
 
             if (target != null && IsInRange(target))
             {
@@ -152,6 +171,7 @@ namespace LuoLuoTrip.Combat
             _dodgeDirection = direction.sqrMagnitude > 0.01f ? direction.normalized : transform.forward;
             SetState(CombatState.Dodging);
             _stateTimer = _dodgeDuration;
+            _dodgeInvulnerableTimer = _dodgeInvulnerableDuration;
             return true;
         }
 
@@ -165,7 +185,7 @@ namespace LuoLuoTrip.Combat
         public void AnimEvent_OnAttackEnd()
         {
             if (_state == CombatState.Attacking)
-                SetState(CombatState.Idle);
+                SetState(CombatState.AttackRecovery);
         }
 
         public bool ApplyHealthDamage(float amount)
@@ -212,7 +232,7 @@ namespace LuoLuoTrip.Combat
 
         private void RecoverResources(float deltaTime)
         {
-            if (_state == CombatState.Attacking) return;
+            if (_state == CombatState.Attacking || _state == CombatState.AttackWindup || _state == CombatState.AttackRecovery) return;
 
             _currentStamina = Math.Min(_stats.maxStamina,
                 _currentStamina + _stats.staminaRecoveryPerSecond * deltaTime);
@@ -234,7 +254,29 @@ namespace LuoLuoTrip.Combat
                 transform.position += _dodgeDirection * (_dodgeDistance / _dodgeDuration * deltaTime);
 
             if (_stateTimer <= 0f && _state != CombatState.Dead)
+            {
+                if (_state == CombatState.AttackWindup)
+                {
+                    SetState(CombatState.Attacking);
+                    _stateTimer = _attackActive;
+                    return;
+                }
+
+                if (_state == CombatState.Attacking)
+                {
+                    SetState(CombatState.AttackRecovery);
+                    _stateTimer = _attackRecovery;
+                    return;
+                }
+
+                if (_state == CombatState.AttackRecovery)
+                {
+                    SetState(CombatState.Idle);
+                    return;
+                }
+
                 SetState(CombatState.Idle);
+            }
         }
 
         private bool CanAct() =>

@@ -81,7 +81,7 @@ namespace LuoLuoTrip.Tests.EditMode
         }
 
         [Test]
-        public void Tick_EndsAttackStateAfterWindupAndActiveFrames()
+        public void Tick_AttackFlowsThroughWindupActiveRecovery()
         {
             var attackerObject = new GameObject("Attacker");
             var defenderObject = new GameObject("Defender");
@@ -94,10 +94,13 @@ namespace LuoLuoTrip.Tests.EditMode
                 defender.AutoTickEnabled = false;
 
                 Assert.That(attacker.TryLightAttack(defender), Is.True);
+                Assert.That(attacker.State, Is.EqualTo(CombatState.AttackWindup));
+
+                attacker.Tick(0.25f);
                 Assert.That(attacker.State, Is.EqualTo(CombatState.Attacking));
 
                 attacker.Tick(0.2f);
-                Assert.That(attacker.State, Is.EqualTo(CombatState.Attacking));
+                Assert.That(attacker.State, Is.EqualTo(CombatState.AttackRecovery));
 
                 attacker.Tick(0.3f);
                 Assert.That(attacker.State, Is.EqualTo(CombatState.Idle));
@@ -180,10 +183,16 @@ namespace LuoLuoTrip.Tests.EditMode
                 Assert.That(attacker.TryLightAttack(defender), Is.True);
                 var afterAttack = attacker.CurrentStamina;
 
-                attacker.Tick(0.2f);
+                attacker.Tick(0.25f);
+                Assert.That(attacker.State, Is.EqualTo(CombatState.Attacking));
+                Assert.That(attacker.CurrentStamina, Is.EqualTo(afterAttack));
+
+                attacker.Tick(0.5f);
+                Assert.That(attacker.State, Is.EqualTo(CombatState.AttackRecovery));
                 Assert.That(attacker.CurrentStamina, Is.EqualTo(afterAttack));
 
                 attacker.Tick(0.3f);
+                Assert.That(attacker.State, Is.EqualTo(CombatState.Idle));
                 attacker.Tick(0.5f);
                 Assert.That(attacker.CurrentStamina, Is.GreaterThan(afterAttack));
                 Assert.That(attacker.CurrentStamina, Is.LessThanOrEqualTo(beforeAttack));

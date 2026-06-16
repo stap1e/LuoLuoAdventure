@@ -36,6 +36,8 @@ namespace LuoLuoTrip.Combat
         [Header("Attack Rhythm")]
         [SerializeField] private float _attackIntervalVariance = 0.2f;
         [SerializeField] private float _lowStaminaAttackDelayMultiplier = 1.5f;
+        [SerializeField] private float _attackWindupDelay = 0.4f;
+        [SerializeField] private bool _showAttackIndicator = true;
 
         private Combatant _self;
         private CharacterEntity _entity;
@@ -45,12 +47,20 @@ namespace LuoLuoTrip.Combat
         private float _thinkTimer;
         private float _targetRefreshTimer;
         private float _attackIntervalOffset;
+        private bool _isWindingUp;
 
         public Func<Combatant[]> CombatantQuery { get; set; }
         public Combatant CurrentTarget => _target;
         public Transform FollowTarget { get; set; }
         public Vector3? HoldPosition { get; set; }
         public Combatant ForcedAttackTarget { get; set; }
+        public bool IsWindingUp => _isWindingUp;
+
+        public void ApplyTuning(CombatTuningConfigSO config)
+        {
+            if (config == null) return;
+            _attackWindupDelay = config.aiAttackWindupDelay;
+        }
 
         private void Awake()
         {
@@ -59,6 +69,12 @@ namespace LuoLuoTrip.Combat
             _spawnPoint = transform.position;
             _attackIntervalOffset = UnityEngine.Random.Range(-_attackIntervalVariance, _attackIntervalVariance);
             CombatantQuery = CombatantQuery ?? (() => FindObjectsOfType<Combatant>());
+        }
+
+        private void Start()
+        {
+            var tuning = CombatTuningConfigSO.LoadOrDefault();
+            ApplyTuning(tuning);
         }
 
         private void Update()
@@ -162,7 +178,7 @@ namespace LuoLuoTrip.Combat
             if (IsLowOnStamina())
                 return distance <= _self.Stats.attackRange ? CombatIntent.Recover : CombatIntent.Reposition;
 
-            if (IsCriticalHealth() && _target.State == CombatState.Attacking && distance <= _self.Stats.attackRange + _repositionDistance)
+            if (IsCriticalHealth() && (_target.State == CombatState.Attacking || _target.State == CombatState.AttackWindup) && distance <= _self.Stats.attackRange + _repositionDistance)
                 return CombatIntent.Reposition;
 
             if (distance <= _self.Stats.attackRange)
@@ -237,8 +253,18 @@ namespace LuoLuoTrip.Combat
         {
             if (_target == null || _attackTimer > 0f) return;
 
-            if (_self.TryLightAttack(_target))
+            if (_isWindingUp)
+            {
+                _isWindingUp = false;
+                _self.TryLightAttack(_target);
                 _attackTimer = GetAttackInterval();
+                return;
+            }
+
+            if (_self.State == CombatState.AttackWindup || _self.State == CombatState.Attacking || _self.State == CombatState.AttackRecovery) return;
+
+            _isWindingUp = true;
+            _attackTimer = _attackWindupDelay;
         }
 
         private float GetAttackInterval()
@@ -291,10 +317,40 @@ namespace LuoLuoTrip.Combat
             var distanceScore = Mathf.Clamp01(1f - distance / _detectRange) * 5f;
             var healthScore = Mathf.Clamp01(1f - other.CurrentHealth / Mathf.Max(1f, other.Stats.maxHealth)) * _focusLowHealthWeight;
             var staggeredScore = other.State == CombatState.Staggered ? _focusStaggeredWeight : 0f;
-            var attackingScore = other.State == CombatState.Attacking ? _focusAttackingWeight : 0f;
+            var attackingScore = other.State == CombatState.Attacking || other.State == CombatState.AttackWindup ? _focusAttackingWeight : 0f;
             var rangeScore = Mathf.Clamp01((_self.Stats.attackRange - distance + 1f) / Mathf.Max(1f, _self.Stats.attackRange + 1f)) * _focusRangeWeight;
 
             return distanceScore + healthScore + staggeredScore + attackingScore + rangeScore;
+        }
+
+        private void OnDrawGizmos()
+        {
+            if (!_showAttackIndicator || !Application.isPlaying) return;
+
+            if (_isWindingUp)
+            {
+                Gizmos.color = Color.red;
+                Gizmos.DrawWireSphere(transform.position, _self.Stats.attackRange);
+            }
+        }
+
+        private void OnGUI()
+        {
+            if (!_showAttackIndicator || !_isWindingUp) return;
+
+            var cam = Camera.main;
+            if (cam == null) return;
+            var screenPos = cam.WorldToScreenPoint(transform.position + Vector3.up * 2.2f);
+            if (screenPos.z <= 0f) return;
+
+            var style = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 24,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter
+            };
+            var rect = new Rect(screenPos.x - 20f, Screen.height - screenPos.y - 12f, 40f, 24f);
+            GUI.Label(rect, "!", style);
         }
     }
 }

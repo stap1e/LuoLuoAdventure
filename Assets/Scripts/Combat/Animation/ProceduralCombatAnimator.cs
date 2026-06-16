@@ -75,8 +75,12 @@ namespace LuoLuoTrip.Combat.Animation
                 case CombatState.Idle:
                     PlayIdle();
                     break;
+                case CombatState.AttackWindup:
+                    break;
                 case CombatState.Attacking:
                     PlayLightAttack();
+                    break;
+                case CombatState.AttackRecovery:
                     break;
                 case CombatState.Dodging:
                     PlayDodge();

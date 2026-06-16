@@ -9,17 +9,19 @@ namespace LuoLuoTrip
         [SerializeField] private KeyCode _interactKey = KeyCode.E;
         [SerializeField] private KeyCode _releaseKey = KeyCode.R;
         [SerializeField] private float _syncAssistDuration = 3f;
-
         private CommanderTargetSelector _targetSelector;
         private CommanderControlRuntimeState _state;
         private CombatController _playerCombatController;
         private SimpleCombatAI _playerAI;
         private ControlPermissionService _permissionService;
         private CommanderDebugHud _debugHud;
+        private CommanderControlHintPanel _hintPanel;
         private CameraFollowController _cameraFollow;
 
         public CommanderControlRuntimeState State => _state;
         public CommanderTargetSelector TargetSelector => _targetSelector;
+
+        public void SetHintPanel(CommanderControlHintPanel panel) => _hintPanel = panel;
 
         private void Awake()
         {
@@ -40,6 +42,9 @@ namespace LuoLuoTrip
             _state.DirectControlledEntity = _state.OriginalPlayerEntity;
 
             _permissionService = new ControlPermissionService();
+
+            var tuning = CombatTuningConfigSO.LoadOrDefault();
+            _syncAssistDuration = tuning.syncAssistDuration;
 
             _cameraFollow = FindObjectOfType<CameraFollowController>();
 
@@ -309,10 +314,18 @@ namespace LuoLuoTrip
 
         private void UpdateDebugHud()
         {
-            if (_debugHud == null) return;
+            if (_debugHud != null)
+            {
+                _debugHud.SetProfile(GameBootstrap.Context?.CommanderProfile);
+                _debugHud.SetRuntimeState(_state);
+            }
 
-            _debugHud.SetProfile(GameBootstrap.Context?.CommanderProfile);
-            _debugHud.SetRuntimeState(_state);
+            if (_hintPanel != null)
+            {
+                _hintPanel.SetRuntimeState(_state);
+                _hintPanel.SetLastControlResult(_state?.LastControlResult ?? default);
+                _hintPanel.SetPlayerEntity(_state?.OriginalPlayerEntity);
+            }
         }
 
         private void SetupDynamicHostility(LuoLuoTripGameContext context)

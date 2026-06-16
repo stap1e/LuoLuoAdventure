@@ -5,8 +5,7 @@ namespace LuoLuoTrip.UI
 {
     public class FactionStandingDebugPanel : MonoBehaviour
     {
-        [SerializeField] private Vector2 _position = new Vector2(300, 150);
-        [SerializeField] private int _width = 360;
+        [SerializeField] private bool _visible = true;
 
         private FactionReputationService _service;
 
@@ -14,12 +13,14 @@ namespace LuoLuoTrip.UI
 
         private void OnGUI()
         {
-            if (_service == null) return;
+            if (!_visible || _service == null) return;
 
-            var x = _position.x;
-            var y = _position.y;
+            var layout = DebugUILayout.FactionStanding;
+            var x = layout.x;
+            var y = layout.y;
+            var width = (int)layout.width;
 
-            GUI.Label(new Rect(x, y, _width, 20), "=== Faction Standing ===");
+            GUI.Label(new Rect(x, y, width, 20), "=== Faction Standing ===");
             y += 22;
 
             foreach (SubFactionId id in Enum.GetValues(typeof(SubFactionId)))
@@ -27,7 +28,7 @@ namespace LuoLuoTrip.UI
                 var standing = _service.GetStanding(id);
                 var name = id.ToString();
                 if (name.Length > 16) name = name.Substring(0, 16);
-                GUI.Label(new Rect(x, y, _width, 18),
+                GUI.Label(new Rect(x, y, width, 18),
                     $"{name}: T={standing.Trust} R={standing.Respect} H={standing.Hostility} WE={standing.WarExhaustion}");
                 y += 18;
             }

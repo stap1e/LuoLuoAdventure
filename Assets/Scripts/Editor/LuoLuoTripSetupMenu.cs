@@ -94,6 +94,7 @@ namespace LuoLuoTrip.Editor
             GenerateAllSubFactionConfigs();
             InitializeRegistryFromDatabase();
             PlaceholderAssetGenerator.GenerateAll();
+            CreateCombatTuningConfig();
 
             EnsureFolder("Assets/Scenes");
             var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
@@ -209,6 +210,7 @@ namespace LuoLuoTrip.Editor
             CreateCommanderPrototypeData();
             CreateMissionPrototypeData();
             CreateHitFeedbackProfile();
+            CreateCombatTuningConfig();
             PlaceholderAssetGenerator.GenerateAll();
 
             EnsureFolder("Assets/Scenes");
@@ -273,6 +275,9 @@ namespace LuoLuoTrip.Editor
             var missionPanel = new GameObject("MissionResultDebugPanel").AddComponent<MissionResultDebugPanel>();
             var objectiveHud = new GameObject("MissionObjectiveHud").AddComponent<MissionObjectiveHud>();
             var summaryPanel = new GameObject("MissionResultSummaryPanel").AddComponent<MissionResultSummaryPanel>();
+            var hintPanel = new GameObject("CommanderControlHintPanel").AddComponent<CommanderControlHintPanel>();
+            var toastPanel = new GameObject("FactionDeltaToastPanel").AddComponent<FactionDeltaToastPanel>();
+            var chainSummaryPanel = new GameObject("MissionChainSummaryPanel").AddComponent<MissionChainSummaryPanel>();
 
             var conflictGo = new GameObject("ConvoyEnergyConflict");
             var conflict = conflictGo.AddComponent<ConvoyEnergyConflictRuntime>();
@@ -290,7 +295,17 @@ namespace LuoLuoTrip.Editor
             runtimeSo.FindProperty("_factionPanel").objectReferenceValue = factionPanel;
             runtimeSo.FindProperty("_missionPanel").objectReferenceValue = missionPanel;
             runtimeSo.FindProperty("_summaryPanel").objectReferenceValue = summaryPanel;
+            runtimeSo.FindProperty("_hintPanel").objectReferenceValue = hintPanel;
+            runtimeSo.FindProperty("_toastPanel").objectReferenceValue = toastPanel;
+            runtimeSo.FindProperty("_chainSummaryPanel").objectReferenceValue = chainSummaryPanel;
             runtimeSo.ApplyModifiedPropertiesWithoutUndo();
+
+            var tutorialGo = new GameObject("TutorialFlow");
+            var tutorial = tutorialGo.AddComponent<TutorialFlowRuntime>();
+            var combatController = player.GetComponent<CombatController>();
+            var commanderController = player.GetComponent<CommanderControlController>();
+            tutorial.Initialize(combatController, commanderController);
+            commanderController.SetHintPanel(hintPanel);
 
             var borderTriggerGo = new GameObject("BorderRetaliationTrigger");
             borderTriggerGo.transform.position = new Vector3(25f, 0f, 0f);
@@ -341,7 +356,9 @@ namespace LuoLuoTrip.Editor
             EditorSceneManager.SaveScene(scene, CommanderScenePath);
             AssetDatabase.Refresh();
             Debug.Log($"[LuoLuoTrip] Commander Mission Prototype Scene 已创建: {CommanderScenePath}");
-            Debug.Log("Controls: WASD move | LClick attack | Space dodge | Q lock-on | Tab select target | E interact | R release control | 1/2/3 test missions | F5 save | F9 load");
+            Debug.Log("Controls: WASD move | LClick attack | Space dodge | Q lock-on | Tab select target | E interact | R release control | 1/2/3 test missions | F5 save | F9 load | F10 clear save");
+            Debug.Log("Mission 1: ConvoyEnergyConflict at (0,0,2) | Mission 2: BorderRetaliation at (25,0,0)");
+            Debug.Log("Manual validation: Play scene → complete tutorial → trigger mission 1 → complete → walk to mission 2 → verify branch → F5/F9 cycle → F10 clear");
         }
 
         [MenuItem("LuoLuoTrip/Setup/Create Hit Feedback Profile")]
@@ -393,6 +410,35 @@ namespace LuoLuoTrip.Editor
             AssetDatabase.SaveAssets();
             Selection.activeObject = config;
             Debug.Log($"[LuoLuoTrip] GameConfig 已创建: {path}");
+        }
+
+        [MenuItem("LuoLuoTrip/Setup/Create Combat Tuning Config")]
+        public static void CreateCombatTuningConfig()
+        {
+            EnsureFolder("Assets/Data/Combat");
+            EnsureFolder("Assets/Resources");
+            const string path = "Assets/Data/Combat/CombatTuningConfig.asset";
+
+            var config = AssetDatabase.LoadAssetAtPath<CombatTuningConfigSO>(path);
+            if (config == null)
+            {
+                config = ScriptableObject.CreateInstance<CombatTuningConfigSO>();
+                AssetDatabase.CreateAsset(config, path);
+            }
+
+            var resourcesPath = "Assets/Resources/CombatTuningConfig.asset";
+            var resourcesConfig = AssetDatabase.LoadAssetAtPath<CombatTuningConfigSO>(resourcesPath);
+            if (resourcesConfig == null)
+                AssetDatabase.CopyAsset(path, resourcesPath);
+            else
+            {
+                EditorUtility.CopySerialized(config, resourcesConfig);
+                EditorUtility.SetDirty(resourcesConfig);
+            }
+
+            AssetDatabase.SaveAssets();
+            Selection.activeObject = config;
+            Debug.Log($"[LuoLuoTrip] CombatTuningConfig 已创建: {path}");
         }
 
         [MenuItem("LuoLuoTrip/Debug/Print World Summary")]

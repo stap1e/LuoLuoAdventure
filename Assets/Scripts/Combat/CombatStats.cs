@@ -6,7 +6,9 @@ namespace LuoLuoTrip.Combat
     public enum CombatState
     {
         Idle,
+        AttackWindup,
         Attacking,
+        AttackRecovery,
         Dodging,
         Staggered,
         Dead

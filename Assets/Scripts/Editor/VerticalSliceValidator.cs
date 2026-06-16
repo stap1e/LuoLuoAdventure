@@ -30,6 +30,11 @@ namespace LuoLuoTrip.Editor
             CheckRuntimeEditorReferences(report, ref errors);
             CheckRuntimeFindObjectsOfType(report, ref warnings);
             CheckAssemblyDefinitions(report, ref errors);
+            CheckCombatPrototypeScene(report, ref errors, ref warnings);
+            CheckMissionBranchDefinitionAssets(report, ref warnings);
+            CheckCombatTuningConfig(report, ref warnings);
+            CheckSaveLoadManager(report, ref warnings);
+            CheckDebugTriggerType(report, ref warnings);
 
             report.Add("");
             report.Add("========================================");
@@ -143,7 +148,8 @@ namespace LuoLuoTrip.Editor
                 typeof(ConvoyObjective),
                 typeof(EnergyNodeObjective),
                 typeof(MissionTriggerZone),
-                typeof(ConvoyEnergyConflictRuntime)
+                typeof(ConvoyEnergyConflictRuntime),
+                typeof(TutorialFlowRuntime)
             };
 
             var allObjects = Resources.FindObjectsOfTypeAll<GameObject>();
@@ -163,7 +169,7 @@ namespace LuoLuoTrip.Editor
                 }
             }
 
-            var hudTypes = new[] { "CommanderDebugHud", "FactionStandingDebugPanel", "MissionResultDebugPanel", "MissionObjectiveHud" };
+            var hudTypes = new[] { "CommanderDebugHud", "FactionStandingDebugPanel", "MissionResultDebugPanel", "MissionResultSummaryPanel", "MissionObjectiveHud", "CommanderControlHintPanel", "FactionDeltaToastPanel", "MissionChainSummaryPanel" };
             foreach (var hudName in hudTypes)
             {
                 var hudType = System.AppDomain.CurrentDomain.GetAssemblies()
@@ -310,6 +316,88 @@ namespace LuoLuoTrip.Editor
                 {
                     report.Add($"  OK: {name} (platforms: {(includePlatforms.Count == 0 ? "All" : string.Join(",", includePlatforms))})");
                 }
+            }
+        }
+
+        private static void CheckCombatPrototypeScene(List<string> report, ref int errors, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- CombatPrototype Scene ---");
+            var scenePath = "Assets/Scenes/CombatPrototype.unity";
+            if (!File.Exists(scenePath))
+            {
+                report.Add("  ERROR: CombatPrototype.unity missing (run Create Combat Prototype Scene)");
+                errors++;
+            }
+            else
+            {
+                report.Add("  OK: CombatPrototype.unity exists");
+            }
+        }
+
+        private static void CheckMissionBranchDefinitionAssets(List<string> report, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- MissionBranchDefinition Assets ---");
+            var guids = AssetDatabase.FindAssets("t:MissionBranchDefinition");
+            if (guids.Length == 0)
+            {
+                report.Add("  WARNING: No MissionBranchDefinition assets found under Assets/Data/");
+                warnings++;
+            }
+            else
+            {
+                report.Add($"  OK: {guids.Length} MissionBranchDefinition asset(s) found");
+            }
+        }
+
+        private static void CheckCombatTuningConfig(List<string> report, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- CombatTuningConfig Asset ---");
+            var path = "Assets/Data/Combat/CombatTuningConfig.asset";
+            if (!File.Exists(path))
+            {
+                report.Add("  WARNING: CombatTuningConfig.asset missing (expected at Assets/Data/Combat/)");
+                warnings++;
+            }
+            else
+            {
+                report.Add("  OK: CombatTuningConfig.asset exists");
+            }
+        }
+
+        private static void CheckSaveLoadManager(List<string> report, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- SaveLoadManager ---");
+            var managers = Resources.FindObjectsOfTypeAll<SaveLoadManager>();
+            if (managers.Length == 0)
+            {
+                report.Add("  WARNING: No SaveLoadManager found in any loaded scene");
+                warnings++;
+            }
+            else
+            {
+                report.Add($"  OK: SaveLoadManager found ({managers.Length} instance(s))");
+            }
+        }
+
+        private static void CheckDebugTriggerType(List<string> report, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- Debug Trigger Type ---");
+            var type = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "CommanderPrototypeRuntime");
+            if (type == null)
+            {
+                report.Add("  WARNING: CommanderPrototypeRuntime type not found");
+                warnings++;
+            }
+            else
+            {
+                report.Add("  OK: CommanderPrototypeRuntime type exists");
             }
         }
 

@@ -58,7 +58,13 @@ namespace LuoLuoTrip.Save
 
             if (!silent)
             {
-                Debug.Log($"[Save] Quick save complete (F5) | Commander Lv.{context.CommanderProfile.CommanderLevel} XP:{context.CommanderProfile.Experience} | Factions:{context.ReputationService.StandingsCount} | Characters:{save.characters.Count}");
+                var chainState = context.MissionChainService?.State;
+                var lastOutcome = chainState != null && chainState.CompletedMissions.Count > 0
+                    ? chainState.CompletedMissions[chainState.CompletedMissions.Count - 1].Outcome.ToString()
+                    : "none";
+                var activeMission = chainState?.ActiveMissionId ?? "none";
+                var controlled = context.CommanderProfile != null ? "self" : "none";
+                Debug.Log($"[Save] Quick save complete (F5) | Commander Lv.{context.CommanderProfile.CommanderLevel} XP:{context.CommanderProfile.Experience} | Controlled:{controlled} | Factions:{context.ReputationService.StandingsCount} | Chain completed:{chainState?.CompletedMissions.Count ?? 0} | Last outcome:{lastOutcome} | Active mission:{activeMission} | Characters:{save.characters.Count}");
             }
         }
 
@@ -84,8 +90,18 @@ namespace LuoLuoTrip.Save
             var commanderOk = context.CommanderProfile != null;
             var factionOk = context.ReputationService != null;
             var missionOk = context.MissionService != null;
+            var chainOk = context.MissionChainService != null;
 
-            Debug.Log($"[Save] Load complete | Commander:{(commanderOk ? $"Lv.{context.CommanderProfile.CommanderLevel}" : "MISSING")} | Factions:{(factionOk ? "OK" : "MISSING")} | Mission:{(missionOk ? "OK" : "MISSING")} | Version:{save.version} | Time:{save.savedAtUtc}");
+            var chainState = context.MissionChainService?.State;
+            var chainCompleted = chainState?.CompletedMissions.Count ?? 0;
+            var chainUnlocked = chainState?.UnlockedMissionIds.Count ?? 0;
+
+            Debug.Log($"[Save] Load complete | Commander:{(commanderOk ? $"Lv.{context.CommanderProfile.CommanderLevel} XP:{context.CommanderProfile.Experience}" : "MISSING")} | Factions:{(factionOk ? $"OK({context.ReputationService.StandingsCount})" : "MISSING")} | Mission:{(missionOk ? "OK" : "MISSING")} | Chain:{(chainOk ? $"completed:{chainCompleted} unlocked:{chainUnlocked}" : "MISSING")} | Version:{save.version} | Time:{save.savedAtUtc}");
+
+            if (save.missionChainState != null)
+                Debug.Log($"[Save] MissionChainState restored: {save.missionChainState.CompletedMissions.Count} entries, {save.missionChainState.UnlockedMissionIds.Count} unlocked");
+            else
+                Debug.LogWarning("[Save] missionChainState is null in save data");
 
             if (save.version < 2)
                 Debug.LogWarning($"[Save] Old save version ({save.version}), new fields use defaults");
@@ -94,7 +110,7 @@ namespace LuoLuoTrip.Save
         public void ClearSave()
         {
             SaveService.Delete(_saveFileName);
-            Debug.Log("[Save] Save file cleared (F10)");
+            Debug.Log("[Save] Save file cleared (F10). Restart scene to fully reset runtime objects.");
         }
 
         public void NewGame()

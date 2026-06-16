@@ -9,6 +9,10 @@ namespace LuoLuoTrip
         [SerializeField] private FactionStandingDebugPanel _factionPanel;
         [SerializeField] private MissionResultDebugPanel _missionPanel;
         [SerializeField] private MissionResultSummaryPanel _summaryPanel;
+        [SerializeField] private CommanderControlHintPanel _hintPanel;
+        [SerializeField] private FactionDeltaToastPanel _toastPanel;
+        [SerializeField] private MissionChainSummaryPanel _chainSummaryPanel;
+        [SerializeField] private TutorialFlowRuntime _tutorial;
 
         private MissionService _missionService;
         private MissionChainService _chainService;
@@ -24,6 +28,12 @@ namespace LuoLuoTrip
 
             if (_factionPanel != null)
                 _factionPanel.SetService(context.ReputationService);
+
+            if (_chainSummaryPanel != null)
+                _chainSummaryPanel.SetChainService(context.MissionChainService);
+
+            if (_chainSummaryPanel != null)
+                _chainSummaryPanel.SetProfile(context.CommanderProfile);
 
             _missionService = context.MissionService;
             _chainService = context.MissionChainService;
@@ -43,6 +53,7 @@ namespace LuoLuoTrip
 
         private void TestMechaVictory()
         {
+            Debug.Log("[DEBUG TRIGGER] Key 1: Test MechaVictory (not recorded to chain)");
             _profileBefore = CloneProfile();
             _missionService.StartMission("test_mecha");
             var consequence = _missionService.CompleteMissionWithOutcome(MissionOutcomeType.MechaVictory);
@@ -51,6 +62,7 @@ namespace LuoLuoTrip
 
         private void TestBeastVictory()
         {
+            Debug.Log("[DEBUG TRIGGER] Key 2: Test BeastVictory (not recorded to chain)");
             _profileBefore = CloneProfile();
             _missionService.StartMission("test_beast");
             var consequence = _missionService.CompleteMissionWithOutcome(MissionOutcomeType.BeastVictory);
@@ -59,6 +71,7 @@ namespace LuoLuoTrip
 
         private void TestBalancedResolution()
         {
+            Debug.Log("[DEBUG TRIGGER] Key 3: Test BalancedResolution (not recorded to chain)");
             _profileBefore = CloneProfile();
             _missionService.StartMission("test_balance");
             var consequence = _missionService.CompleteMissionWithOutcome(MissionOutcomeType.BalancedResolution);
@@ -97,6 +110,11 @@ namespace LuoLuoTrip
                     : null;
                 var modifier = _chainService?.BuildMissionModifiers("border_retaliation");
                 _summaryPanel.ShowSummary(missionId, consequence, _profileBefore, context.CommanderProfile, unlocked, modifier);
+            }
+
+            if (_toastPanel != null && consequence.FactionDeltas != null)
+            {
+                _toastPanel.ShowFactionDeltas(consequence.FactionDeltas);
             }
 
             Debug.Log($"[Commander] Mission complete: {consequence.Outcome}, XP: +{consequence.CommanderExperienceDelta}, Level: {context?.CommanderProfile.CommanderLevel}");
