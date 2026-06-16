@@ -29,7 +29,7 @@ namespace LuoLuoTrip.Tests.EditMode
             try
             {
                 var entity = go.AddComponent<CharacterEntity>();
-                entity.Bind(new CharacterData("t1", "Test", SubFactionId.MotorIronRiders, CharacterRole.Common));
+                entity.Bind(CharacterData.Create("t1", "Test", SubFactionId.MotorIronRiders, CharacterRole.Common));
                 var state = new TacticalCommandState();
                 state.SetCommand(CommanderCommandType.HoldPosition, entity, 1f);
                 Assert.That(state.IsActive, Is.True);

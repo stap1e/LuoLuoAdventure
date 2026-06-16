@@ -5,8 +5,13 @@
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
-    "overrideReferences": false,
-    "precompiledReferences": [],
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "UnityEngine.AIModule.dll",
+        "UnityEngine.AudioModule.dll",
+        "UnityEngine.PhysicsModule.dll",
+        "UnityEngine.CoreModule.dll"
+    ],
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [],
