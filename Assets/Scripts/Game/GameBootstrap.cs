@@ -22,6 +22,8 @@ namespace LuoLuoTrip
 
         private void Awake()
         {
+            RuntimeCameraBootstrap.EnsureMainCamera();
+
             if (Context != null)
             {
                 Debug.LogWarning("[LuoLuoTrip] GameContext already exists, skipping duplicate bootstrap.");

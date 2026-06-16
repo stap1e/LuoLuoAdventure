@@ -21,7 +21,7 @@ namespace LuoLuoTrip.Combat.Feedback
         {
             if (Instance != null && Instance != this)
             {
-                Destroy(gameObject);
+                Destroy(this);
                 return;
             }
             Instance = this;

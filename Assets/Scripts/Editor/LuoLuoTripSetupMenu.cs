@@ -127,6 +127,12 @@ namespace LuoLuoTrip.Editor
 
             ApplyAnimatorToGameObject(player);
 
+            var cameraGo = EnsureMainCamera();
+            var cameraFollow = cameraGo.AddComponent<CameraFollowController>();
+            cameraFollow.SetTarget(player.transform);
+
+            bootstrapGo.AddComponent<RuntimeCameraBootstrap>();
+
             EditorSceneManager.SaveScene(scene, CombatScenePath);
             AssetDatabase.Refresh();
             Debug.Log($"[LuoLuoTrip] 战斗原型场景已创建: {CombatScenePath}");
@@ -269,10 +275,11 @@ namespace LuoLuoTrip.Editor
 
             player.AddComponent<CommanderControlController>();
 
-            var cameraGo = new GameObject("Main Camera");
-            cameraGo.transform.position = new Vector3(0f, 8f, -10f);
+            var cameraGo = EnsureMainCamera();
             var cameraFollow = cameraGo.AddComponent<CameraFollowController>();
             cameraFollow.SetTarget(player.transform);
+
+            bootstrapGo.AddComponent<RuntimeCameraBootstrap>();
 
             var commanderHud = new GameObject("CommanderDebugHud").AddComponent<CommanderDebugHud>();
             var factionPanel = new GameObject("FactionStandingDebugPanel").AddComponent<FactionStandingDebugPanel>();
@@ -553,10 +560,6 @@ namespace LuoLuoTrip.Editor
                 so.FindProperty("_profile").objectReferenceValue = profile;
                 so.ApplyModifiedPropertiesWithoutUndo();
             }
-
-            var cam = Camera.main;
-            if (cam != null && cam.GetComponent<CameraShakeService>() == null)
-                cam.gameObject.AddComponent<CameraShakeService>();
         }
 
         private static GameObject CreateCombatCharacter(string name, Vector3 position, CharacterData data, string prefabPath, bool isPlayer)
@@ -708,6 +711,52 @@ namespace LuoLuoTrip.Editor
             var db = AssetDatabase.LoadAssetAtPath<SubFactionDatabaseSO>(DatabasePath);
             if (db != null)
                 SubFactionRegistry.Initialize(db);
+        }
+
+        public static GameObject EnsureMainCamera()
+        {
+            var cameraGo = GameObject.Find("Main Camera");
+
+            if (cameraGo == null)
+            {
+                var tagged = GameObject.FindWithTag("MainCamera");
+                if (tagged != null)
+                    cameraGo = tagged;
+            }
+
+            if (cameraGo == null)
+            {
+                cameraGo = new GameObject("Main Camera");
+                cameraGo.transform.position = new Vector3(0f, 8f, -10f);
+                cameraGo.transform.rotation = Quaternion.Euler(45f, 0f, 0f);
+            }
+
+            cameraGo.tag = "MainCamera";
+            cameraGo.SetActive(true);
+
+            var cam = cameraGo.GetComponent<Camera>();
+            if (cam == null)
+                cam = cameraGo.AddComponent<Camera>();
+
+            cam.enabled = true;
+            cam.targetDisplay = 0;
+            cam.targetTexture = null;
+            cam.fieldOfView = 60f;
+            cam.nearClipPlane = 0.3f;
+            cam.farClipPlane = 1000f;
+
+            if (cam.clearFlags == CameraClearFlags.SolidColor && cam.backgroundColor == Color.black)
+                cam.clearFlags = CameraClearFlags.Skybox;
+
+            if (cam.cullingMask == 0)
+                cam.cullingMask = -1;
+
+            var existingListener = cameraGo.GetComponent<AudioListener>();
+            var allListeners = Object.FindObjectsOfType<AudioListener>();
+            if (existingListener == null && allListeners.Length == 0)
+                cameraGo.AddComponent<AudioListener>();
+
+            return cameraGo;
         }
 
         private static void EnsureFolder(string path)

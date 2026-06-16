@@ -20,7 +20,7 @@ namespace LuoLuoTrip.Combat.Feedback
         {
             if (Instance != null && Instance != this)
             {
-                Destroy(gameObject);
+                Destroy(this);
                 return;
             }
             Instance = this;
@@ -131,15 +131,12 @@ namespace LuoLuoTrip.Combat.Feedback
 
         private void EnsureServices()
         {
-            if (HitStopService.Instance == null)
+            if (HitStopService.Instance == null && GetComponent<HitStopService>() == null)
                 gameObject.AddComponent<HitStopService>();
 
-            if (CameraShakeService.Instance == null)
-            {
-                var cam = Camera.main;
-                if (cam != null)
-                    cam.gameObject.AddComponent<CameraShakeService>();
-            }
+            var cam = Camera.main;
+            if (cam != null && cam.GetComponent<CameraShakeService>() == null)
+                cam.gameObject.AddComponent<CameraShakeService>();
         }
     }
 }

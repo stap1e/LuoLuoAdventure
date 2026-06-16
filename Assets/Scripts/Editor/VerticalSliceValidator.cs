@@ -41,6 +41,8 @@ namespace LuoLuoTrip.Editor
             CheckNavigationAgentBridge(report, ref warnings);
             CheckEncounterRuntime(report, ref warnings);
             CheckMissionAreaRuntime(report, ref warnings);
+            CheckCameraSetup(report, ref errors, ref warnings);
+            CheckRuntimeCameraBootstrap(report, ref warnings);
 
             report.Add("");
             report.Add("========================================");
@@ -641,6 +643,114 @@ namespace LuoLuoTrip.Editor
             else
             {
                 report.Add("  OK: RetreatTracker type exists");
+            }
+        }
+
+        private static void CheckCameraSetup(List<string> report, ref int errors, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- Camera Setup ---");
+
+            var camGo = GameObject.FindWithTag("MainCamera");
+            if (camGo == null)
+            {
+                report.Add("  ERROR: No MainCamera tagged object in current scene (run EnsureMainCamera or re-create scene)");
+                errors++;
+                return;
+            }
+
+            var cameraComp = camGo.GetComponent<Camera>();
+            if (cameraComp == null)
+            {
+                report.Add("  ERROR: Main Camera has no Camera component");
+                errors++;
+                return;
+            }
+
+            if (!cameraComp.enabled)
+            {
+                report.Add("  ERROR: Main Camera Camera component is disabled");
+                errors++;
+            }
+            else
+            {
+                report.Add("  OK: Main Camera is active and enabled");
+            }
+
+            if (cameraComp.targetTexture != null)
+            {
+                report.Add("  ERROR: Main Camera targetTexture is not null (will not render to display)");
+                errors++;
+            }
+            else
+            {
+                report.Add("  OK: Main Camera targetTexture is null");
+            }
+
+            if (cameraComp.cullingMask == 0)
+            {
+                report.Add("  ERROR: Main Camera cullingMask is 0 (nothing rendered)");
+                errors++;
+            }
+            else
+            {
+                report.Add("  OK: Main Camera cullingMask is non-zero");
+            }
+
+            if (cameraComp.targetDisplay != 0)
+            {
+                report.Add($"  WARNING: Main Camera targetDisplay={cameraComp.targetDisplay} (expected 0 for Display 1)");
+                warnings++;
+            }
+
+            var follow = camGo.GetComponent<CameraFollowController>();
+            if (follow != null && !cameraComp.enabled)
+            {
+                report.Add("  ERROR: CameraFollowController present but Camera is disabled — follow controller must not disable Camera");
+                errors++;
+            }
+
+            if (follow != null)
+            {
+                report.Add("  OK: CameraFollowController present (CommanderPrototype)");
+            }
+
+            var shakeType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "CameraShakeService");
+            if (shakeType != null && camGo.GetComponent(shakeType) != null)
+            {
+                report.Add("  WARNING: CameraShakeService serialized on Main Camera — will be added at runtime by CombatHitFeedbackHub. Remove from scene to avoid Awake-ordering duplicate.");
+                warnings++;
+            }
+        }
+
+        private static void CheckRuntimeCameraBootstrap(List<string> report, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- RuntimeCameraBootstrap ---");
+
+            var type = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "RuntimeCameraBootstrap");
+            if (type == null)
+            {
+                report.Add("  WARNING: RuntimeCameraBootstrap type not found (check Assets/Scripts/Camera/)");
+                warnings++;
+                return;
+            }
+
+            report.Add("  OK: RuntimeCameraBootstrap type exists");
+
+            var instances = Object.FindObjectsOfType(type);
+            if (instances.Length == 0)
+            {
+                report.Add("  WARNING: No RuntimeCameraBootstrap in current scene — Add RuntimeCameraBootstrap to GameBootstrap GO or re-create scene");
+                warnings++;
+            }
+            else
+            {
+                report.Add($"  OK: RuntimeCameraBootstrap found in scene ({instances.Length} instance(s))");
             }
         }
     }
