@@ -647,6 +647,12 @@ namespace LuoLuoTrip.Editor
             var entity = go.GetComponent<CharacterEntity>();
             if (entity == null)
                 entity = go.AddComponent<CharacterEntity>();
+
+            // Add motor BEFORE Bind() so Combatant.Awake (triggered by EnsureCombatant)
+            // can grab it via GetComponent. Order matters: motor → bind → combatant/controller.
+            if (go.GetComponent<CharacterMovementMotor>() == null)
+                go.AddComponent<CharacterMovementMotor>();
+
             entity.Bind(data);
 
             if (go.GetComponent<Combatant>() == null)
@@ -672,6 +678,15 @@ namespace LuoLuoTrip.Editor
                 var navAgent = go.GetComponent<UnityEngine.AI.NavMeshAgent>();
                 if (navAgent == null)
                     go.AddComponent<UnityEngine.AI.NavMeshAgent>();
+
+                // Match player Rigidbody config so AI fallback movement is not blocked by physics.
+                if (go.GetComponent<Rigidbody>() == null)
+                {
+                    var rb = go.AddComponent<Rigidbody>();
+                    rb.isKinematic = true;
+                    rb.useGravity = false;
+                    rb.constraints = RigidbodyConstraints.FreezeRotation;
+                }
             }
 
             if (isPlayer)
@@ -737,6 +752,9 @@ namespace LuoLuoTrip.Editor
             if (animator == null)
                 animator = go.AddComponent<Animator>();
             animator.runtimeAnimatorController = result.Controller;
+            // CRITICAL: never let Animator drive root transform. Gameplay movement
+            // (CombatController/SimpleCombatAI/CharacterMovementMotor) owns the root.
+            animator.applyRootMotion = false;
 
             var bridge = go.GetComponent<AnimatorCombatBridge>();
             if (bridge == null)

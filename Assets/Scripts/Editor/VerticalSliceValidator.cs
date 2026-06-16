@@ -47,6 +47,7 @@ namespace LuoLuoTrip.Editor
             CheckNavMeshSetup(report, ref warnings);
             CheckEncounterWaveConfig(report, ref warnings);
             CheckInputOwnership(report, ref warnings);
+            CheckRootMovement(report, ref warnings);
 
             report.Add("");
             report.Add("========================================");
@@ -996,6 +997,159 @@ namespace LuoLuoTrip.Editor
                     }
                 }
             }
+        }
+
+        private static void CheckRootMovement(List<string> report, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- Root Movement ---");
+
+            var motorType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "CharacterMovementMotor");
+            if (motorType == null)
+            {
+                report.Add("  WARNING: CharacterMovementMotor type not found (expected at Assets/Scripts/Character/)");
+                warnings++;
+                return;
+            }
+            report.Add("  OK: CharacterMovementMotor type exists");
+
+            var combatCtrlType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "CombatController");
+            var aiType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "SimpleCombatAI");
+            var navBridgeType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "NavigationAgentBridge");
+
+            int playersWithMotor = 0;
+            int playersMissingMotor = 0;
+            int aiWithMotor = 0;
+            int aiMissingMotor = 0;
+            int rootMotionViolations = 0;
+            int frozenXZ = 0;
+            int gravityOn = 0;
+            int controllerOnVisual = 0;
+            int aiOnVisual = 0;
+
+            if (combatCtrlType != null)
+            {
+                var allCtrls = Object.FindObjectsOfType(combatCtrlType);
+                foreach (var ctrl in allCtrls)
+                {
+                    var mono = ctrl as MonoBehaviour;
+                    if (mono == null) continue;
+
+                    if (mono.transform.parent != null && mono.gameObject.name == "Visual")
+                    {
+                        report.Add($"  WARNING: CombatController on Visual child '{mono.transform.parent.name}/Visual' — must be on PrefabRoot");
+                        controllerOnVisual++;
+                        warnings++;
+                    }
+
+                    if (mono.GetComponent(motorType) != null) playersWithMotor++;
+                    else
+                    {
+                        playersMissingMotor++;
+                        report.Add($"  WARNING: '{mono.gameObject.name}' has CombatController but no CharacterMovementMotor");
+                        warnings++;
+                    }
+
+                    var animator = mono.GetComponent<Animator>();
+                    if (animator != null && animator.applyRootMotion)
+                    {
+                        report.Add($"  WARNING: '{mono.gameObject.name}' Animator.applyRootMotion=true — will fight gameplay root movement");
+                        rootMotionViolations++;
+                        warnings++;
+                    }
+
+                    var rb = mono.GetComponent<Rigidbody>();
+                    if (rb != null)
+                    {
+                        if ((rb.constraints & RigidbodyConstraints.FreezePositionX) != 0 ||
+                            (rb.constraints & RigidbodyConstraints.FreezePositionZ) != 0)
+                        {
+                            report.Add($"  WARNING: '{mono.gameObject.name}' Rigidbody freezes X/Z position — root cannot move");
+                            frozenXZ++;
+                            warnings++;
+                        }
+                        if (rb.useGravity && !rb.isKinematic)
+                        {
+                            report.Add($"  WARNING: '{mono.gameObject.name}' Rigidbody non-kinematic with gravity — may sink/fall");
+                            gravityOn++;
+                            warnings++;
+                        }
+                    }
+                }
+            }
+
+            if (aiType != null)
+            {
+                var allAI = Object.FindObjectsOfType(aiType);
+                foreach (var a in allAI)
+                {
+                    var mono = a as MonoBehaviour;
+                    if (mono == null) continue;
+
+                    if (mono.gameObject.name == "Visual" && mono.transform.parent != null)
+                    {
+                        report.Add($"  WARNING: SimpleCombatAI on Visual child '{mono.transform.parent.name}/Visual' — must be on PrefabRoot");
+                        aiOnVisual++;
+                        warnings++;
+                    }
+
+                    if (mono.GetComponent(motorType) != null) aiWithMotor++;
+                    else
+                    {
+                        aiMissingMotor++;
+                        report.Add($"  WARNING: AI '{mono.gameObject.name}' missing CharacterMovementMotor");
+                        warnings++;
+                    }
+
+                    if (navBridgeType != null && mono.GetComponent(navBridgeType) == null)
+                    {
+                        report.Add($"  WARNING: AI '{mono.gameObject.name}' missing NavigationAgentBridge");
+                        warnings++;
+                    }
+
+                    var animator = mono.GetComponent<Animator>();
+                    if (animator != null && animator.applyRootMotion)
+                    {
+                        report.Add($"  WARNING: AI '{mono.gameObject.name}' Animator.applyRootMotion=true");
+                        rootMotionViolations++;
+                        warnings++;
+                    }
+                }
+            }
+
+            // Visual child localPosition sanity
+            int visualOffsetIssues = 0;
+            if (combatCtrlType != null)
+            {
+                foreach (var ctrl in Object.FindObjectsOfType(combatCtrlType))
+                {
+                    var mono = ctrl as MonoBehaviour;
+                    if (mono == null) continue;
+                    var visual = mono.transform.Find("Visual");
+                    if (visual != null && visual.localPosition.y < -0.5f)
+                    {
+                        report.Add($"  WARNING: '{mono.gameObject.name}/Visual' localPosition.y={visual.localPosition.y:F2} (sunken)");
+                        visualOffsetIssues++;
+                        warnings++;
+                    }
+                }
+            }
+
+            report.Add($"  Players with motor: {playersWithMotor}, missing: {playersMissingMotor}");
+            report.Add($"  AI with motor: {aiWithMotor}, missing: {aiMissingMotor}");
+            if (rootMotionViolations == 0) report.Add("  OK: No applyRootMotion=true violations");
+            if (frozenXZ == 0) report.Add("  OK: No Rigidbody freezing X/Z");
+            if (gravityOn == 0) report.Add("  OK: No prototype Rigidbody with gravity+non-kinematic");
+            if (controllerOnVisual == 0 && aiOnVisual == 0) report.Add("  OK: All controllers on PrefabRoot, not Visual");
+            if (visualOffsetIssues == 0) report.Add("  OK: No Visual children sunken below -0.5y");
         }
     }
 }

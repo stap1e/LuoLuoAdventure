@@ -1,3 +1,4 @@
+using LuoLuoTrip;
 using UnityEngine;
 #if UNITY_2022_3_OR_NEWER
 using UnityEngine.AI;
@@ -24,6 +25,7 @@ namespace LuoLuoTrip.AI
         private bool _fallbackWarned;
         private bool _useNavMesh;
         private bool _navMeshAvailable;
+        private CharacterMovementMotor _motor;
 
         public NavigationState State => _state;
         public bool IsNavigating => _state == NavigationState.Moving;
@@ -39,6 +41,7 @@ namespace LuoLuoTrip.AI
             _useNavMesh = _navAgent != null;
             if (_useNavMesh)
                 _navMeshAvailable = true;
+            _motor = GetComponent<CharacterMovementMotor>();
         }
 
         public void SetDestination(NavigationMoveRequest request)
@@ -136,7 +139,12 @@ namespace LuoLuoTrip.AI
             }
 
             var speed = _currentRequest.Speed > 0f ? _currentRequest.Speed : _fallbackSpeed;
-            transform.position += diff.normalized * (speed * deltaTime);
+            if (_motor == null)
+                _motor = GetComponent<CharacterMovementMotor>();
+            if (_motor != null)
+                _motor.MoveDirection(diff.normalized, speed, deltaTime);
+            else
+                transform.position += diff.normalized * (speed * deltaTime);
 
             if (diff.sqrMagnitude > 0.01f)
                 transform.rotation = Quaternion.LookRotation(diff.normalized);

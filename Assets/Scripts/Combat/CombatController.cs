@@ -15,6 +15,7 @@ namespace LuoLuoTrip.Combat
 
         private Combatant _self;
         private CharacterEntity _entity;
+        private CharacterMovementMotor _motor;
         private Combatant _lockTarget;
         private Camera _camera;
         private bool _inputEnabled = true;
@@ -35,6 +36,9 @@ namespace LuoLuoTrip.Combat
         {
             _self = GetComponent<Combatant>();
             _entity = GetComponent<CharacterEntity>();
+            _motor = GetComponent<CharacterMovementMotor>();
+            if (_motor == null)
+                _motor = gameObject.AddComponent<CharacterMovementMotor>();
             _camera = Camera.main;
             _lastPosition = transform.position;
         }
@@ -92,7 +96,12 @@ namespace LuoLuoTrip.Combat
             camRight.Normalize();
 
             var move = (camForward * dir.z + camRight * dir.x).normalized;
-            transform.position += move * (speed * Time.deltaTime);
+            if (_motor == null)
+                _motor = GetComponent<CharacterMovementMotor>();
+            if (_motor != null)
+                _motor.MoveDirection(move, speed, Time.deltaTime);
+            else
+                transform.position += move * (speed * Time.deltaTime);
             transform.rotation = Quaternion.LookRotation(move);
         }
 

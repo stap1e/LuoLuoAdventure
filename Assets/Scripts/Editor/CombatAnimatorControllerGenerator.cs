@@ -194,27 +194,33 @@ namespace LuoLuoTrip.Editor
 
             var clip = new AnimationClip { name = clipName };
 
+            // IMPORTANT: bind animation curves to the "Visual" child only.
+            // Never bind localPosition/localEulerAngles to the Animator's GameObject (root)
+            // because that would overwrite gameplay root movement (CombatController/AI/dodge)
+            // and cause WASD to not move and attacks to "sink" the root.
+            const string visualPath = "Visual";
+
             if (bobAmount > 0f)
             {
-                clip.SetCurve("", typeof(Transform), "localPosition.y",
+                clip.SetCurve(visualPath, typeof(Transform), "localPosition.y",
                     AnimationCurve.Linear(0f, 0f, duration, bobAmount));
             }
 
             if (tiltX != 0f)
             {
-                clip.SetCurve("", typeof(Transform), "localEulerAngles.x",
+                clip.SetCurve(visualPath, typeof(Transform), "localEulerAngles.x",
                     AnimationCurve.EaseInOut(0f, 0f, duration, tiltX));
             }
 
             if (tiltZ != 0f)
             {
-                clip.SetCurve("", typeof(Transform), "localEulerAngles.z",
+                clip.SetCurve(visualPath, typeof(Transform), "localEulerAngles.z",
                     AnimationCurve.EaseInOut(0f, 0f, duration * 0.5f, tiltZ));
             }
 
             if (kickback != 0f)
             {
-                clip.SetCurve("", typeof(Transform), "localPosition.z",
+                clip.SetCurve(visualPath, typeof(Transform), "localPosition.z",
                     AnimationCurve.EaseInOut(0f, 0f, duration * 0.4f, kickback));
             }
 
@@ -266,6 +272,7 @@ namespace LuoLuoTrip.Editor
                 animator = go.AddComponent<Animator>();
 
             animator.runtimeAnimatorController = result.Controller;
+            animator.applyRootMotion = false;
 
             var bridge = go.GetComponent<AnimatorCombatBridge>();
             if (bridge == null)

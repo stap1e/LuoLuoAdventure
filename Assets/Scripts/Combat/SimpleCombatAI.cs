@@ -44,6 +44,7 @@ namespace LuoLuoTrip.Combat
 
         private Combatant _self;
         private CharacterEntity _entity;
+        private CharacterMovementMotor _motor;
         private Combatant _target;
         private Vector3 _spawnPoint;
         private float _attackTimer;
@@ -71,6 +72,9 @@ namespace LuoLuoTrip.Combat
         {
             _self = GetComponent<Combatant>();
             _entity = GetComponent<CharacterEntity>();
+            _motor = GetComponent<CharacterMovementMotor>();
+            if (_motor == null)
+                _motor = gameObject.AddComponent<CharacterMovementMotor>();
             _spawnPoint = transform.position;
             _attackIntervalOffset = UnityEngine.Random.Range(-_attackIntervalVariance, _attackIntervalVariance);
             CombatantQuery = CombatantQuery ?? (() => FindObjectsOfType<Combatant>());
@@ -271,7 +275,12 @@ namespace LuoLuoTrip.Combat
 
         private void MoveTowards(Vector3 direction, float speed)
         {
-            transform.position += direction * (speed * Time.deltaTime);
+            if (_motor == null)
+                _motor = GetComponent<CharacterMovementMotor>();
+            if (_motor != null)
+                _motor.MoveDirection(direction, speed, Time.deltaTime);
+            else
+                transform.position += direction * (speed * Time.deltaTime);
         }
 
         private void TryAttack()

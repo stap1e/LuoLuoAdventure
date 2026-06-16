@@ -29,6 +29,7 @@ namespace LuoLuoTrip.Combat
         [SerializeField] private float _dodgeInvulnerableDuration = 0.3f;
 
         private CharacterEntity _entity;
+        private CharacterMovementMotor _motor;
         private float _currentHealth;
         private float _currentStamina;
         private float _currentPoise;
@@ -73,6 +74,7 @@ namespace LuoLuoTrip.Combat
         private void Awake()
         {
             _entity = GetComponent<CharacterEntity>();
+            _motor = GetComponent<CharacterMovementMotor>();
             _hitCollider = GetComponentInChildren<Collider>();
             InitializeFromCharacter();
         }
@@ -257,7 +259,19 @@ namespace LuoLuoTrip.Combat
             _stateTimer -= deltaTime;
 
             if (_state == CombatState.Dodging)
-                transform.position += _dodgeDirection * (_dodgeDistance / _dodgeDuration * deltaTime);
+            {
+                var dodgeSpeed = _dodgeDistance / Mathf.Max(_dodgeDuration, 0.0001f);
+                if (_motor == null)
+                    _motor = GetComponent<CharacterMovementMotor>();
+                if (_motor != null)
+                    _motor.Dodge(_dodgeDirection, dodgeSpeed, deltaTime);
+                else
+                {
+                    var delta = _dodgeDirection * (dodgeSpeed * deltaTime);
+                    delta.y = 0f;
+                    transform.position += delta;
+                }
+            }
 
             if (_stateTimer <= 0f && _state != CombatState.Dead)
             {

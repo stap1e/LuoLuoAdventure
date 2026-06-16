@@ -24,7 +24,17 @@ namespace LuoLuoTrip.Combat.Animation
 
         private void Awake()
         {
-            _visualRoot = _visualRoot ?? transform;
+            // CRITICAL: never animate root transform. Visual offset / lunge / kickback
+            // must only apply to a Visual child so gameplay root movement is preserved.
+            if (_visualRoot == null)
+            {
+                var visualChild = transform.Find("Visual");
+                _visualRoot = visualChild != null ? visualChild : transform;
+            }
+
+            if (_visualRoot == transform)
+                Debug.LogWarning($"[ProceduralCombatAnimator] '{name}' has no 'Visual' child; falling back to root transform. Attack/dodge visuals may collide with gameplay movement.");
+
             _baseLocalPos = _visualRoot.localPosition;
             _baseScale = _visualRoot.localScale;
             _baseLocalRot = _visualRoot.localRotation;
@@ -187,9 +197,20 @@ namespace LuoLuoTrip.Combat.Animation
 
         private void ResetVisual()
         {
+            if (_visualRoot == null) return;
             _visualRoot.localPosition = _baseLocalPos;
             _visualRoot.localScale = _baseScale;
             _visualRoot.localRotation = _baseLocalRot;
+        }
+
+        private void OnDisable()
+        {
+            if (_activeRoutine != null)
+            {
+                StopCoroutine(_activeRoutine);
+                _activeRoutine = null;
+            }
+            ResetVisual();
         }
 
         private void RunRoutine(IEnumerator routine)
