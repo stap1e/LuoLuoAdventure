@@ -14,6 +14,7 @@ namespace LuoLuoTrip
         public string MissionId => _missionId;
         public bool MissionStarted => _missionStarted;
         public bool MissionCompleted => _missionCompleted;
+        public float ZoneRadius => _zoneRadius;
 
         private void Update()
         {

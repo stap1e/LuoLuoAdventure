@@ -1,4 +1,5 @@
 using System;
+using LuoLuoTrip.AI;
 using UnityEngine;
 
 namespace LuoLuoTrip.UI
@@ -87,6 +88,17 @@ namespace LuoLuoTrip.UI
                     GUI.Label(new Rect(x, y, width, 18), $"Command: {_runtimeState.TacticalCommand.StatusText}");
                     GUI.color = Color.white;
                     y += 18;
+
+                    if (_runtimeState.CommandTarget != null)
+                    {
+                        var cmdAI = _runtimeState.CommandTarget.GetComponent<Combat.SimpleCombatAI>();
+                        if (cmdAI != null && cmdAI.NavController != null)
+                        {
+                            var nav = cmdAI.NavController;
+                            GUI.Label(new Rect(x, y, width, 18), $"  Nav: {nav.NavState} | Dist: {nav.DistanceToDestination:F1} | NavMesh: {nav.Bridge.UseNavMesh}");
+                            y += 18;
+                        }
+                    }
                 }
 
                 if (_runtimeState.IsSyncAssistActive)

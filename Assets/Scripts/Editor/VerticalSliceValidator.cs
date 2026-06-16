@@ -38,6 +38,9 @@ namespace LuoLuoTrip.Editor
             CheckAudioFeedbackProfile(report, ref warnings);
             CheckWorldMarkerProfile(report, ref warnings);
             CheckEnhancedPlaceholderHierarchy(report, ref warnings);
+            CheckNavigationAgentBridge(report, ref warnings);
+            CheckEncounterRuntime(report, ref warnings);
+            CheckMissionAreaRuntime(report, ref warnings);
 
             report.Add("");
             report.Add("========================================");
@@ -534,6 +537,7 @@ namespace LuoLuoTrip.Editor
             if (closeBracket < 0) return result;
             var arrayContent = json.Substring(openBracket + 1, closeBracket - openBracket - 1);
             var entries = arrayContent.Split(',');
+
             foreach (var entry in entries)
             {
                 var trimmed = entry.Trim().Trim('"').Trim();
@@ -541,6 +545,103 @@ namespace LuoLuoTrip.Editor
                     result.Add(trimmed);
             }
             return result;
+        }
+
+        private static void CheckNavigationAgentBridge(List<string> report, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- NavigationAgentBridge ---");
+            var type = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "NavigationAgentBridge");
+            if (type == null)
+            {
+                report.Add("  WARNING: NavigationAgentBridge type not found (check Assets/Scripts/AI/)");
+                warnings++;
+            }
+            else
+            {
+                report.Add("  OK: NavigationAgentBridge type exists");
+            }
+        }
+
+        private static void CheckEncounterRuntime(List<string> report, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- EncounterRuntime ---");
+            var type = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "EncounterRuntime");
+            if (type == null)
+            {
+                report.Add("  WARNING: EncounterRuntime type not found (check Assets/Scripts/Encounter/)");
+                warnings++;
+            }
+            else
+            {
+                report.Add("  OK: EncounterRuntime type exists");
+            }
+
+            var convoyType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "ConvoyEnergyConflictRuntime");
+            if (convoyType != null)
+            {
+                var hasEncounter = convoyType.GetProperty("Encounter") != null;
+                if (hasEncounter)
+                    report.Add("  OK: ConvoyEnergyConflictRuntime has Encounter property");
+                else
+                {
+                    report.Add("  WARNING: ConvoyEnergyConflictRuntime missing Encounter property");
+                    warnings++;
+                }
+            }
+
+            var borderType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "BorderRetaliationRuntime");
+            if (borderType != null)
+            {
+                var hasEncounter = borderType.GetProperty("Encounter") != null;
+                if (hasEncounter)
+                    report.Add("  OK: BorderRetaliationRuntime has Encounter property");
+                else
+                {
+                    report.Add("  WARNING: BorderRetaliationRuntime missing Encounter property");
+                    warnings++;
+                }
+            }
+        }
+
+        private static void CheckMissionAreaRuntime(List<string> report, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- MissionAreaRuntime ---");
+            var type = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "MissionAreaRuntime");
+            if (type == null)
+            {
+                report.Add("  WARNING: MissionAreaRuntime type not found (check Assets/Scripts/Mission/Runtime/)");
+                warnings++;
+            }
+            else
+            {
+                report.Add("  OK: MissionAreaRuntime type exists");
+            }
+
+            var retreatType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "RetreatTracker");
+            if (retreatType == null)
+            {
+                report.Add("  WARNING: RetreatTracker type not found");
+                warnings++;
+            }
+            else
+            {
+                report.Add("  OK: RetreatTracker type exists");
+            }
         }
     }
 }

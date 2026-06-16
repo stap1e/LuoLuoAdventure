@@ -1,3 +1,4 @@
+using LuoLuoTrip.AI;
 using LuoLuoTrip.Audio;
 using LuoLuoTrip.Combat;
 using LuoLuoTrip.Feedback;
@@ -170,6 +171,8 @@ namespace LuoLuoTrip
                     prevAI.HoldPosition = null;
                     prevAI.ForcedAttackTarget = null;
                     prevAI.enabled = true;
+                    if (prevAI.NavController != null)
+                        prevAI.NavController.ClearNavigation();
                 }
             }
 
@@ -179,7 +182,12 @@ namespace LuoLuoTrip
             targetCombat.enabled = true;
 
             var targetAI = target.GetComponent<SimpleCombatAI>();
-            if (targetAI != null) targetAI.enabled = false;
+            if (targetAI != null)
+            {
+                targetAI.enabled = false;
+                if (targetAI.NavController != null)
+                    targetAI.NavController.ClearNavigation();
+            }
 
             if (_playerCombatController != null)
                 _playerCombatController.enabled = false;
@@ -220,6 +228,8 @@ namespace LuoLuoTrip
                     prevAI.HoldPosition = null;
                     prevAI.ForcedAttackTarget = null;
                     prevAI.enabled = true;
+                    if (prevAI.NavController != null)
+                        prevAI.NavController.ClearNavigation();
                 }
             }
 
@@ -231,6 +241,8 @@ namespace LuoLuoTrip
                     cmdAI.FollowTarget = null;
                     cmdAI.HoldPosition = null;
                     cmdAI.ForcedAttackTarget = null;
+                    if (cmdAI.NavController != null)
+                        cmdAI.NavController.ClearNavigation();
                 }
             }
 

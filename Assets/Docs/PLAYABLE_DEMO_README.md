@@ -174,20 +174,55 @@ Hierarchy is preserved as `PrefabRoot / Visual / Collision / Marker` — only th
 - [ ] Mission 1 starts when entering trigger zone
 - [ ] Mission 1 completes and unlocks Mission 2
 - [ ] Mission 2 branch matches Mission 1 outcome
+- [ ] AI units navigate using NavigationAgentBridge (fallback without NavMesh)
+- [ ] TacticalCommand FollowPlayer uses navigation to follow
+- [ ] TacticalCommand HoldPosition stops navigation
+- [ ] TacticalCommand AttackCurrentTarget navigates to target
+- [ ] R release clears navigation and command state
+- [ ] Retreat countdown appears when player leaves mission area
+- [ ] Returning to mission area resets retreat countdown
+- [ ] EncounterRuntime tracks units and casualties correctly
 - [ ] F5 saves, F9 loads, F10 clears
 - [ ] 1/2/3 debug triggers work and don't affect mission chain
 - [ ] No Missing Script warnings
 - [ ] All debug UI panels visible and non-overlapping
 
+## Navigation
+
+AI units use `NavigationAgentBridge` for movement:
+
+- If `NavMeshAgent` is present and NavMesh is baked → uses NavMesh pathfinding
+- Otherwise → falls back to transform-based direct movement (one-time warning)
+- `AICombatNavigationController` provides higher-level: ChaseTarget, FollowTarget, MoveToPosition
+- CommanderDebugHud shows navigation state (Moving/Idle/Stopped) and distance
+
+## Encounter System
+
+`EncounterRuntime` tracks mission units:
+
+- Registers units by faction automatically when mission starts
+- Provides `AreAllRaidUnitsDefeated`, `CountCasualties`, `GetAliveUnits` queries
+- Both ConvoyEnergyConflict and BorderRetaliation use EncounterRuntime
+- Falls back to legacy `CharacterRuntimeRegistry` + `FindObjectsOfType` if unavailable
+
+## Mission Areas & Retreat
+
+- `MissionAreaRuntime` manages player inside/outside mission boundary
+- `RetreatTracker` counts time outside; triggers mission failure after threshold
+- `MissionObjectiveHud` shows INSIDE/OUTSIDE status and retreat countdown
+- Mission boundaries auto-configure from MissionTriggerZone
+
 ## Known Limitations
 
 - All UI uses OnGUI (debug quality, not production)
 - Placeholder art (multi-primitive cube/cylinder/sphere prefabs)
-- No NavMesh / pathfinding
+- No baked NavMesh in demo scenes — AI uses transform fallback movement
+- NavigationAgentBridge with NavMeshAgent works if NavMesh is baked; demo scenes do not bake it
 - No cinematic camera
 - No formal dialogue system
 - AudioFeedbackProfile entries ship with no clips by default — system runs silent until clips are added
 - Tests must be run from Unity Editor Test Runner (no CLI test runner)
 - SimpleCombatAI uses FindObjectsOfType as fallback (registry preferred)
+- EncounterRuntime does not dynamically spawn units
 - No network / multiplayer
 - No localization

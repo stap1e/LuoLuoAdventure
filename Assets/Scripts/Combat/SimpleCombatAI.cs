@@ -1,4 +1,5 @@
 using System;
+using LuoLuoTrip.AI;
 using LuoLuoTrip.Audio;
 using LuoLuoTrip.Feedback;
 using UnityEngine;
@@ -50,6 +51,7 @@ namespace LuoLuoTrip.Combat
         private float _targetRefreshTimer;
         private float _attackIntervalOffset;
         private bool _isWindingUp;
+        private AICombatNavigationController _navController;
 
         public Func<Combatant[]> CombatantQuery { get; set; }
         public Combatant CurrentTarget => _target;
@@ -57,6 +59,7 @@ namespace LuoLuoTrip.Combat
         public Vector3? HoldPosition { get; set; }
         public Combatant ForcedAttackTarget { get; set; }
         public bool IsWindingUp => _isWindingUp;
+        public AICombatNavigationController NavController => _navController;
 
         public void ApplyTuning(CombatTuningConfigSO config)
         {
@@ -71,6 +74,10 @@ namespace LuoLuoTrip.Combat
             _spawnPoint = transform.position;
             _attackIntervalOffset = UnityEngine.Random.Range(-_attackIntervalVariance, _attackIntervalVariance);
             CombatantQuery = CombatantQuery ?? (() => FindObjectsOfType<Combatant>());
+
+            _navController = GetComponent<AICombatNavigationController>();
+            if (_navController == null)
+                _navController = gameObject.AddComponent<AICombatNavigationController>();
         }
 
         private void Start()
@@ -86,6 +93,8 @@ namespace LuoLuoTrip.Combat
         private void Update()
         {
             if (!_self.IsAlive) return;
+
+            _navController.Tick(Time.deltaTime);
 
             if (FollowTarget != null)
             {
@@ -123,6 +132,7 @@ namespace LuoLuoTrip.Combat
             if (distance > _detectRange * _disengageDistanceMultiplier)
             {
                 _target = null;
+                _navController.ClearNavigation();
                 return;
             }
 
@@ -138,7 +148,13 @@ namespace LuoLuoTrip.Combat
             var dist = direction.magnitude;
 
             if (dist > 2.5f)
-                MoveTowards(direction.normalized, _chaseSpeed * 0.8f);
+            {
+                _navController.FollowTarget(FollowTarget);
+            }
+            else
+            {
+                _navController.StopNavigation();
+            }
         }
 
         private void ExecuteHoldPosition()
@@ -148,7 +164,9 @@ namespace LuoLuoTrip.Combat
             var offset = HoldPosition.Value - transform.position;
             offset.y = 0f;
             if (offset.magnitude > 1f)
-                MoveTowards(offset.normalized, _chaseSpeed * 0.5f);
+                _navController.MoveToPosition(HoldPosition.Value);
+            else
+                _navController.StopNavigation();
         }
 
         private void TickTimers()
@@ -173,7 +191,7 @@ namespace LuoLuoTrip.Combat
             var offset = _spawnPoint - transform.position;
             offset.y = 0f;
             if (offset.magnitude > _patrolRadius)
-                MoveTowards(offset.normalized, _chaseSpeed * 0.5f);
+                _navController.MoveToPosition(_spawnPoint);
         }
 
         private CombatIntent ChooseIntent(float distance)
@@ -199,9 +217,10 @@ namespace LuoLuoTrip.Combat
             {
                 case CombatIntent.Chase:
                     FaceTarget();
-                    MoveTowardsTarget();
+                    _navController.ChaseTarget(_target.transform);
                     break;
                 case CombatIntent.Attack:
+                    _navController.StopNavigation();
                     FaceTarget();
                     TryAttack();
                     break;
@@ -356,6 +375,8 @@ namespace LuoLuoTrip.Combat
         private void OnDisable()
         {
             UpdateWindupMarker(false);
+            if (_navController != null)
+                _navController.ClearNavigation();
         }
 
         private void OnGUI()

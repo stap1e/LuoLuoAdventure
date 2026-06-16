@@ -11,6 +11,7 @@ namespace LuoLuoTrip
         private MissionPhase _phase;
         private bool _visible;
         private bool _showFinal;
+        private MissionAreaRuntime _areaRuntime;
 
         public void UpdateDisplay(MissionRuntimeState state, ConvoyObjective convoy, EnergyNodeObjective energyNode, MissionPhase phase)
         {
@@ -20,6 +21,11 @@ namespace LuoLuoTrip
             _phase = phase;
             _visible = state != null;
             _showFinal = false;
+        }
+
+        public void SetAreaRuntime(MissionAreaRuntime area)
+        {
+            _areaRuntime = area;
         }
 
         public void ShowFinalResult(MissionRuntimeState state, MissionPhase phase)
@@ -49,7 +55,7 @@ namespace LuoLuoTrip
                 : _phase == MissionPhase.Resolving ? Color.yellow
                 : Color.white;
 
-            GUI.Box(new Rect(x - 4, y - 4, width + 8, _showFinal ? 100 : 160), "");
+            GUI.Box(new Rect(x - 4, y - 4, width + 8, _showFinal ? 100 : 200), "");
 
             GUI.color = phaseColor;
             GUI.Label(new Rect(x, y, width, 20), $"=== Mission: {_state.MissionId} [{_phase}] ===");
@@ -62,6 +68,28 @@ namespace LuoLuoTrip
                 y += 20;
                 GUI.Label(new Rect(x, y, width, 20), $"Casualties: Mecha {_state.MechaCasualties} / Beast {_state.BeastCasualties}");
                 return;
+            }
+
+            if (_areaRuntime != null && _areaRuntime.IsActive)
+            {
+                var areaColor = _areaRuntime.IsPlayerInside ? Color.green : Color.red;
+                GUI.color = areaColor;
+                var areaStatus = _areaRuntime.IsPlayerInside ? "INSIDE" : "OUTSIDE";
+                GUI.Label(new Rect(x, y, width, 18), $"Area: {areaStatus}");
+                GUI.color = Color.white;
+                y += 18;
+
+                if (!_areaRuntime.IsPlayerInside && _areaRuntime.Retreat != null)
+                {
+                    var retreatProgress = _areaRuntime.Retreat.Progress;
+                    if (retreatProgress > 0f)
+                    {
+                        GUI.color = Color.red;
+                        GUI.Label(new Rect(x, y, width, 18), $"Retreat in: {_areaRuntime.Retreat.RetreatTime - _areaRuntime.Retreat.CurrentTimer:F1}s");
+                        GUI.color = Color.white;
+                        y += 18;
+                    }
+                }
             }
 
             foreach (var obj in _state.Objectives)

@@ -293,12 +293,18 @@ namespace LuoLuoTrip.Editor
 
             var conflictGo = new GameObject("ConvoyEnergyConflict");
             var conflict = conflictGo.AddComponent<ConvoyEnergyConflictRuntime>();
+            conflictGo.AddComponent<EncounterRuntime>();
+            conflictGo.AddComponent<MissionAreaRuntime>();
             var conflictSo = new SerializedObject(conflict);
             conflictSo.FindProperty("_convoy").objectReferenceValue = convoyComponent;
             conflictSo.FindProperty("_energyNode").objectReferenceValue = energyComponent;
             conflictSo.FindProperty("_triggerZone").objectReferenceValue = triggerZone;
             conflictSo.FindProperty("_objectiveHud").objectReferenceValue = objectiveHud;
             conflictSo.ApplyModifiedPropertiesWithoutUndo();
+
+            var convoySpawn = new GameObject("SpawnPoint_Beast");
+            convoySpawn.transform.position = new Vector3(5f, 0f, 3f);
+            var spawnComp = convoySpawn.AddComponent<EncounterSpawnPoint>();
 
             var runtimeGo = new GameObject("CommanderPrototypeRuntime");
             var runtime = runtimeGo.AddComponent<CommanderPrototypeRuntime>();
@@ -332,6 +338,8 @@ namespace LuoLuoTrip.Editor
 
             var borderConflictGo = new GameObject("BorderRetaliation");
             var borderConflict = borderConflictGo.AddComponent<BorderRetaliationRuntime>();
+            borderConflictGo.AddComponent<EncounterRuntime>();
+            borderConflictGo.AddComponent<MissionAreaRuntime>();
             var borderConflictSo = new SerializedObject(borderConflict);
             borderConflictSo.FindProperty("_triggerZone").objectReferenceValue = borderTrigger;
             borderConflictSo.FindProperty("_objectiveHud").objectReferenceValue = objectiveHud;
@@ -372,6 +380,7 @@ namespace LuoLuoTrip.Editor
             Debug.Log("Areas: Tutorial (0,0,0) | Convoy Mission (0,0,5) | Border Retaliation (25,0,0) | Advanced Units (22,0,-2)");
             Debug.Log("Mission 1: ConvoyEnergyConflict at (0,0,2) | Mission 2: BorderRetaliation at (25,0,0)");
             Debug.Log("Services: AudioFeedbackService + WorldMarkerService spawned (profiles in Resources/)");
+            Debug.Log("Encounter: EncounterRuntime + MissionAreaRuntime on each mission | NavMeshAgent on AI units (fallback if no NavMesh baked)");
             Debug.Log("Manual validation: Play scene → complete tutorial → trigger mission 1 → complete → walk to mission 2 → verify branch → F5/F9 cycle → F10 clear");
         }
 
@@ -602,6 +611,9 @@ namespace LuoLuoTrip.Editor
             {
                 if (go.GetComponent<SimpleCombatAI>() == null)
                     go.AddComponent<SimpleCombatAI>();
+                var navAgent = go.GetComponent<UnityEngine.AI.NavMeshAgent>();
+                if (navAgent == null)
+                    go.AddComponent<UnityEngine.AI.NavMeshAgent>();
             }
 
             if (isPlayer)
