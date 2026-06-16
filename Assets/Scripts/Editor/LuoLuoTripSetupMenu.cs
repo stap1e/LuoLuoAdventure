@@ -1,8 +1,10 @@
 #if UNITY_EDITOR
 using System.Collections.Generic;
+using LuoLuoTrip.Audio;
 using LuoLuoTrip.Combat;
 using LuoLuoTrip.Combat.Animation;
 using LuoLuoTrip.Combat.Feedback;
+using LuoLuoTrip.Feedback;
 using LuoLuoTrip.Save;
 using LuoLuoTrip.UI;
 using UnityEditor;
@@ -211,6 +213,8 @@ namespace LuoLuoTrip.Editor
             CreateMissionPrototypeData();
             CreateHitFeedbackProfile();
             CreateCombatTuningConfig();
+            CreateAudioFeedbackProfile();
+            CreateWorldMarkerProfile();
             PlaceholderAssetGenerator.GenerateAll();
 
             EnsureFolder("Assets/Scenes");
@@ -278,6 +282,14 @@ namespace LuoLuoTrip.Editor
             var hintPanel = new GameObject("CommanderControlHintPanel").AddComponent<CommanderControlHintPanel>();
             var toastPanel = new GameObject("FactionDeltaToastPanel").AddComponent<FactionDeltaToastPanel>();
             var chainSummaryPanel = new GameObject("MissionChainSummaryPanel").AddComponent<MissionChainSummaryPanel>();
+
+            new GameObject("[AudioFeedbackService]").AddComponent<AudioFeedbackService>();
+            new GameObject("[WorldMarkerService]").AddComponent<WorldMarkerService>();
+
+            CreateAreaLabel("Area_Tutorial", new Vector3(0f, 0f, 0f), "Tutorial Area", new Color(0.6f, 0.85f, 1f));
+            CreateAreaLabel("Area_ConvoyMission", new Vector3(0f, 0f, 5f), "Convoy Mission", new Color(0.3f, 1f, 0.5f));
+            CreateAreaLabel("Area_BorderRetaliation", new Vector3(25f, 0f, 0f), "Border Retaliation", new Color(1f, 0.6f, 0.3f));
+            CreateAreaLabel("Area_AdvancedShowcase", new Vector3(22f, 0f, -2f), "Advanced Units", new Color(1f, 0.85f, 0.2f));
 
             var conflictGo = new GameObject("ConvoyEnergyConflict");
             var conflict = conflictGo.AddComponent<ConvoyEnergyConflictRuntime>();
@@ -357,7 +369,9 @@ namespace LuoLuoTrip.Editor
             AssetDatabase.Refresh();
             Debug.Log($"[LuoLuoTrip] Commander Mission Prototype Scene 已创建: {CommanderScenePath}");
             Debug.Log("Controls: WASD move | LClick attack | Space dodge | Q lock-on | Tab select target | E interact | R release control | 1/2/3 test missions | F5 save | F9 load | F10 clear save");
+            Debug.Log("Areas: Tutorial (0,0,0) | Convoy Mission (0,0,5) | Border Retaliation (25,0,0) | Advanced Units (22,0,-2)");
             Debug.Log("Mission 1: ConvoyEnergyConflict at (0,0,2) | Mission 2: BorderRetaliation at (25,0,0)");
+            Debug.Log("Services: AudioFeedbackService + WorldMarkerService spawned (profiles in Resources/)");
             Debug.Log("Manual validation: Play scene → complete tutorial → trigger mission 1 → complete → walk to mission 2 → verify branch → F5/F9 cycle → F10 clear");
         }
 
@@ -439,6 +453,68 @@ namespace LuoLuoTrip.Editor
             AssetDatabase.SaveAssets();
             Selection.activeObject = config;
             Debug.Log($"[LuoLuoTrip] CombatTuningConfig 已创建: {path}");
+        }
+
+        [MenuItem("LuoLuoTrip/Setup/Create Audio Feedback Profile")]
+        public static void CreateAudioFeedbackProfile()
+        {
+            EnsureFolder("Assets/Data/Audio");
+            EnsureFolder("Assets/Resources");
+            const string path = "Assets/Data/Audio/AudioFeedbackProfile.asset";
+
+            var profile = AssetDatabase.LoadAssetAtPath<AudioFeedbackProfileSO>(path);
+            if (profile == null)
+            {
+                profile = ScriptableObject.CreateInstance<AudioFeedbackProfileSO>();
+                AssetDatabase.CreateAsset(profile, path);
+            }
+            profile.EnsureAllEvents();
+            EditorUtility.SetDirty(profile);
+
+            const string resourcesPath = "Assets/Resources/AudioFeedbackProfile.asset";
+            var resourcesProfile = AssetDatabase.LoadAssetAtPath<AudioFeedbackProfileSO>(resourcesPath);
+            if (resourcesProfile == null)
+                AssetDatabase.CopyAsset(path, resourcesPath);
+            else
+            {
+                EditorUtility.CopySerialized(profile, resourcesProfile);
+                EditorUtility.SetDirty(resourcesProfile);
+            }
+
+            AssetDatabase.SaveAssets();
+            Selection.activeObject = profile;
+            Debug.Log($"[LuoLuoTrip] AudioFeedbackProfile 已创建: {path}");
+        }
+
+        [MenuItem("LuoLuoTrip/Setup/Create World Marker Profile")]
+        public static void CreateWorldMarkerProfile()
+        {
+            EnsureFolder("Assets/Data/Feedback");
+            EnsureFolder("Assets/Resources");
+            const string path = "Assets/Data/Feedback/WorldMarkerProfile.asset";
+
+            var profile = AssetDatabase.LoadAssetAtPath<WorldMarkerProfileSO>(path);
+            if (profile == null)
+            {
+                profile = ScriptableObject.CreateInstance<WorldMarkerProfileSO>();
+                AssetDatabase.CreateAsset(profile, path);
+            }
+            profile.EnsureAllTypes();
+            EditorUtility.SetDirty(profile);
+
+            const string resourcesPath = "Assets/Resources/WorldMarkerProfile.asset";
+            var resourcesProfile = AssetDatabase.LoadAssetAtPath<WorldMarkerProfileSO>(resourcesPath);
+            if (resourcesProfile == null)
+                AssetDatabase.CopyAsset(path, resourcesPath);
+            else
+            {
+                EditorUtility.CopySerialized(profile, resourcesProfile);
+                EditorUtility.SetDirty(resourcesProfile);
+            }
+
+            AssetDatabase.SaveAssets();
+            Selection.activeObject = profile;
+            Debug.Log($"[LuoLuoTrip] WorldMarkerProfile 已创建: {path}");
         }
 
         [MenuItem("LuoLuoTrip/Debug/Print World Summary")]
@@ -534,6 +610,30 @@ namespace LuoLuoTrip.Editor
                 hudGo.AddComponent<CombatDebugHUD>();
             }
 
+            return go;
+        }
+
+        private static GameObject CreateAreaLabel(string name, Vector3 position, string label, Color color)
+        {
+            var go = new GameObject(name);
+            go.transform.position = position + new Vector3(0f, 3f, 0f);
+
+            var marker = go.AddComponent<WorldMarker>();
+            marker.Configure(WorldMarkerType.MissionObjective, go.transform, label);
+
+            var ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            ring.name = name + "_Ring";
+            Object.DestroyImmediate(ring.GetComponent<Collider>());
+            ring.transform.SetParent(go.transform, false);
+            ring.transform.localPosition = new Vector3(0f, -2.95f, 0f);
+            ring.transform.localScale = new Vector3(6f, 0.05f, 6f);
+            var renderer = ring.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                var mat = new Material(Shader.Find("Standard"));
+                mat.color = new Color(color.r, color.g, color.b, 0.5f);
+                renderer.sharedMaterial = mat;
+            }
             return go;
         }
 

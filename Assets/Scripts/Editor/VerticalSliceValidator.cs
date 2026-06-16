@@ -35,6 +35,9 @@ namespace LuoLuoTrip.Editor
             CheckCombatTuningConfig(report, ref warnings);
             CheckSaveLoadManager(report, ref warnings);
             CheckDebugTriggerType(report, ref warnings);
+            CheckAudioFeedbackProfile(report, ref warnings);
+            CheckWorldMarkerProfile(report, ref warnings);
+            CheckEnhancedPlaceholderHierarchy(report, ref warnings);
 
             report.Add("");
             report.Add("========================================");
@@ -398,6 +401,102 @@ namespace LuoLuoTrip.Editor
             else
             {
                 report.Add("  OK: CommanderPrototypeRuntime type exists");
+            }
+        }
+
+        private static void CheckAudioFeedbackProfile(List<string> report, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- AudioFeedbackProfile ---");
+            var path = "Assets/Data/Audio/AudioFeedbackProfile.asset";
+            var resourcesPath = "Assets/Resources/AudioFeedbackProfile.asset";
+            if (!File.Exists(path))
+            {
+                report.Add("  WARNING: AudioFeedbackProfile.asset missing (run Create Audio Feedback Profile)");
+                warnings++;
+            }
+            else
+            {
+                report.Add("  OK: AudioFeedbackProfile.asset exists");
+            }
+            if (!File.Exists(resourcesPath))
+            {
+                report.Add("  WARNING: Resources/AudioFeedbackProfile.asset missing (re-run profile menu)");
+                warnings++;
+            }
+            else
+            {
+                report.Add("  OK: Resources copy exists");
+            }
+        }
+
+        private static void CheckWorldMarkerProfile(List<string> report, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- WorldMarkerProfile ---");
+            var path = "Assets/Data/Feedback/WorldMarkerProfile.asset";
+            var resourcesPath = "Assets/Resources/WorldMarkerProfile.asset";
+            if (!File.Exists(path))
+            {
+                report.Add("  WARNING: WorldMarkerProfile.asset missing (run Create World Marker Profile)");
+                warnings++;
+            }
+            else
+            {
+                report.Add("  OK: WorldMarkerProfile.asset exists");
+            }
+            if (!File.Exists(resourcesPath))
+            {
+                report.Add("  WARNING: Resources/WorldMarkerProfile.asset missing (re-run profile menu)");
+                warnings++;
+            }
+            else
+            {
+                report.Add("  OK: Resources copy exists");
+            }
+        }
+
+        private static void CheckEnhancedPlaceholderHierarchy(List<string> report, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- Enhanced Placeholder Visual Hierarchy ---");
+
+            var prefabDir = "Assets/Art/Placeholders/Prefabs";
+            var prefabs = new[]
+            {
+                "PH_PlayerCommander_Cylinder",
+                "PH_MechaMinion_Cylinder",
+                "PH_BeastMinion_Cylinder",
+                "PH_CityLord_Cylinder",
+                "PH_WarKing_Cylinder",
+                "PH_Convoy_Cylinder",
+                "PH_EnergyNode_Cylinder",
+                "PH_ObjectiveMarker_Cylinder"
+            };
+
+            foreach (var name in prefabs)
+            {
+                var path = $"{prefabDir}/{name}.prefab";
+                var asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (asset == null) continue;
+
+                var visual = asset.transform.Find("Visual");
+                if (visual == null)
+                {
+                    report.Add($"  WARNING: {name} missing Visual child");
+                    warnings++;
+                    continue;
+                }
+
+                if (visual.childCount < 2)
+                {
+                    report.Add($"  WARNING: {name} Visual has only {visual.childCount} primitive(s) (enhanced expected >=2). Run Regenerate Enhanced Placeholders (Force).");
+                    warnings++;
+                }
+                else
+                {
+                    report.Add($"  OK: {name} Visual has {visual.childCount} primitives");
+                }
             }
         }
 

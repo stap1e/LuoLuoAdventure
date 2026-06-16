@@ -1,4 +1,6 @@
 using System;
+using LuoLuoTrip.Audio;
+using LuoLuoTrip.Feedback;
 using UnityEngine;
 
 namespace LuoLuoTrip.Combat
@@ -75,6 +77,10 @@ namespace LuoLuoTrip.Combat
         {
             var tuning = CombatTuningConfigSO.LoadOrDefault();
             ApplyTuning(tuning);
+
+            var audio = AudioFeedbackService.Instance;
+            if (audio != null)
+                audio.SetThrottle(AudioEventId.AIWindupWarning, 0.5f);
         }
 
         private void Update()
@@ -256,6 +262,7 @@ namespace LuoLuoTrip.Combat
             if (_isWindingUp)
             {
                 _isWindingUp = false;
+                UpdateWindupMarker(false);
                 _self.TryLightAttack(_target);
                 _attackTimer = GetAttackInterval();
                 return;
@@ -265,6 +272,8 @@ namespace LuoLuoTrip.Combat
 
             _isWindingUp = true;
             _attackTimer = _attackWindupDelay;
+            AudioFeedbackService.Play(AudioEventId.AIWindupWarning, transform.position);
+            UpdateWindupMarker(true);
         }
 
         private float GetAttackInterval()
@@ -332,6 +341,21 @@ namespace LuoLuoTrip.Combat
                 Gizmos.color = Color.red;
                 Gizmos.DrawWireSphere(transform.position, _self.Stats.attackRange);
             }
+        }
+
+        private void UpdateWindupMarker(bool active)
+        {
+            var service = WorldMarkerService.Instance;
+            if (service == null) return;
+            if (active)
+                service.AttachMarker(gameObject, WorldMarkerType.AIWindupWarning);
+            else
+                service.DetachMarker(gameObject);
+        }
+
+        private void OnDisable()
+        {
+            UpdateWindupMarker(false);
         }
 
         private void OnGUI()

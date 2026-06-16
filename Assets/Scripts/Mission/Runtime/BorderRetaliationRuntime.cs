@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using LuoLuoTrip.Audio;
+using LuoLuoTrip.Feedback;
 using UnityEngine;
 
 namespace LuoLuoTrip
@@ -87,6 +89,7 @@ namespace LuoLuoTrip
             _abandonTimer = 0f;
 
             RefreshEnemyEntities();
+            AttachObjectiveMarker();
 
             switch (_modifier.ModifierId)
             {
@@ -281,7 +284,27 @@ namespace LuoLuoTrip
             if (_triggerZone != null) _triggerZone.MarkCompleted();
             if (_objectiveHud != null) _objectiveHud.ShowFinalResult(_missionState, _phase);
 
+            DetachObjectiveMarker();
+            if (_phase == MissionPhase.Failed)
+                AudioFeedbackService.PlayUI(AudioEventId.MissionFailed);
+            else
+                AudioFeedbackService.PlayUI(AudioEventId.MissionComplete);
+
             Debug.Log($"[Mission] BorderRetaliation complete: {outcome} ({resultTag}), XP: +{consequence?.CommanderExperienceDelta ?? 0}");
+        }
+
+        private void AttachObjectiveMarker()
+        {
+            var service = WorldMarkerService.Instance;
+            if (service == null || _triggerZone == null) return;
+            service.AttachMarker(_triggerZone.gameObject, WorldMarkerType.MissionObjective, "[BORDER]");
+        }
+
+        private void DetachObjectiveMarker()
+        {
+            var service = WorldMarkerService.Instance;
+            if (service == null || _triggerZone == null) return;
+            service.DetachMarker(_triggerZone.gameObject);
         }
 
         private CharacterEntity FindPlayerEntity()

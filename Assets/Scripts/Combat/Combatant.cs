@@ -1,4 +1,5 @@
 using System;
+using LuoLuoTrip.Audio;
 using LuoLuoTrip.Combat.Feedback;
 using UnityEngine;
 
@@ -146,6 +147,8 @@ namespace LuoLuoTrip.Combat
             _stateTimer = _attackWindup;
             _attackCooldownTimer = _stats.attackCooldown + _attackWindup + _attackActive + _attackRecovery;
 
+            AudioFeedbackService.Play(AudioEventId.AttackStart, transform.position);
+
             if (target != null && IsInRange(target))
             {
                 var result = DamageCalculator.Calculate(this, target);
@@ -157,6 +160,7 @@ namespace LuoLuoTrip.Combat
                 };
                 target.NotifyHitReceived(hitEvent);
                 OnHitLanded?.Invoke(hitEvent);
+                AudioFeedbackService.Play(AudioEventId.Hit, target.transform.position);
             }
 
             return true;
@@ -172,6 +176,7 @@ namespace LuoLuoTrip.Combat
             SetState(CombatState.Dodging);
             _stateTimer = _dodgeDuration;
             _dodgeInvulnerableTimer = _dodgeInvulnerableDuration;
+            AudioFeedbackService.Play(AudioEventId.Dodge, transform.position);
             return true;
         }
 
@@ -219,6 +224,7 @@ namespace LuoLuoTrip.Combat
         {
             SetState(CombatState.Staggered);
             _stateTimer = _staggerDuration;
+            AudioFeedbackService.Play(AudioEventId.Stagger, transform.position);
         }
 
         private void Die()

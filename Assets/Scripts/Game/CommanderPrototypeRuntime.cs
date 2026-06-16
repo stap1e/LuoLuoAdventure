@@ -1,3 +1,4 @@
+using LuoLuoTrip.Audio;
 using LuoLuoTrip.UI;
 using UnityEngine;
 
@@ -115,6 +116,12 @@ namespace LuoLuoTrip
             if (_toastPanel != null && consequence.FactionDeltas != null)
             {
                 _toastPanel.ShowFactionDeltas(consequence.FactionDeltas);
+                AudioFeedbackService.PlayUI(AudioEventId.FactionDelta);
+            }
+
+            if (context != null && _profileBefore != null && context.CommanderProfile.CommanderLevel > _profileBefore.CommanderLevel)
+            {
+                AudioFeedbackService.PlayUI(AudioEventId.LevelUp);
             }
 
             Debug.Log($"[Commander] Mission complete: {consequence.Outcome}, XP: +{consequence.CommanderExperienceDelta}, Level: {context?.CommanderProfile.CommanderLevel}");

@@ -9,8 +9,11 @@
 Run these from the Unity top menu in order:
 
 1. **LuoLuoTrip/Setup/Generate Placeholder Assets** — creates `Assets/Art/Placeholders/Prefabs/PH_*.prefab` + materials
-2. **LuoLuoTrip/Setup/Create Commander Mission Prototype Scene** — creates all data assets + `Assets/Scenes/CommanderPrototype.unity`
-3. **LuoLuoTrip/Tools/Validation/Run Vertical Slice Validation** — verifies all required objects exist
+2. **LuoLuoTrip/Setup/Create Audio Feedback Profile** *(optional, auto-run by step 4)* — creates `Assets/Data/Audio/AudioFeedbackProfile.asset` + Resources copy
+3. **LuoLuoTrip/Setup/Create World Marker Profile** *(optional, auto-run by step 4)* — creates `Assets/Data/Feedback/WorldMarkerProfile.asset` + Resources copy
+4. **LuoLuoTrip/Setup/Create Commander Mission Prototype Scene** — creates all data assets + `Assets/Scenes/CommanderPrototype.unity`
+5. **LuoLuoTrip/Tools/Validation/Run Vertical Slice Validation** — verifies all required objects exist
+6. *(Optional)* **LuoLuoTrip/Setup/Regenerate Enhanced Placeholders (Force)** — rebuilds multi-primitive placeholder visuals from scratch
 
 ## How to Run
 
@@ -92,8 +95,66 @@ TutorialFlowRuntime guides through 8 steps:
 - **Attack Recovery**: 0.3s after attack, no actions
 - **Dodge Invulnerability**: 0.3s invulnerable window during 0.35s dodge
 - **Stagger**: 1.2s when poise depleted, no actions
-- **AI Warning**: "!" indicator above enemy during attack windup (0.4s)
+- **AI Warning**: "[!]" world-marker label above enemy during attack windup (0.4s)
 - All timings configurable via `Assets/Data/Combat/CombatTuningConfig.asset`
+
+## Demo Areas
+
+| Area | Position | Purpose |
+|---|---|---|
+| Tutorial | (0, 0, 0) | Initial spawn + tutorial steps |
+| Convoy Mission | (0, 0, 5) | Mission 1 trigger + convoy/energy node |
+| Border Retaliation | (25, 0, 0) | Mission 2 trigger + objective marker |
+| Advanced Units | (22, 0, -2) | Rank 2/3 unit showcase (Captain, Elite, Deputy) |
+
+Each area is marked with a colored ground ring and a floating world-marker label for navigation.
+
+## Audio Feedback
+
+`AudioFeedbackService` (singleton MonoBehaviour) plays 2D/3D one-shot SFX driven by `AudioFeedbackProfileSO` events:
+
+| Event | Trigger | Spatial |
+|---|---|---|
+| AttackStart | Player or AI begins attack windup | 3D |
+| Hit | Damage lands | 3D |
+| Dodge | Player dodge | 3D |
+| Stagger | Combatant enters stagger | 3D |
+| AIWindupWarning | AI windup begins (throttled to 0.5s) | 3D |
+| DirectControlSuccess / TacticalCommandIssued / SyncAssistActive / DeniedControl | E-key control attempt | UI 2D |
+| MissionComplete / MissionFailed | Mission ends | UI 2D |
+| LevelUp / FactionDelta | Commander level / standing change | UI 2D |
+
+The profile auto-populates one entry per `AudioEventId` enum value. Drop `AudioClip[]` into entries to provide sound; missing clips are silently skipped (no errors).
+
+## World Markers
+
+`WorldMarkerService` (singleton MonoBehaviour) renders OnGUI text labels above world-space objects, billboarded to `Camera.main`:
+
+| Type | Label | Used By |
+|---|---|---|
+| SelectedCommanderTarget | `[TARGET]` | CommanderControlController on Tab selection |
+| LockOnTarget | `[LOCK]` | CombatController on Q lock-on |
+| MissionObjective | `[OBJ]` | Convoy, Border objective marker, Area labels |
+| Interactable | `[E]` | EnergyNode |
+| AIWindupWarning | `[!]` | SimpleCombatAI during attack windup |
+| ControlledUnit | `[YOU]` | Currently controlled commander unit |
+| HostileUnit / FriendlyUnit | (color only) | Reserved for future faction tinting |
+| SyncAssistActive | `[SYNC]` | SyncAssist control mode |
+
+Markers can be disabled at runtime via `WorldMarkerService.Instance.MarkersEnabled = false`. Defaults are provided in code so the service works even with no profile asset.
+
+## Enhanced Placeholders
+
+Each `PH_*.prefab` uses a multi-primitive Visual subgraph for readability:
+
+- **PlayerCommander**: Capsule body + Sphere head + Crown + Core + FacingFin
+- **MechaMinion / CityLord**: Hull + Cockpit + FrontFin + 4 Wheels (CityLord adds Antenna)
+- **BeastMinion / WarKing**: Body + Head + 2 Horns + 2 Claws + 4 Legs
+- **Convoy**: 2 Cargo crates + EnergyTank + 4 Wheels
+- **EnergyNode**: Base + Core sphere + Pillar + Ring
+- **ObjectiveMarker**: Pillar + Banner + Apex sphere
+
+Hierarchy is preserved as `PrefabRoot / Visual / Collision / Marker` — only the Visual subgraph is enhanced. Use **Regenerate Enhanced Placeholders (Force)** to rebuild after edits.
 
 ## Save/Load
 
@@ -121,11 +182,11 @@ TutorialFlowRuntime guides through 8 steps:
 ## Known Limitations
 
 - All UI uses OnGUI (debug quality, not production)
-- Placeholder art (cylinder prefabs)
+- Placeholder art (multi-primitive cube/cylinder/sphere prefabs)
 - No NavMesh / pathfinding
 - No cinematic camera
 - No formal dialogue system
-- No audio
+- AudioFeedbackProfile entries ship with no clips by default — system runs silent until clips are added
 - Tests must be run from Unity Editor Test Runner (no CLI test runner)
 - SimpleCombatAI uses FindObjectsOfType as fallback (registry preferred)
 - No network / multiplayer

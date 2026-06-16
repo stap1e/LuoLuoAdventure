@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using LuoLuoTrip.Audio;
+using LuoLuoTrip.Feedback;
 using UnityEngine;
 
 namespace LuoLuoTrip
@@ -96,6 +98,27 @@ namespace LuoLuoTrip
             Phase = MissionPhase.Active;
 
             RefreshBeastEntities();
+            AttachObjectiveMarkers();
+        }
+
+        private void AttachObjectiveMarkers()
+        {
+            var service = WorldMarkerService.Instance;
+            if (service == null) return;
+            if (_convoy != null)
+                service.AttachMarker(_convoy.gameObject, WorldMarkerType.MissionObjective, "[CONVOY]");
+            if (_energyNode != null)
+                service.AttachMarker(_energyNode.gameObject, WorldMarkerType.Interactable, "[E] SHARE");
+        }
+
+        private void DetachObjectiveMarkers()
+        {
+            var service = WorldMarkerService.Instance;
+            if (service == null) return;
+            if (_convoy != null)
+                service.DetachMarker(_convoy.gameObject);
+            if (_energyNode != null)
+                service.DetachMarker(_energyNode.gameObject);
         }
 
         private void RefreshBeastEntities()
@@ -275,6 +298,12 @@ namespace LuoLuoTrip
 
             if (_objectiveHud != null)
                 _objectiveHud.ShowFinalResult(_missionState, Phase);
+
+            DetachObjectiveMarkers();
+            if (Phase == MissionPhase.Failed)
+                AudioFeedbackService.PlayUI(AudioEventId.MissionFailed);
+            else
+                AudioFeedbackService.PlayUI(AudioEventId.MissionComplete);
 
             Debug.Log($"[Mission] ConvoyEnergyConflict complete: {_missionState.Outcome}, Phase: {Phase}, XP: +{consequence?.CommanderExperienceDelta ?? 0}");
         }

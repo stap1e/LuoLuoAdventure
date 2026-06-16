@@ -1,4 +1,6 @@
+using LuoLuoTrip.Audio;
 using LuoLuoTrip.Combat;
+using LuoLuoTrip.Feedback;
 using LuoLuoTrip.UI;
 using UnityEngine;
 
@@ -17,6 +19,8 @@ namespace LuoLuoTrip
         private CommanderDebugHud _debugHud;
         private CommanderControlHintPanel _hintPanel;
         private CameraFollowController _cameraFollow;
+        private CharacterEntity _lastSelectedTarget;
+        private CharacterEntity _lastControlledMarkerEntity;
 
         public CommanderControlRuntimeState State => _state;
         public CommanderTargetSelector TargetSelector => _targetSelector;
@@ -75,6 +79,8 @@ namespace LuoLuoTrip
             if (Input.GetKeyDown(_releaseKey))
                 ReleaseControl();
 
+            UpdateSelectionMarker();
+            UpdateControlledMarker();
             UpdateDebugHud();
         }
 
@@ -106,15 +112,19 @@ namespace LuoLuoTrip
             {
                 case ControlMode.DirectControl:
                     ApplyDirectControl(target);
+                    AudioFeedbackService.PlayUI(AudioEventId.DirectControlSuccess);
                     break;
                 case ControlMode.TacticalCommand:
                     ApplyTacticalCommand(target);
+                    AudioFeedbackService.PlayUI(AudioEventId.TacticalCommandIssued);
                     break;
                 case ControlMode.SyncAssist:
                     ApplySyncAssist(target);
+                    AudioFeedbackService.PlayUI(AudioEventId.SyncAssistActive);
                     break;
                 case ControlMode.Denied:
                 default:
+                    AudioFeedbackService.PlayUI(AudioEventId.DeniedControl);
                     break;
             }
         }
@@ -328,6 +338,43 @@ namespace LuoLuoTrip
             }
         }
 
+        private void UpdateSelectionMarker()
+        {
+            var service = WorldMarkerService.Instance;
+            if (service == null) return;
+
+            var current = _targetSelector?.CurrentTarget;
+            if (current == _lastSelectedTarget) return;
+
+            if (_lastSelectedTarget != null && _lastSelectedTarget.gameObject != null)
+                service.DetachMarker(_lastSelectedTarget.gameObject);
+
+            if (current != null)
+                service.AttachMarker(current.gameObject, WorldMarkerType.SelectedCommanderTarget);
+
+            _lastSelectedTarget = current;
+        }
+
+        private void UpdateControlledMarker()
+        {
+            var service = WorldMarkerService.Instance;
+            if (service == null || _state == null) return;
+
+            CharacterEntity controlled = null;
+            if (_state.IsDirectControllingOther)
+                controlled = _state.DirectControlledEntity;
+
+            if (controlled == _lastControlledMarkerEntity) return;
+
+            if (_lastControlledMarkerEntity != null && _lastControlledMarkerEntity.gameObject != null)
+                service.DetachMarker(_lastControlledMarkerEntity.gameObject);
+
+            if (controlled != null && controlled != _state.OriginalPlayerEntity)
+                service.AttachMarker(controlled.gameObject, WorldMarkerType.ControlledUnit);
+
+            _lastControlledMarkerEntity = controlled;
+        }
+
         private void SetupDynamicHostility(LuoLuoTripGameContext context)
         {
             var dynamicService = new DynamicFactionHostilityService(
@@ -345,6 +392,15 @@ namespace LuoLuoTrip
         private void OnDestroy()
         {
             CharacterEntity.HostilityResolver = null;
+
+            var service = WorldMarkerService.Instance;
+            if (service != null)
+            {
+                if (_lastSelectedTarget != null && _lastSelectedTarget.gameObject != null)
+                    service.DetachMarker(_lastSelectedTarget.gameObject);
+                if (_lastControlledMarkerEntity != null && _lastControlledMarkerEntity.gameObject != null)
+                    service.DetachMarker(_lastControlledMarkerEntity.gameObject);
+            }
         }
     }
 }
