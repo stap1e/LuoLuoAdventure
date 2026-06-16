@@ -109,6 +109,7 @@ namespace LuoLuoTrip.Editor
             var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
             ground.name = "Ground";
             ground.transform.localScale = new Vector3(3f, 1f, 3f);
+            MarkNavMeshStatic(ground);
 
             var player = CreateCombatCharacter(
                 "Player",
@@ -234,6 +235,7 @@ namespace LuoLuoTrip.Editor
             var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
             ground.name = "Ground";
             ground.transform.localScale = new Vector3(5f, 1f, 5f);
+            MarkNavMeshStatic(ground);
 
             var playerData = CharacterData.Create("player_cmd_001", "见习机战王", SubFactionId.MotorIronRiders, CharacterRole.Common);
             playerData.CommandRank = 1;
@@ -311,7 +313,30 @@ namespace LuoLuoTrip.Editor
 
             var convoySpawn = new GameObject("SpawnPoint_Beast");
             convoySpawn.transform.position = new Vector3(5f, 0f, 3f);
-            var spawnComp = convoySpawn.AddComponent<EncounterSpawnPoint>();
+            var beastSpawnComp = convoySpawn.AddComponent<EncounterSpawnPoint>();
+            var beastSpawnSo = new SerializedObject(beastSpawnComp);
+            beastSpawnSo.FindProperty("_spawnPointId").stringValue = "beast_spawn_main";
+            beastSpawnSo.FindProperty("_faction").enumValueIndex = (int)SubFactionId.BeastIronClaw;
+            beastSpawnSo.ApplyModifiedPropertiesWithoutUndo();
+
+            var mechaSpawn = new GameObject("SpawnPoint_Mecha");
+            mechaSpawn.transform.position = new Vector3(-3f, 0f, 2f);
+            var mechaSpawnComp = mechaSpawn.AddComponent<EncounterSpawnPoint>();
+            var mechaSpawnSo = new SerializedObject(mechaSpawnComp);
+            mechaSpawnSo.FindProperty("_spawnPointId").stringValue = "mecha_spawn_main";
+            mechaSpawnSo.FindProperty("_faction").enumValueIndex = (int)SubFactionId.MotorIronRiders;
+            mechaSpawnSo.ApplyModifiedPropertiesWithoutUndo();
+
+            if (conflictGo.GetComponent<EncounterRuntime>() is EncounterRuntime convoyEncounter)
+            {
+                convoyEncounter.AddSpawnPoint(beastSpawnComp);
+                convoyEncounter.AddSpawnPoint(mechaSpawnComp);
+                convoyEncounter.SetWaves(new List<EncounterWave>
+                {
+                    new EncounterWave { waveId = "convoy_beast_1", faction = SubFactionId.BeastIronClaw, role = CharacterRole.Minion, unitCount = 2, delaySeconds = 15f },
+                    new EncounterWave { waveId = "convoy_beast_2", faction = SubFactionId.BeastIronClaw, role = CharacterRole.Minion, unitCount = 3, delaySeconds = 35f },
+                });
+            }
 
             var runtimeGo = new GameObject("CommanderPrototypeRuntime");
             var runtime = runtimeGo.AddComponent<CommanderPrototypeRuntime>();
@@ -351,6 +376,28 @@ namespace LuoLuoTrip.Editor
             borderConflictSo.FindProperty("_triggerZone").objectReferenceValue = borderTrigger;
             borderConflictSo.FindProperty("_objectiveHud").objectReferenceValue = objectiveHud;
             borderConflictSo.ApplyModifiedPropertiesWithoutUndo();
+
+            var borderBeastSpawn = new GameObject("BorderSpawnPoint_Beast");
+            borderBeastSpawn.transform.position = new Vector3(28f, 0f, 3f);
+            var borderBeastSpawnComp = borderBeastSpawn.AddComponent<EncounterSpawnPoint>();
+            var borderBeastSpawnSo = new SerializedObject(borderBeastSpawnComp);
+            borderBeastSpawnSo.FindProperty("_spawnPointId").stringValue = "border_beast_spawn";
+            borderBeastSpawnSo.FindProperty("_faction").enumValueIndex = (int)SubFactionId.BeastIronClaw;
+            borderBeastSpawnSo.ApplyModifiedPropertiesWithoutUndo();
+
+            var borderMechaSpawn = new GameObject("BorderSpawnPoint_Mecha");
+            borderMechaSpawn.transform.position = new Vector3(22f, 0f, -3f);
+            var borderMechaSpawnComp = borderMechaSpawn.AddComponent<EncounterSpawnPoint>();
+            var borderMechaSpawnSo = new SerializedObject(borderMechaSpawnComp);
+            borderMechaSpawnSo.FindProperty("_spawnPointId").stringValue = "border_mecha_spawn";
+            borderMechaSpawnSo.FindProperty("_faction").enumValueIndex = (int)SubFactionId.MotorIronRiders;
+            borderMechaSpawnSo.ApplyModifiedPropertiesWithoutUndo();
+
+            if (borderConflictGo.GetComponent<EncounterRuntime>() is EncounterRuntime borderEncounter)
+            {
+                borderEncounter.AddSpawnPoint(borderBeastSpawnComp);
+                borderEncounter.AddSpawnPoint(borderMechaSpawnComp);
+            }
 
             var rank2MechaData = CharacterData.Create("captain_001", "MechaCaptain", SubFactionId.MotorIronRiders, CharacterRole.Minion);
             rank2MechaData.CommandRank = 2;
@@ -609,6 +656,14 @@ namespace LuoLuoTrip.Editor
             {
                 if (go.GetComponent<CombatController>() == null)
                     go.AddComponent<CombatController>();
+
+                if (go.GetComponent<Rigidbody>() == null)
+                {
+                    var rb = go.AddComponent<Rigidbody>();
+                    rb.isKinematic = true;
+                    rb.useGravity = false;
+                    rb.constraints = RigidbodyConstraints.FreezeRotation;
+                }
             }
             else
             {
@@ -776,6 +831,18 @@ namespace LuoLuoTrip.Editor
                 if (!AssetDatabase.IsValidFolder(next))
                     AssetDatabase.CreateFolder(current, parts[i]);
                 current = next;
+            }
+        }
+
+        private static void MarkNavMeshStatic(GameObject go)
+        {
+            if (go == null) return;
+            const int navMeshStaticFlag = 1 << 0;
+            GameObjectUtility.SetStaticEditorFlags(go, StaticEditorFlags.NavigationStatic);
+            foreach (Transform child in go.transform)
+            {
+                var existing = GameObjectUtility.GetStaticEditorFlags(child.gameObject);
+                GameObjectUtility.SetStaticEditorFlags(child.gameObject, existing | StaticEditorFlags.NavigationStatic);
             }
         }
     }

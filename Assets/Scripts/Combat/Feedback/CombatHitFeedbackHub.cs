@@ -5,7 +5,9 @@ namespace LuoLuoTrip.Combat.Feedback
 {
     /// <summary>
     /// 战斗受击反馈中枢：监听命中事件，触发卡肉 + 屏幕震动。
-    /// 挂载到场景常驻对象（如 GameBootstrap）。
+    /// 宿主: GameBootstrap (共享对象)。
+    /// 必须使用 Destroy(this)，绝不能用 Destroy(gameObject)——否则会删除 GameBootstrap。
+    /// EnsureServices() 会向自身添加 HitStopService，向 Main Camera 添加 CameraShakeService。
     /// </summary>
     public class CombatHitFeedbackHub : MonoBehaviour
     {

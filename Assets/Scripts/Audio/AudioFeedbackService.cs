@@ -3,6 +3,10 @@ using UnityEngine;
 
 namespace LuoLuoTrip.Audio
 {
+    /// <summary>
+    /// 音频反馈服务。宿主: 专用 GameObject [AudioFeedbackService]。
+    /// Destroy(this) 安全——只删除重复组件，专用 GO 上无其他关键组件。
+    /// </summary>
     public class AudioFeedbackService : MonoBehaviour
     {
         [SerializeField] private AudioFeedbackProfileSO _profile;

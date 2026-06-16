@@ -162,7 +162,7 @@ namespace LuoLuoTrip
             if (prevEntity != null && prevEntity != _state.OriginalPlayerEntity)
             {
                 var prevCombat = prevEntity.GetComponent<CombatController>();
-                if (prevCombat != null) prevCombat.enabled = false;
+                if (prevCombat != null) prevCombat.SetInputEnabled(false);
 
                 var prevAI = prevEntity.GetComponent<SimpleCombatAI>();
                 if (prevAI != null)
@@ -179,7 +179,7 @@ namespace LuoLuoTrip
             var targetCombat = target.GetComponent<CombatController>();
             if (targetCombat == null)
                 targetCombat = target.gameObject.AddComponent<CombatController>();
-            targetCombat.enabled = true;
+            targetCombat.SetInputEnabled(true);
 
             var targetAI = target.GetComponent<SimpleCombatAI>();
             if (targetAI != null)
@@ -190,7 +190,7 @@ namespace LuoLuoTrip
             }
 
             if (_playerCombatController != null)
-                _playerCombatController.enabled = false;
+                _playerCombatController.SetInputEnabled(false);
 
             _state.SetDirectControl(target);
 
@@ -219,7 +219,7 @@ namespace LuoLuoTrip
             if (_state.DirectControlledEntity != null && _state.DirectControlledEntity != _state.OriginalPlayerEntity)
             {
                 var prevCombat = _state.DirectControlledEntity.GetComponent<CombatController>();
-                if (prevCombat != null) prevCombat.enabled = false;
+                if (prevCombat != null) prevCombat.SetInputEnabled(false);
 
                 var prevAI = _state.DirectControlledEntity.GetComponent<SimpleCombatAI>();
                 if (prevAI != null)
@@ -249,7 +249,7 @@ namespace LuoLuoTrip
             _state.ReleaseControl();
 
             if (_playerCombatController != null)
-                _playerCombatController.enabled = true;
+                _playerCombatController.SetInputEnabled(true);
 
             if (_playerAI != null)
                 _playerAI.enabled = false;

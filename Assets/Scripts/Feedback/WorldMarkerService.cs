@@ -3,6 +3,10 @@ using UnityEngine;
 
 namespace LuoLuoTrip.Feedback
 {
+    /// <summary>
+    /// 世界标记渲染服务。宿主: 专用 GameObject [WorldMarkerService]。
+    /// Destroy(this) 安全——只删除重复组件，专用 GO 上无其他关键组件。
+    /// </summary>
     public class WorldMarkerService : MonoBehaviour
     {
         [SerializeField] private WorldMarkerProfileSO _profile;

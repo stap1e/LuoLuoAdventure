@@ -8,7 +8,11 @@ namespace LuoLuoTrip
     {
         public string waveId;
         public SubFactionId faction;
+        public CharacterRole role = CharacterRole.Minion;
         public int unitCount;
         public float delaySeconds;
+        public bool spawned;
+
+        public bool IsReady => !spawned;
     }
 }

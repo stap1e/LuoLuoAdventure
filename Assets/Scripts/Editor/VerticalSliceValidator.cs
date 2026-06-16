@@ -43,6 +43,9 @@ namespace LuoLuoTrip.Editor
             CheckMissionAreaRuntime(report, ref warnings);
             CheckCameraSetup(report, ref errors, ref warnings);
             CheckRuntimeCameraBootstrap(report, ref warnings);
+            CheckServiceLifecycle(report, ref warnings);
+            CheckNavMeshSetup(report, ref warnings);
+            CheckEncounterWaveConfig(report, ref warnings);
 
             report.Add("");
             report.Add("========================================");
@@ -714,15 +717,6 @@ namespace LuoLuoTrip.Editor
             {
                 report.Add("  OK: CameraFollowController present (CommanderPrototype)");
             }
-
-            var shakeType = System.AppDomain.CurrentDomain.GetAssemblies()
-                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
-                .FirstOrDefault(t => t.Name == "CameraShakeService");
-            if (shakeType != null && camGo.GetComponent(shakeType) != null)
-            {
-                report.Add("  WARNING: CameraShakeService serialized on Main Camera — will be added at runtime by CombatHitFeedbackHub. Remove from scene to avoid Awake-ordering duplicate.");
-                warnings++;
-            }
         }
 
         private static void CheckRuntimeCameraBootstrap(List<string> report, ref int warnings)
@@ -751,6 +745,168 @@ namespace LuoLuoTrip.Editor
             else
             {
                 report.Add($"  OK: RuntimeCameraBootstrap found in scene ({instances.Length} instance(s))");
+            }
+        }
+
+        private static void CheckServiceLifecycle(List<string> report, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- Service Lifecycle ---");
+
+            var camGo = GameObject.FindWithTag("MainCamera");
+            if (camGo != null)
+            {
+                var shakeType = System.AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                    .FirstOrDefault(t => t.Name == "CameraShakeService");
+                if (shakeType != null && camGo.GetComponent(shakeType) != null)
+                {
+                    report.Add("  WARNING: CameraShakeService serialized on Main Camera — remove from scene; CombatHitFeedbackHub adds it at runtime");
+                    warnings++;
+                }
+            }
+
+            var sourceDir = Path.Combine(Application.dataPath, "Scripts");
+            var dangerousSingletons = new[]
+            {
+                new { Name = "CameraShakeService", File = "Combat/Feedback/CameraShakeService.cs", Host = "Main Camera" },
+                new { Name = "HitStopService", File = "Combat/Feedback/HitStopService.cs", Host = "GameBootstrap" },
+                new { Name = "CombatHitFeedbackHub", File = "Combat/Feedback/CombatHitFeedbackHub.cs", Host = "GameBootstrap" },
+            };
+
+            foreach (var svc in dangerousSingletons)
+            {
+                var filePath = Path.Combine(sourceDir, svc.File.Replace('/', '\\'));
+                if (!File.Exists(filePath)) continue;
+
+                var source = File.ReadAllText(filePath);
+                if (source.Contains("Destroy(gameObject)"))
+                {
+                    report.Add($"  WARNING: {svc.Name} uses Destroy(gameObject) — host is shared ({svc.Host}), use Destroy(this) instead");
+                    warnings++;
+                }
+                else
+                {
+                    report.Add($"  OK: {svc.Name} uses Destroy(this) (shared host: {svc.Host})");
+                }
+            }
+        }
+
+        private static void CheckNavMeshSetup(List<string> report, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- NavMesh Setup ---");
+
+            var navMeshAgentType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "NavMeshAgent");
+            var bridgeType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "NavigationAgentBridge");
+
+            if (navMeshAgentType == null || bridgeType == null)
+            {
+                report.Add("  WARNING: NavMeshAgent or NavigationAgentBridge type not found");
+                warnings++;
+                return;
+            }
+
+            var bridges = Object.FindObjectsOfType(bridgeType);
+            int navMeshCount = 0;
+            int fallbackCount = 0;
+            foreach (var b in bridges)
+            {
+                var bridge = b as MonoBehaviour;
+                if (bridge == null) continue;
+                var useNavMeshProp = bridgeType.GetProperty("UseNavMesh");
+                if (useNavMeshProp != null && (bool)useNavMeshProp.GetValue(bridge))
+                    navMeshCount++;
+                else
+                    fallbackCount++;
+            }
+
+            if (navMeshCount > 0)
+                report.Add($"  OK: {navMeshCount} NavigationAgentBridge(s) using NavMesh mode");
+            if (fallbackCount > 0)
+                report.Add($"  WARNING: {fallbackCount} NavigationAgentBridge(s) in fallback mode (no NavMesh baked or no NavMeshAgent)");
+            if (navMeshCount == 0 && fallbackCount == 0)
+                report.Add("  INFO: No NavigationAgentBridge instances in current scene");
+
+            var spawnPointType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "EncounterSpawnPoint");
+            if (spawnPointType != null)
+            {
+                var spawnPoints = Object.FindObjectsOfType(spawnPointType);
+                report.Add($"  INFO: {spawnPoints.Length} EncounterSpawnPoint(s) in scene");
+            }
+
+            var ground = GameObject.Find("Ground");
+            if (ground != null)
+            {
+                var flags = GameObjectUtility.GetStaticEditorFlags(ground);
+                if ((flags & StaticEditorFlags.NavigationStatic) != 0)
+                    report.Add("  OK: Ground is marked NavigationStatic");
+                else
+                {
+                    report.Add("  WARNING: Ground is not marked NavigationStatic — NavMesh bake will ignore it");
+                    warnings++;
+                }
+            }
+        }
+
+        private static void CheckEncounterWaveConfig(List<string> report, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- Encounter Wave Configuration ---");
+
+            var encounterType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "EncounterRuntime");
+            if (encounterType == null)
+            {
+                report.Add("  WARNING: EncounterRuntime type not found");
+                warnings++;
+                return;
+            }
+
+            var encounters = Object.FindObjectsOfType(encounterType);
+            if (encounters.Length == 0)
+            {
+                report.Add("  INFO: No EncounterRuntime instances in current scene");
+                return;
+            }
+
+            var wavesProp = encounterType.GetProperty("Waves");
+            var spawnPointsProp = encounterType.GetProperty("SpawnPoints");
+            var pendingProp = encounterType.GetProperty("PendingWaveCount");
+
+            foreach (var enc in encounters)
+            {
+                var mono = enc as MonoBehaviour;
+                if (mono == null) continue;
+                report.Add($"  Encounter: {mono.gameObject.name}");
+
+                if (wavesProp != null)
+                {
+                    var waves = wavesProp.GetValue(enc) as System.Collections.ICollection;
+                    if (waves != null && waves.Count > 0)
+                        report.Add($"    OK: {waves.Count} wave(s) configured");
+                    else
+                    {
+                        report.Add("    WARNING: No waves configured — dynamic spawning disabled");
+                        warnings++;
+                    }
+                }
+
+                if (spawnPointsProp != null)
+                {
+                    var sps = spawnPointsProp.GetValue(enc) as System.Collections.ICollection;
+                    if (sps != null && sps.Count > 0)
+                        report.Add($"    OK: {sps.Count} spawn point(s)");
+                    else
+                        report.Add("    INFO: No spawn points — wave spawning will have nowhere to place units");
+                }
             }
         }
     }

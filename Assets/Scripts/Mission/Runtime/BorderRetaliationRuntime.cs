@@ -25,6 +25,7 @@ namespace LuoLuoTrip
         private int _mechaCasualties;
         private int _beastCasualties;
         private List<CharacterEntity> _enemyEntities = new List<CharacterEntity>();
+        private List<EncounterWave> _dynamicWaves = new List<EncounterWave>();
 
         public MissionPhase Phase => _phase;
         public MissionModifier CurrentModifier => _modifier;
@@ -75,6 +76,8 @@ namespace LuoLuoTrip
             if (_phase != MissionPhase.Active) return;
 
             _areaRuntime.Tick(Time.deltaTime);
+            if (_encounter != null)
+                _encounter.TickWaves(Time.deltaTime);
             TrackCasualties();
             CheckAbandon();
 
@@ -111,6 +114,8 @@ namespace LuoLuoTrip
             _encounter.RegisterUnitsBySubFaction(SubFactionId.MotorIronRiders);
             if (_modifier != null)
                 _encounter.ApplyMissionModifier(_modifier);
+
+            ConfigureDynamicWaves();
 
             _areaRuntime.Activate("border_retaliation");
             AttachObjectiveMarker();
@@ -197,6 +202,37 @@ namespace LuoLuoTrip
                     foreach (SubFactionId faction in System.Enum.GetValues(typeof(SubFactionId)))
                         rep.ApplyDelta(FactionStandingDelta.Create(faction, hostility: (int)_modifier.InitialHostilityOffset));
             }
+        }
+
+        private void ConfigureDynamicWaves()
+        {
+            _dynamicWaves.Clear();
+            var beastCount = Mathf.RoundToInt(2 * (_encounter?.GetFactionMultiplier(SubFactionId.BeastIronClaw) ?? 1f));
+            var mechaSupport = Mathf.RoundToInt(1 * (_encounter?.GetFactionMultiplier(SubFactionId.MotorIronRiders) ?? 1f));
+
+            switch (_modifier.ModifierId)
+            {
+                case "border_beast_retaliation":
+                    _dynamicWaves.Add(new EncounterWave { waveId = "beast_wave1", faction = SubFactionId.BeastIronClaw, role = CharacterRole.Minion, unitCount = beastCount, delaySeconds = 10f });
+                    _dynamicWaves.Add(new EncounterWave { waveId = "beast_wave2", faction = SubFactionId.BeastIronClaw, role = CharacterRole.Minion, unitCount = beastCount + 1, delaySeconds = 30f });
+                    break;
+                case "border_mecha_distrust":
+                    _dynamicWaves.Add(new EncounterWave { waveId = "beast_wave1", faction = SubFactionId.BeastIronClaw, role = CharacterRole.Minion, unitCount = beastCount, delaySeconds = 15f });
+                    break;
+                case "border_ceasefire":
+                    break;
+                default:
+                    _dynamicWaves.Add(new EncounterWave { waveId = "beast_wave1", faction = SubFactionId.BeastIronClaw, role = CharacterRole.Minion, unitCount = beastCount, delaySeconds = 20f });
+                    break;
+            }
+
+            if (mechaSupport > 0 && _modifier.ModifierId != "border_mecha_distrust")
+            {
+                _dynamicWaves.Add(new EncounterWave { waveId = "mecha_support", faction = SubFactionId.MotorIronRiders, role = CharacterRole.Minion, unitCount = mechaSupport, delaySeconds = 25f });
+            }
+
+            if (_encounter != null)
+                _encounter.SetWaves(_dynamicWaves);
         }
 
         private void RefreshEnemyEntities()

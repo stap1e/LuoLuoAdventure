@@ -2,7 +2,11 @@ using UnityEngine;
 
 namespace LuoLuoTrip.Combat.Feedback
 {
-    /// <summary>主摄像机屏幕震动</summary>
+    /// <summary>
+    /// 主摄像机屏幕震动。宿主: Main Camera (共享对象)。
+    /// 必须使用 Destroy(this)，绝不能用 Destroy(gameObject)——否则会删除 Main Camera。
+    /// 由 CombatHitFeedbackHub.EnsureServices() 在运行时 AddComponent，不要在编辑器序列化到场景。
+    /// </summary>
     public class CameraShakeService : MonoBehaviour
     {
         public static CameraShakeService Instance { get; private set; }

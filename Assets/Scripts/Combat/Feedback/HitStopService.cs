@@ -2,7 +2,10 @@ using UnityEngine;
 
 namespace LuoLuoTrip.Combat.Feedback
 {
-    /// <summary>全局 Hit Stop（卡肉）服务，使用 unscaledTime 计时</summary>
+    /// <summary>
+    /// 全局 Hit Stop（卡肉）服务，使用 unscaledTime 计时。宿主: GameBootstrap (共享对象)。
+    /// 必须使用 Destroy(this)，绝不能用 Destroy(gameObject)——否则会删除 GameBootstrap。
+    /// </summary>
     public class HitStopService : MonoBehaviour
     {
         public static HitStopService Instance { get; private set; }

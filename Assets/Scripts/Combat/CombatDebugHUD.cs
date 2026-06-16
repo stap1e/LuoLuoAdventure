@@ -2,13 +2,13 @@ using UnityEngine;
 
 namespace LuoLuoTrip.Combat
 {
-    /// <summary>战斗 HUD 调试显示（原型用）</summary>
     public class CombatDebugHUD : MonoBehaviour
     {
         [SerializeField] private Combatant _target;
         [SerializeField] private bool _autoFindPlayer = true;
 
         private Combatant _player;
+        private CombatController _playerCombat;
 
         private void Start()
         {
@@ -19,6 +19,7 @@ namespace LuoLuoTrip.Combat
                     if (c.GetComponent<CombatController>() != null)
                     {
                         _player = c;
+                        _playerCombat = c.GetComponent<CombatController>();
                         break;
                     }
                 }
@@ -39,6 +40,13 @@ namespace LuoLuoTrip.Combat
             DrawBar(10, y, 200, 12, combatant.CurrentPoise / stats.maxPoise, Color.cyan, "Poise");
             y += 24;
             GUI.Label(new Rect(10, y, 400, 20), $"State: {combatant.State}");
+            y += 20;
+
+            if (_playerCombat != null)
+            {
+                GUI.Label(new Rect(10, y, 400, 20),
+                    $"Input: {(_playerCombat.IsInputEnabled ? "ON" : "OFF")} | Speed: {_playerCombat.MoveSpeed:F1}");
+            }
         }
 
         private static void DrawBar(float x, float y, float w, float h, float ratio, Color color, string label)
