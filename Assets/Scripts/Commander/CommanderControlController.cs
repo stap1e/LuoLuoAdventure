@@ -36,15 +36,16 @@ namespace LuoLuoTrip
 
             _playerCombatController = GetComponent<CombatController>();
             _playerAI = GetComponent<SimpleCombatAI>();
-        }
 
-        private void Start()
-        {
             _state = new CommanderControlRuntimeState
             {
                 OriginalPlayerEntity = GetComponent<CharacterEntity>()
             };
             _state.DirectControlledEntity = _state.OriginalPlayerEntity;
+        }
+
+        private void Start()
+        {
 
             _permissionService = new ControlPermissionService();
 

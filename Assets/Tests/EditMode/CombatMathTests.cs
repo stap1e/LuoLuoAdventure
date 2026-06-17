@@ -129,7 +129,10 @@ namespace LuoLuoTrip.Tests.EditMode
                 attacker.Tick(0.5f);
                 Assert.That(attacker.TryLightAttack(defender), Is.False);
 
-                attacker.Tick(1f);
+                // Drain the rest of windup/active/recovery + stat cooldown.
+                CombatTimingTestHelper.AdvanceCombatThroughAttack(attacker);
+                Assert.That(attacker.State, Is.EqualTo(CombatState.Idle));
+                Assert.That(attacker.AttackCooldownRemaining, Is.EqualTo(0f).Within(1e-3f));
                 Assert.That(attacker.TryLightAttack(defender), Is.True);
             }
             finally

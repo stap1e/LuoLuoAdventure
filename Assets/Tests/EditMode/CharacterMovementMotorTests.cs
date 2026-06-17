@@ -19,7 +19,12 @@ namespace LuoLuoTrip.Tests.EditMode
         {
             _go = new GameObject("MotorTestRoot");
             _go.transform.position = startPos;
-            return _go.AddComponent<CharacterMovementMotor>();
+            var motor = _go.AddComponent<CharacterMovementMotor>();
+            // EditMode does not call Awake. Force initialization at the current
+            // position so _groundY captures startPos.y (matches runtime Awake).
+            motor.Move(Vector3.zero);
+            motor.SetGroundY(startPos.y);
+            return motor;
         }
 
         [Test]

@@ -88,7 +88,8 @@ namespace LuoLuoTrip.Tests.PlayMode
             {
                 var entity = go.AddComponent<CharacterEntity>();
                 entity.Bind(new CharacterData("tuned", "Tuned", SubFactionId.MotorIronRiders, CharacterRole.Common, 5));
-                var combatant = go.AddComponent<Combatant>();
+                go.AddComponent<CombatController>(); // Makes IsPlayerRole=true
+                var combatant = entity.Combatant;
 
                 var config = ScriptableObject.CreateInstance<CombatTuningConfigSO>();
                 config.playerAttackWindup = 0.5f;

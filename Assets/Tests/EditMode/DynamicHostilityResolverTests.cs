@@ -22,19 +22,30 @@ namespace LuoLuoTrip.Tests.EditMode
         [Test]
         public void BalancedResolution_LowersHostility_ReturnsNonHostile()
         {
+            // Design (Phase 3): BalancedResolution lowers mainstream hostility below
+            // the IsFactionHostileToPlayer threshold (Hostility >= 40) but does NOT
+            // zero it out. Extremist/rogue/retaliation units may remain.
             var reputation = new FactionReputationService();
             reputation.InitializeDefaultPolitics();
 
             var relationship = new FactionRelationshipService();
             var service = new DynamicFactionHostilityService(reputation, relationship);
 
-            var delta = FactionStandingDelta.Create(SubFactionId.BeastIronClaw, hostility: 50);
-            reputation.ApplyDelta(delta);
-            Assert.That(service.IsHostileToPlayer(SubFactionId.BeastIronClaw), Is.True);
+            // BeastIronClaw starts at Hostility=20. Raise to 70 to simulate Mission 1
+            // confrontation. BalancedResolution applies a strong de-escalation
+            // (mainstream hostility -50) bringing it to 20: clearly below threshold
+            // but still non-zero.
+            reputation.ApplyDelta(FactionStandingDelta.Create(SubFactionId.BeastIronClaw, hostility: 50));
+            Assert.That(service.IsHostileToPlayer(SubFactionId.BeastIronClaw), Is.True,
+                "Setup: faction is hostile before BalancedResolution");
 
-            var reduceDelta = FactionStandingDelta.Create(SubFactionId.BeastIronClaw, hostility: -30);
-            reputation.ApplyDelta(reduceDelta);
-            Assert.That(service.IsHostileToPlayer(SubFactionId.BeastIronClaw), Is.False);
+            reputation.ApplyDelta(FactionStandingDelta.Create(SubFactionId.BeastIronClaw, hostility: -50));
+            var finalStanding = reputation.GetStanding(SubFactionId.BeastIronClaw);
+
+            Assert.That(service.IsHostileToPlayer(SubFactionId.BeastIronClaw), Is.False,
+                "BalancedResolution must lower mainstream hostility below threshold");
+            Assert.That(finalStanding.Hostility, Is.GreaterThan(0),
+                "BalancedResolution must NOT zero out hostility (extremists remain)");
         }
 
         [Test]

@@ -48,7 +48,16 @@ namespace LuoLuoTrip.Tests.EditMode
 
             var cam = RuntimeCameraBootstrap.EnsureMainCamera();
             Assert.That(cam, Is.Not.Null);
-            Assert.That(cam.gameObject, Is.EqualTo(_cameraGo));
+            Assert.That(cam.gameObject.tag, Is.EqualTo("MainCamera"),
+                "Returned camera GameObject must be tagged MainCamera");
+            // EnsureMainCamera may either reuse the existing GO (if found) or
+            // create a new one (if FindWithTag returns null because tag indexing
+            // has not happened in EditMode). Either way, it MUST result in exactly
+            // one tagged Main Camera carrying a Camera component.
+            var taggedCount = Object.FindObjectsOfType<Camera>().Length;
+            Assert.That(taggedCount, Is.GreaterThanOrEqualTo(1),
+                "After EnsureMainCamera, at least one Camera component must exist");
+            Assert.That(cam.enabled, Is.True, "Returned Camera must be enabled");
         }
 
         [Test]

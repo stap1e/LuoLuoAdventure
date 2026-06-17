@@ -24,12 +24,12 @@ namespace LuoLuoTrip.Tests.PlayMode
                 entity.Bind(new CharacterData("player", "Player", SubFactionId.MotorIronRiders, CharacterRole.Common, 5));
                 go.AddComponent<Combatant>();
                 go.AddComponent<CombatController>();
-                var ctrl = go.AddComponent<CommanderControlController>();
+            var ctrl = go.AddComponent<CommanderControlController>();
 
-                Assert.That(ctrl.HasSelectedTarget(), Is.False);
-                Assert.That(ctrl.State, Is.Not.Null);
+            yield return null;
 
-                yield return null;
+            Assert.That(ctrl.HasSelectedTarget(), Is.False);
+            Assert.That(ctrl.State, Is.Not.Null);
             }
             finally
             {
@@ -45,7 +45,7 @@ namespace LuoLuoTrip.Tests.PlayMode
             {
                 var entity = targetGo.AddComponent<CharacterEntity>();
                 entity.Bind(new CharacterData("target", "Target", SubFactionId.MotorIronRiders, CharacterRole.Minion, 5));
-                var combatant = targetGo.AddComponent<Combatant>();
+                var combatant = entity.Combatant; // Use the Combatant created by Bind, not AddComponent
 
                 var state = new CommanderControlRuntimeState();
                 state.ActivateSyncAssist(3f);

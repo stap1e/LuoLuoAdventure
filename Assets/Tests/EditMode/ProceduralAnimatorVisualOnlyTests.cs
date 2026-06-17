@@ -21,8 +21,9 @@ namespace LuoLuoTrip.Tests.EditMode
             var visual = new GameObject("Visual");
             visual.transform.SetParent(_go.transform, false);
             var anim = _go.AddComponent<ProceduralCombatAnimator>();
-            // Trigger Awake by enabling
-            anim.enabled = true;
+            // In EditMode, Awake/OnEnable do not fire after AddComponent.
+            // Use the test-only initializer to mirror runtime Awake behavior.
+            anim.EnsureInitializedForTests();
 
             Assert.IsNotNull(anim.VisualRoot, "Animator must have resolved a Visual transform");
             Assert.AreNotSame(_go.transform, anim.VisualRoot, "Animator must not target root transform");
@@ -36,6 +37,7 @@ namespace LuoLuoTrip.Tests.EditMode
         {
             _go = new GameObject("CharRootNoVisual");
             var anim = _go.AddComponent<ProceduralCombatAnimator>();
+            anim.EnsureInitializedForTests();
 
             Assert.IsTrue(anim.IsDisabled, "Strict mode must disable animator when no 'Visual' child exists");
             Assert.IsFalse(anim.enabled, "Disabled animator must have enabled=false");
@@ -47,6 +49,7 @@ namespace LuoLuoTrip.Tests.EditMode
             _go = new GameObject("CharRootNoVisual2");
             _go.transform.position = new Vector3(0f, 0.5f, 0f);
             var anim = _go.AddComponent<ProceduralCombatAnimator>();
+            anim.EnsureInitializedForTests();
 
             // Even calling Play methods should be no-op when disabled.
             anim.PlayLightAttack();
@@ -70,6 +73,7 @@ namespace LuoLuoTrip.Tests.EditMode
             var visual = new GameObject("Visual");
             visual.transform.SetParent(_go.transform, false);
             var anim = _go.AddComponent<ProceduralCombatAnimator>();
+            anim.EnsureInitializedForTests();
             anim.SetCombatState(LuoLuoTrip.Combat.CombatState.Idle);
 
             anim.PlayMove(0.8f);

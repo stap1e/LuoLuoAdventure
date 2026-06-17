@@ -1,0 +1,14 @@
+{
+  "enableToast": true,
+  "showSessionTokens": true,
+  "enabledProviders": "auto",
+  "formatStyle": "allWindows",
+  "percentDisplayMode": "remaining",
+  "tuiSidebarPanel": {
+    "enabled": false
+  },
+  "maintainerAnnouncements": {
+    "enabled": true,
+    "home": true
+  }
+}

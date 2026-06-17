@@ -18,13 +18,12 @@ namespace LuoLuoTrip.Tests.EditMode
                 attacker.AutoTickEnabled = false;
                 defender.AutoTickEnabled = false;
 
-                var config = CombatTuningConfigSO.Default;
-                var totalAttackTime = config.playerAttackWindup + config.playerAttackActive + config.playerAttackRecovery;
-
                 Assert.That(attacker.TryLightAttack(defender), Is.True);
                 Assert.That(attacker.State, Is.EqualTo(CombatState.AttackWindup));
 
-                attacker.Tick(totalAttackTime + 0.01f);
+                // UpdateStateTimer advances at most one phase per Tick. The helper walks
+                // windup -> active -> recovery -> idle and drains the stat cooldown.
+                CombatTimingTestHelper.AdvanceCombatThroughAttack(attacker);
                 Assert.That(attacker.State, Is.EqualTo(CombatState.Idle));
             }
             finally
@@ -47,10 +46,14 @@ namespace LuoLuoTrip.Tests.EditMode
                 Assert.That(dodger.IsInvulnerable, Is.True);
 
                 var config = CombatTuningConfigSO.Default;
-                dodger.Tick(config.dodgeInvulnerableDuration + 0.01f);
-
-                if (config.dodgeInvulnerableDuration < config.dodgeDuration)
-                    Assert.That(dodger.IsInvulnerable, Is.False);
+                // IsInvulnerable returns true while State==Dodging OR while invuln timer > 0.
+                // The Default config has dodgeInvulnerableDuration < dodgeDuration, so after
+                // ticking past dodgeDuration the dodge state ends AND invuln timer is drained.
+                dodger.Tick(config.dodgeDuration + 0.01f);
+                Assert.That(dodger.State, Is.Not.EqualTo(CombatState.Dodging),
+                    "After ticking past dodgeDuration, Dodging state must end");
+                Assert.That(dodger.IsInvulnerable, Is.False,
+                    "After dodge ends, IsInvulnerable must be false");
             }
             finally
             {

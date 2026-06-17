@@ -37,6 +37,15 @@ namespace LuoLuoTrip.Combat.Animation
             EnsureInitialized();
         }
 
+        /// <summary>
+        /// Public initialization for EditMode tests where Awake is not invoked.
+        /// Safe to call multiple times.
+        /// </summary>
+        public void EnsureInitializedForTests()
+        {
+            EnsureInitialized();
+        }
+
         private void EnsureInitialized()
         {
             if (_initialized) return;

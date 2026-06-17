@@ -75,13 +75,18 @@ namespace LuoLuoTrip.Tests.EditMode
                 atk.OnHitLanded += _ => hits++;
 
                 atk.TryLightAttack(def);
-                atk.Tick(atk.AttackWindup + 0.001f);
-                atk.Tick(atk.AttackActive + atk.AttackRecovery + 2f);
-                Assert.AreEqual(CombatState.Idle, atk.State);
+                CombatTimingTestHelper.AdvanceCombatUntilActiveWindow(atk);
+                Assert.AreEqual(1, hits, "First hit resolved on entering active window");
+
+                // Tick through active -> recovery -> idle and cooldown drain
+                atk.Tick(atk.AttackActive + 0.001f);
+                atk.Tick(atk.AttackRecovery + 0.001f);
+                atk.Tick(atk.Stats.attackCooldown + 0.05f);
+                Assert.AreEqual(CombatState.Idle, atk.State, "After full sequence attacker is Idle");
 
                 atk.TryLightAttack(def);
-                atk.Tick(atk.AttackWindup + 0.001f);
-                Assert.AreEqual(2, hits);
+                CombatTimingTestHelper.AdvanceCombatUntilActiveWindow(atk);
+                Assert.AreEqual(2, hits, "Second hit resolved on entering active window");
             }
             finally { Object.DestroyImmediate(atkGo); Object.DestroyImmediate(defGo); }
         }

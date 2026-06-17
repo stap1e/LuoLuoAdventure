@@ -33,10 +33,10 @@ namespace LuoLuoTrip.Tests.PlayMode
             bridge.SetDestination(new Vector3(5f, 0f, 0f), 10f, 0.5f);
             yield return null;
 
+            var fixedDelta = 0.02f;
             for (int i = 0; i < 60; i++)
             {
-                bridge.TickFallback(Time.deltaTime);
-                yield return null;
+                bridge.TickFallback(fixedDelta);
                 if (bridge.HasReachedDestination()) break;
             }
 

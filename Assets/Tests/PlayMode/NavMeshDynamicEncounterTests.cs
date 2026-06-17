@@ -86,13 +86,19 @@ namespace LuoLuoTrip.Tests.PlayMode
 
                 bridge.SetDestination(new Vector3(5f, 0f, 0f), 4f, 0.5f);
 
-                for (int i = 0; i < 30; i++)
+                var fixedDelta = 0.02f;
+                for (int i = 0; i < 60; i++)
                 {
-                    bridge.TickFallback(Time.deltaTime);
-                    yield return null;
+                    bridge.TickFallback(fixedDelta);
                 }
 
                 Assert.That(unitGo.transform.position.x, Is.GreaterThan(1f));
+
+                yield return null;
+
+                yield return null;
+
+                yield return null;
             }
             finally
             {

@@ -53,7 +53,11 @@ namespace LuoLuoTrip.Tests.EditMode
                 Assert.IsTrue(atk.TryLightAttack(def));
                 Assert.IsFalse(atk.TryLightAttack(def), "Cooldown blocks second attack");
 
-                atk.Tick(atk.AttackWindup + atk.AttackActive + atk.AttackRecovery + 2f);
+                // Tick through windup -> active -> recovery -> cooldown so attacker is Idle
+                // AND attack cooldown timer has fully drained.
+                CombatTimingTestHelper.AdvanceCombatThroughAttack(atk);
+                Assert.AreEqual(CombatState.Idle, atk.State, "After full sequence attacker is Idle");
+                Assert.AreEqual(0f, atk.AttackCooldownRemaining, 1e-3f, "Cooldown timer drained");
                 Assert.IsTrue(atk.TryLightAttack(def), "Can attack after cooldown");
             }
             finally { Object.DestroyImmediate(atkGo); Object.DestroyImmediate(defGo); }

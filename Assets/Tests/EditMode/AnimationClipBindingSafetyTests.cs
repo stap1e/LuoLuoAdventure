@@ -55,9 +55,17 @@ namespace LuoLuoTrip.Tests.EditMode
         [Test]
         public void GeneratedPlaceholderClip_BindsToVisualPath_NotRoot()
         {
-            // Create an in-memory clip mimicking generator output.
+            // Use AnimationUtility.SetEditorCurve so AnimationUtility.GetCurveBindings
+            // returns the binding immediately in EditMode tests (clip.SetCurve does
+            // not register the binding through AnimationUtility in this path).
             var clip = new AnimationClip { name = "TestPlaceholder" };
-            clip.SetCurve("Visual", typeof(Transform), "localPosition.y",
+            var visualBinding = new EditorCurveBinding
+            {
+                path = "Visual",
+                type = typeof(Transform),
+                propertyName = "localPosition.y"
+            };
+            AnimationUtility.SetEditorCurve(clip, visualBinding,
                 AnimationCurve.Linear(0f, 0f, 0.5f, 0.05f));
 
             var bindings = AnimationUtility.GetCurveBindings(clip);
@@ -71,7 +79,13 @@ namespace LuoLuoTrip.Tests.EditMode
         public void RootPathBinding_DetectionLogic_FlagsViolation()
         {
             var clip = new AnimationClip { name = "BadClip" };
-            clip.SetCurve("", typeof(Transform), "localPosition.y",
+            var rootBinding = new EditorCurveBinding
+            {
+                path = "",
+                type = typeof(Transform),
+                propertyName = "localPosition.y"
+            };
+            AnimationUtility.SetEditorCurve(clip, rootBinding,
                 AnimationCurve.Linear(0f, 0f, 0.5f, 0.05f));
 
             var bindings = AnimationUtility.GetCurveBindings(clip);

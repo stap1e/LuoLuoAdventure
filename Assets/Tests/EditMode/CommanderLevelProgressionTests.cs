@@ -62,10 +62,14 @@ namespace LuoLuoTrip.Tests.EditMode
         [Test]
         public void CanLevelUp_TrueWhenEnoughXP()
         {
+            // CommanderProfile.AddExperience auto-levels-up while XP >= required,
+            // so after the call CanLevelUp is naturally false again. To verify the
+            // CanLevelUp predicate itself, set Experience directly without invoking
+            // AddExperience's auto-level loop.
             var profile = CommanderProfile.CreateDefault();
-            var xpNeeded = CommanderLevelSystem.ExperienceForLevel(profile.CommanderLevel + 1);
-            profile.AddExperience(xpNeeded);
-            Assert.That(profile.CanLevelUp, Is.True);
+            profile.Experience = CommanderLevelSystem.ExperienceForLevel(profile.CommanderLevel + 1);
+            Assert.That(profile.CanLevelUp, Is.True,
+                "CanLevelUp must be true when Experience >= threshold for next level");
         }
 
         [Test]

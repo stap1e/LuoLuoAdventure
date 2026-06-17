@@ -105,6 +105,7 @@ namespace LuoLuoTrip.Combat
         public void ApplyMoveInput(Vector2 input)
         {
             EnsureReferences();
+            if (!_inputEnabled) return;
             if (_self != null && _self.State != CombatState.Idle) return;
 
             var dir = new Vector3(input.x, 0f, input.y);
