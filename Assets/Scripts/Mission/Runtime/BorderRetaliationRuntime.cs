@@ -26,6 +26,7 @@ namespace LuoLuoTrip
         private int _beastCasualties;
         private List<CharacterEntity> _enemyEntities = new List<CharacterEntity>();
         private List<EncounterWave> _dynamicWaves = new List<EncounterWave>();
+        private bool _wavesConfigured;
 
         public MissionPhase Phase => _phase;
         public MissionModifier CurrentModifier => _modifier;
@@ -117,6 +118,7 @@ namespace LuoLuoTrip
 
             ConfigureDynamicWaves();
 
+            _encounter.StartEncounter();
             _areaRuntime.Activate("border_retaliation");
             AttachObjectiveMarker();
 
@@ -206,6 +208,11 @@ namespace LuoLuoTrip
 
         private void ConfigureDynamicWaves()
         {
+            if (_wavesConfigured)
+            {
+                Debug.Log($"[BorderRetaliation] ConfigureDynamicWaves skipped (already configured for modifier '{_modifier?.ModifierId}')");
+                return;
+            }
             _dynamicWaves.Clear();
             var beastMult = _encounter?.GetFactionMultiplier(SubFactionId.BeastIronClaw) ?? 1f;
             var mechaMult = _encounter?.GetFactionMultiplier(SubFactionId.MotorIronRiders) ?? 1f;
@@ -241,6 +248,7 @@ namespace LuoLuoTrip
             if (_encounter != null)
                 _encounter.SetWaves(_dynamicWaves);
 
+            _wavesConfigured = true;
             Debug.Log($"[BorderRetaliation] Configured {_dynamicWaves.Count} dynamic waves for modifier '{_modifier.ModifierId}': beastCount={beastCount}, mechaSupport={mechaSupport}");
         }
 
@@ -316,6 +324,7 @@ namespace LuoLuoTrip
             _phase = outcome == MissionOutcomeType.Failed ? MissionPhase.Failed : MissionPhase.Completed;
             if (_triggerZone != null) _triggerZone.MarkCompleted();
             _areaRuntime.MarkComplete();
+            if (_encounter != null) _encounter.CompleteEncounter(outcome.ToString());
             if (_objectiveHud != null) _objectiveHud.ShowFinalResult(_missionState, _phase);
             DetachObjectiveMarker();
             if (_phase == MissionPhase.Failed) AudioFeedbackService.PlayUI(AudioEventId.MissionFailed);

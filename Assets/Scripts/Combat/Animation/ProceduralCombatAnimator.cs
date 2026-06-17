@@ -10,7 +10,9 @@ namespace LuoLuoTrip.Combat.Animation
     public class ProceduralCombatAnimator : MonoBehaviour, ICombatAnimator
     {
         [SerializeField] private Transform _visualRoot;
-        [SerializeField] private float _attackLunge = 0.35f;
+        [SerializeField] private float _attackLunge = 0.9f;
+        [SerializeField] private float _attackWindupLift = 0.28f;
+        [SerializeField] private float _attackScalePulse = 1.18f;
         [SerializeField] private float _hitKickback = 0.2f;
         [SerializeField] private float _dodgeTilt = 15f;
         [SerializeField] private bool _strictVisualOnly = true;
@@ -23,15 +25,23 @@ namespace LuoLuoTrip.Combat.Animation
         private Color _baseColor;
         private CombatState _currentState = CombatState.Idle;
         private bool _disabled;
+        private bool _initialized;
 
         public Transform VisualRoot => _visualRoot;
         public bool IsOperatingOnVisualOnly => _visualRoot != null && _visualRoot != transform;
         public bool IsDisabled => _disabled;
+        public Vector3 VisualLocalOffset => _visualRoot != null ? _visualRoot.localPosition - _baseLocalPos : Vector3.zero;
 
         private void Awake()
         {
-            // CRITICAL: never animate root transform. Visual offset / lunge / kickback
-            // must only apply to a Visual child so gameplay root movement is preserved.
+            EnsureInitialized();
+        }
+
+        private void EnsureInitialized()
+        {
+            if (_initialized) return;
+            _initialized = true;
+
             if (_visualRoot == null)
             {
                 var visualChild = transform.Find("Visual");
@@ -56,18 +66,20 @@ namespace LuoLuoTrip.Combat.Animation
             _baseScale = _visualRoot.localScale;
             _baseLocalRot = _visualRoot.localRotation;
             _renderer = _visualRoot.GetComponentInChildren<Renderer>();
-            if (_renderer != null)
-                _baseColor = _renderer.material.color;
+            if (_renderer != null && _renderer.sharedMaterial != null)
+                _baseColor = _renderer.sharedMaterial.color;
         }
 
         public void PlayIdle()
         {
+            EnsureInitialized();
             if (_disabled) return;
             ResetVisual();
         }
 
         public void PlayMove(float normalizedSpeed)
         {
+            EnsureInitialized();
             if (_disabled) return;
             if (_currentState != CombatState.Idle) return;
             var bob = Mathf.Sin(Time.time * 8f * Mathf.Clamp01(normalizedSpeed)) * 0.03f * normalizedSpeed;
@@ -76,36 +88,42 @@ namespace LuoLuoTrip.Combat.Animation
 
         public void PlayLightAttack()
         {
+            EnsureInitialized();
             if (_disabled) return;
             RunRoutine(AttackRoutine(_attackLunge, 0.12f));
         }
 
         public void PlayDodge()
         {
+            EnsureInitialized();
             if (_disabled) return;
             RunRoutine(DodgeRoutine());
         }
 
         public void PlayStagger()
         {
+            EnsureInitialized();
             if (_disabled) return;
             RunRoutine(StaggerRoutine());
         }
 
         public void PlayHitReact(bool isHeavy)
         {
+            EnsureInitialized();
             if (_disabled) return;
             RunRoutine(HitRoutine(isHeavy ? _hitKickback * 1.6f : _hitKickback));
         }
 
         public void PlayDeath()
         {
+            EnsureInitialized();
             if (_disabled) return;
             RunRoutine(DeathRoutine());
         }
 
         public void SetCombatState(CombatState state)
         {
+            EnsureInitialized();
             _currentState = state;
             if (_disabled) return;
             switch (state)
@@ -114,11 +132,15 @@ namespace LuoLuoTrip.Combat.Animation
                     PlayIdle();
                     break;
                 case CombatState.AttackWindup:
+                    ApplyAttackWindupPose();
+                    RunRoutine(AttackWindupRoutine());
                     break;
                 case CombatState.Attacking:
                     PlayLightAttack();
                     break;
                 case CombatState.AttackRecovery:
+                    StopActiveRoutine();
+                    ResetVisual();
                     break;
                 case CombatState.Dodging:
                     PlayDodge();
@@ -132,11 +154,39 @@ namespace LuoLuoTrip.Combat.Animation
             }
         }
 
+        private void ApplyAttackWindupPose()
+        {
+            _visualRoot.localPosition = _baseLocalPos + Vector3.up * _attackWindupLift - Vector3.forward * (_attackLunge * 0.2f);
+            _visualRoot.localScale = _baseScale * _attackScalePulse;
+        }
+
+        private IEnumerator AttackWindupRoutine()
+        {
+            var targetPos = _baseLocalPos + Vector3.up * _attackWindupLift - Vector3.forward * (_attackLunge * 0.2f);
+            var targetScale = _baseScale * _attackScalePulse;
+            var t = 0f;
+            var duration = 0.12f;
+            var startPos = _visualRoot.localPosition;
+            var startScale = _visualRoot.localScale;
+            while (t < duration)
+            {
+                t += Time.unscaledDeltaTime;
+                var ratio = Mathf.Clamp01(t / duration);
+                _visualRoot.localPosition = Vector3.Lerp(startPos, targetPos, ratio);
+                _visualRoot.localScale = Vector3.Lerp(startScale, targetScale, ratio);
+                yield return null;
+            }
+        }
+
         private IEnumerator AttackRoutine(float distance, float duration)
         {
-            var forward = transform.forward * distance;
-            yield return LerpLocalPosition(_baseLocalPos + forward, duration * 0.4f);
-            yield return LerpLocalPosition(_baseLocalPos, duration * 0.6f);
+            var forward = Vector3.forward * distance;
+            FlashColor(Color.yellow, 0.08f);
+            _visualRoot.localScale = _baseScale * _attackScalePulse;
+            yield return LerpLocalPosition(_baseLocalPos + forward, duration * 0.45f);
+            _visualRoot.localScale = _baseScale;
+            yield return LerpLocalPosition(_baseLocalPos, duration * 0.55f);
+            ResetVisual();
         }
 
         private IEnumerator DodgeRoutine()
@@ -166,8 +216,8 @@ namespace LuoLuoTrip.Combat.Animation
         {
             var targetRot = Quaternion.Euler(90f, transform.eulerAngles.y, 0f);
             yield return LerpWorldRotation(targetRot, 0.35f);
-            if (_renderer != null)
-                _renderer.material.color = new Color(_baseColor.r * 0.5f, _baseColor.g * 0.5f, _baseColor.b * 0.5f);
+            if (_renderer != null && _renderer.sharedMaterial != null)
+                _renderer.sharedMaterial.color = new Color(_baseColor.r * 0.5f, _baseColor.g * 0.5f, _baseColor.b * 0.5f);
         }
 
         private IEnumerator LerpLocalPosition(Vector3 target, float duration)
@@ -176,7 +226,7 @@ namespace LuoLuoTrip.Combat.Animation
             var t = 0f;
             while (t < duration)
             {
-                t += Time.deltaTime;
+                t += Time.unscaledDeltaTime;
                 _visualRoot.localPosition = Vector3.Lerp(start, target, t / duration);
                 yield return null;
             }
@@ -189,7 +239,7 @@ namespace LuoLuoTrip.Combat.Animation
             var t = 0f;
             while (t < duration)
             {
-                t += Time.deltaTime;
+                t += Time.unscaledDeltaTime;
                 _visualRoot.localRotation = Quaternion.Slerp(start, target, t / duration);
                 yield return null;
             }
@@ -202,7 +252,7 @@ namespace LuoLuoTrip.Combat.Animation
             var t = 0f;
             while (t < duration)
             {
-                t += Time.deltaTime;
+                t += Time.unscaledDeltaTime;
                 _visualRoot.rotation = Quaternion.Slerp(start, target, t / duration);
                 yield return null;
             }
@@ -211,16 +261,16 @@ namespace LuoLuoTrip.Combat.Animation
 
         private void FlashColor(Color flash, float duration)
         {
-            if (_renderer == null) return;
-            _renderer.material.color = flash;
+            if (_renderer == null || _renderer.sharedMaterial == null) return;
+            _renderer.sharedMaterial.color = flash;
             StartCoroutine(RestoreColor(duration));
         }
 
         private IEnumerator RestoreColor(float delay)
         {
             yield return new WaitForSeconds(delay);
-            if (_renderer != null)
-                _renderer.material.color = _baseColor;
+            if (_renderer != null && _renderer.sharedMaterial != null)
+                _renderer.sharedMaterial.color = _baseColor;
         }
 
         private void ResetVisual()
@@ -233,19 +283,21 @@ namespace LuoLuoTrip.Combat.Animation
 
         private void OnDisable()
         {
-            if (_activeRoutine != null)
-            {
-                StopCoroutine(_activeRoutine);
-                _activeRoutine = null;
-            }
+            StopActiveRoutine();
             ResetVisual();
         }
 
         private void RunRoutine(IEnumerator routine)
         {
-            if (_activeRoutine != null)
-                StopCoroutine(_activeRoutine);
+            StopActiveRoutine();
             _activeRoutine = StartCoroutine(routine);
+        }
+
+        private void StopActiveRoutine()
+        {
+            if (_activeRoutine == null) return;
+            StopCoroutine(_activeRoutine);
+            _activeRoutine = null;
         }
     }
 }

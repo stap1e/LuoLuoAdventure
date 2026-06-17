@@ -69,6 +69,7 @@ namespace LuoLuoTrip.Combat
         public Combatant PendingAttackTarget => _pendingAttackTarget;
         public bool IsAttackActiveWindow => _state == CombatState.Attacking;
         public float LastHitDamage => _lastHitDamage;
+        public float AttackCooldownRemaining => _attackCooldownTimer;
         public bool ShowAttackDebug { get => _showAttackDebug; set => _showAttackDebug = value; }
         public float PoiseBreakThreshold => _poiseBreakThreshold;
         public float StaggerDamageThreshold => _staggerDamageThreshold;
@@ -157,6 +158,9 @@ namespace LuoLuoTrip.Combat
 
         public void InitializeFromCharacter()
         {
+            if (_entity == null) _entity = GetComponent<CharacterEntity>();
+            if (_motor == null) _motor = GetComponent<CharacterMovementMotor>();
+            if (_hitCollider == null) _hitCollider = GetComponentInChildren<Collider>();
             if (_entity?.Data == null) return;
 
             _stats = CombatStatsCalculator.Calculate(_entity.Data);
@@ -203,10 +207,35 @@ namespace LuoLuoTrip.Combat
             Tick(Time.deltaTime);
         }
 
+        public bool CanStartLightAttack(out string reason)
+        {
+            if (!IsAlive)
+            {
+                reason = "PlayerDead";
+                return false;
+            }
+            if (_state != CombatState.Idle)
+            {
+                reason = $"StateBlocked:{_state}";
+                return false;
+            }
+            if (_attackCooldownTimer > 0f)
+            {
+                reason = "AttackCooldown";
+                return false;
+            }
+            if (_currentStamina < 10f)
+            {
+                reason = "NoStamina";
+                return false;
+            }
+            reason = "Ready";
+            return true;
+        }
+
         public bool TryLightAttack(Combatant target)
         {
-            if (!CanAct() || _attackCooldownTimer > 0f) return false;
-            if (_currentStamina < 10f) return false;
+            if (!CanStartLightAttack(out _)) return false;
 
             _currentStamina -= 10f;
             SetState(CombatState.AttackWindup);

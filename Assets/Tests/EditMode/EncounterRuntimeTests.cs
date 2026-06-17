@@ -85,8 +85,8 @@ namespace LuoLuoTrip.Tests.EditMode
             {
                 var entity = unitGo.AddComponent<CharacterEntity>();
                 entity.Bind(CharacterData.Create("m1", "TestMecha", SubFactionId.MotorIronRiders, CharacterRole.Minion));
-                entity.Data.IsAlive = false;
                 encounter.RegisterUnit(entity);
+                entity.Data.IsAlive = false;
                 Assert.That(encounter.CountCasualties(MainRace.MotorTribe), Is.EqualTo(1));
             }
             finally

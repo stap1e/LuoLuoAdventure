@@ -33,6 +33,11 @@ namespace LuoLuoTrip
 
         public void ForceStart()
         {
+            if (_missionCompleted)
+            {
+                Debug.Log($"[MissionTriggerZone] ForceStart ignored: mission '{_missionId}' already completed");
+                return;
+            }
             _missionStarted = true;
         }
 

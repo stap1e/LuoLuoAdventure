@@ -341,6 +341,9 @@ namespace LuoLuoTrip.Editor
                 });
             }
 
+            var debugGo = new GameObject("CommanderPrototypeDebug");
+            debugGo.AddComponent<PrototypeDebugController>();
+
             var runtimeGo = new GameObject("CommanderPrototypeRuntime");
             var runtime = runtimeGo.AddComponent<CommanderPrototypeRuntime>();
             var runtimeSo = new SerializedObject(runtime);
@@ -681,6 +684,10 @@ namespace LuoLuoTrip.Editor
 
             if (go.GetComponent<Combatant>() == null)
                 go.AddComponent<Combatant>();
+            if (go.GetComponent<ProceduralCombatAnimator>() == null)
+                go.AddComponent<ProceduralCombatAnimator>();
+            if (go.GetComponent<CombatAnimationDriver>() == null)
+                go.AddComponent<CombatAnimationDriver>();
 
             if (isPlayer)
             {
@@ -782,18 +789,16 @@ namespace LuoLuoTrip.Editor
             bridgeSo.FindProperty("_animator").objectReferenceValue = animator;
             bridgeSo.ApplyModifiedPropertiesWithoutUndo();
 
-            var procedural = go.GetComponent<ProceduralCombatAnimator>();
-            if (procedural != null)
-                Object.DestroyImmediate(procedural);
+            if (go.GetComponent<ProceduralCombatAnimator>() == null)
+                go.AddComponent<ProceduralCombatAnimator>();
 
             var driver = go.GetComponent<CombatAnimationDriver>();
-            if (driver != null)
-            {
-                var driverSo = new SerializedObject(driver);
-                driverSo.FindProperty("_preferAnimatorBridge").boolValue = true;
-                driverSo.FindProperty("_useProceduralFallback").boolValue = false;
-                driverSo.ApplyModifiedPropertiesWithoutUndo();
-            }
+            if (driver == null)
+                driver = go.AddComponent<CombatAnimationDriver>();
+            var driverSo = new SerializedObject(driver);
+            driverSo.FindProperty("_preferAnimatorBridge").boolValue = false;
+            driverSo.FindProperty("_useProceduralFallback").boolValue = true;
+            driverSo.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static void InitializeRegistryFromDatabase()

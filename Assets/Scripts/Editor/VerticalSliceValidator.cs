@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using LuoLuoTrip.Combat;
+using LuoLuoTrip.Combat.Animation;
 using LuoLuoTrip.Combat.Feedback;
 using LuoLuoTrip.Save;
 using System.Collections.Generic;
@@ -55,6 +56,8 @@ namespace LuoLuoTrip.Editor
             CheckCombatReadability(report, ref errors, ref warnings);
             CheckCombatBalance(report, ref errors, ref warnings);
             CheckEncounterReliability(report, ref errors, ref warnings);
+            CheckEncounterPersistence(report, ref errors, ref warnings);
+            CheckPlayerAttackUsability(report, ref errors, ref warnings);
 
             report.Add("");
             report.Add("========================================");
@@ -1612,6 +1615,201 @@ namespace LuoLuoTrip.Editor
                         report.Add("  WARNING: CommanderPrototype has no EncounterSpawnPoint — dynamic waves cannot spawn");
                         warnings++;
                     }
+                }
+                finally
+                {
+                    EditorSceneManager.CloseScene(scene, true);
+                }
+            }
+        }
+
+        private static void CheckEncounterPersistence(List<string> report, ref int errors, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- Encounter Persistence ---");
+
+            var snapshotType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "EncounterSnapshot");
+            if (snapshotType == null)
+            {
+                report.Add("  ERROR: EncounterSnapshot type missing (check Save/GameSaveData.cs)");
+                errors++;
+            }
+            else
+                report.Add("  OK: EncounterSnapshot type exists");
+
+            var encounterType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "EncounterRuntime");
+            if (encounterType != null)
+            {
+                var requiredMethods = new[] { "GetSnapshot", "RestoreSnapshot", "StartEncounter", "CompleteEncounter", "ResetEncounter", "ClearSpawnedUnits", "DespawnDeadUnits" };
+                foreach (var m in requiredMethods)
+                {
+                    if (encounterType.GetMethod(m) != null)
+                        report.Add($"  OK: EncounterRuntime.{m} exists");
+                    else
+                    {
+                        report.Add($"  ERROR: EncounterRuntime.{m} missing");
+                        errors++;
+                    }
+                }
+                var props = new[] { "HasStarted", "HasCompleted", "LastOutcome", "TotalSpawnedCount", "SpawnedWaveIds" };
+                foreach (var p in props)
+                {
+                    if (encounterType.GetProperty(p) != null)
+                        report.Add($"  OK: EncounterRuntime.{p} exists");
+                    else
+                    {
+                        report.Add($"  WARNING: EncounterRuntime.{p} missing");
+                        warnings++;
+                    }
+                }
+            }
+
+            var saveDataType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "GameSaveData");
+            if (saveDataType != null)
+            {
+                var field = saveDataType.GetField("encounterSnapshots");
+                if (field != null)
+                    report.Add("  OK: GameSaveData.encounterSnapshots field exists");
+                else
+                {
+                    report.Add("  ERROR: GameSaveData.encounterSnapshots field missing");
+                    errors++;
+                }
+            }
+
+            var triggerType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "MissionTriggerZone");
+            if (triggerType != null)
+            {
+                var startedProp = triggerType.GetProperty("MissionStarted");
+                var completedProp = triggerType.GetProperty("MissionCompleted");
+                if (startedProp != null && completedProp != null)
+                    report.Add("  OK: MissionTriggerZone has MissionStarted + MissionCompleted guards");
+                else
+                {
+                    report.Add("  WARNING: MissionTriggerZone missing started/completed guards");
+                    warnings++;
+                }
+            }
+        }
+
+        private static void CheckPlayerAttackUsability(List<string> report, ref int errors, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- Player Attack Usability ---");
+
+            var combatControllerType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "CombatController");
+            if (combatControllerType == null)
+            {
+                report.Add("  ERROR: CombatController type missing");
+                errors++;
+                return;
+            }
+
+            var diagnosticProps = new[] { "LastAttackAttemptTime", "LastAttackResult", "LastAttackRejectReason", "LastAttackTargetName", "LastAttackDistance", "LastAttackRange", "LastAttackState" };
+            foreach (var p in diagnosticProps)
+            {
+                if (combatControllerType.GetProperty(p) != null)
+                    report.Add($"  OK: CombatController.{p} exists");
+                else
+                {
+                    report.Add($"  ERROR: CombatController.{p} missing");
+                    errors++;
+                }
+            }
+
+            if (combatControllerType.GetMethod("AttemptAttack") != null)
+                report.Add("  OK: CombatController.AttemptAttack exists");
+            else
+            {
+                report.Add("  ERROR: CombatController.AttemptAttack missing");
+                errors++;
+            }
+
+            var debugType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "PrototypeDebugController");
+            if (debugType != null)
+                report.Add("  OK: PrototypeDebugController type exists");
+            else
+            {
+                report.Add("  ERROR: PrototypeDebugController type missing");
+                errors++;
+            }
+
+            var proceduralType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "ProceduralCombatAnimator");
+            if (proceduralType != null)
+            {
+                report.Add("  OK: ProceduralCombatAnimator fallback exists");
+                if (proceduralType.GetProperty("VisualLocalOffset") != null)
+                    report.Add("  OK: ProceduralCombatAnimator exposes VisualLocalOffset");
+            }
+            else
+            {
+                report.Add("  ERROR: ProceduralCombatAnimator type missing");
+                errors++;
+            }
+
+            if (File.Exists("Assets/Scenes/CommanderPrototype.unity"))
+            {
+                var scene = EditorSceneManager.OpenScene("Assets/Scenes/CommanderPrototype.unity", OpenSceneMode.Additive);
+                try
+                {
+                    int debugControllers = 0;
+                    int alivePlayers = 0;
+                    int rootMotionIssues = 0;
+                    int visualMissing = 0;
+                    int animFallbackMissing = 0;
+
+                    foreach (var go in scene.GetRootGameObjects())
+                    {
+                        debugControllers += go.GetComponentsInChildren<PrototypeDebugController>(true).Length;
+                        foreach (var ctrl in go.GetComponentsInChildren<CombatController>(true))
+                        {
+                            var c = ctrl.GetComponent<Combatant>();
+                            if (c != null && c.CurrentHealth > 0f) alivePlayers++;
+                            var animator = ctrl.GetComponent<Animator>();
+                            if (animator != null && animator.applyRootMotion) rootMotionIssues++;
+                            if (ctrl.transform.Find("Visual") == null) visualMissing++;
+                            if (ctrl.GetComponent<ProceduralCombatAnimator>() == null && ctrl.GetComponent<AnimatorCombatBridge>() == null) animFallbackMissing++;
+                        }
+                    }
+
+                    if (debugControllers > 0)
+                        report.Add($"  OK: CommanderPrototype has {debugControllers} PrototypeDebugController(s)");
+                    else
+                    {
+                        report.Add("  WARNING: CommanderPrototype missing PrototypeDebugController (recreate scene)");
+                        warnings++;
+                    }
+
+                    if (alivePlayers > 0)
+                        report.Add("  OK: CommanderPrototype player starts alive");
+                    else
+                    {
+                        report.Add("  WARNING: CommanderPrototype has no alive CombatController player in scene asset");
+                        warnings++;
+                    }
+
+                    if (rootMotionIssues == 0) report.Add("  OK: player Animator.applyRootMotion=false");
+                    else { report.Add($"  ERROR: {rootMotionIssues} player Animator(s) have applyRootMotion=true"); errors += rootMotionIssues; }
+
+                    if (visualMissing == 0) report.Add("  OK: player Visual child exists");
+                    else { report.Add($"  WARNING: {visualMissing} player(s) missing Visual child"); warnings += visualMissing; }
+
+                    if (animFallbackMissing == 0) report.Add("  OK: player has animation bridge or procedural fallback");
+                    else { report.Add($"  WARNING: {animFallbackMissing} player(s) missing combat animation feedback"); warnings += animFallbackMissing; }
                 }
                 finally
                 {

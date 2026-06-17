@@ -116,6 +116,7 @@ namespace LuoLuoTrip
             _encounter.Initialize(new EncounterDefinition { encounterId = "convoy_energy_conflict", displayName = "Convoy Energy Conflict", attackerFaction = SubFactionId.BeastIronClaw, defenderFaction = SubFactionId.MotorIronRiders });
             _encounter.RegisterUnitsBySubFaction(SubFactionId.BeastIronClaw);
             _encounter.RegisterUnitsBySubFaction(SubFactionId.MotorIronRiders);
+            _encounter.StartEncounter();
 
             _areaRuntime.Activate("convoy_energy_conflict");
             AttachObjectiveMarkers();
@@ -300,6 +301,7 @@ namespace LuoLuoTrip
             Phase = _missionState.Outcome == MissionOutcomeType.Failed ? MissionPhase.Failed : MissionPhase.Completed;
             if (_triggerZone != null) _triggerZone.MarkCompleted();
             _areaRuntime.MarkComplete();
+            if (_encounter != null) _encounter.CompleteEncounter(_missionState.Outcome.ToString());
             if (_objectiveHud != null) _objectiveHud.ShowFinalResult(_missionState, Phase);
             DetachObjectiveMarkers();
             if (Phase == MissionPhase.Failed) AudioFeedbackService.PlayUI(AudioEventId.MissionFailed);

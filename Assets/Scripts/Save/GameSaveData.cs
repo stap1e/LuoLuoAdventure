@@ -21,6 +21,19 @@ namespace LuoLuoTrip.Save
         public FactionPoliticsSnapshot factionPolitics = new FactionPoliticsSnapshot();
         public List<MissionConsequenceSaveEntry> completedMissions = new List<MissionConsequenceSaveEntry>();
         public MissionChainState missionChainState = new MissionChainState();
+        public List<EncounterSnapshot> encounterSnapshots = new List<EncounterSnapshot>();
+    }
+
+    [Serializable]
+    public class EncounterSnapshot
+    {
+        public string encounterId;
+        public bool hasStarted;
+        public bool hasCompleted;
+        public string lastOutcome;
+        public int defeatedUnitCount;
+        public int totalSpawnedCount;
+        public List<string> spawnedWaveIds = new List<string>();
     }
 
     [Serializable]

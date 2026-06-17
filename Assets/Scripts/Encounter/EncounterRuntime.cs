@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using LuoLuoTrip.Save;
 using UnityEngine;
 
 namespace LuoLuoTrip
@@ -11,7 +12,12 @@ namespace LuoLuoTrip
 
         private readonly List<EncounterUnitHandle> _units = new List<EncounterUnitHandle>();
         private readonly List<EncounterUnitHandle> _spawnedUnits = new List<EncounterUnitHandle>();
+        private readonly HashSet<string> _spawnedWaveIds = new HashSet<string>();
         private float _waveTimer;
+        private bool _hasStarted;
+        private bool _hasCompleted;
+        private string _lastOutcome;
+        private int _totalSpawnedCount;
 
         public EncounterDefinition Definition => _definition;
         public IReadOnlyList<EncounterUnitHandle> Units => _units;
@@ -19,6 +25,11 @@ namespace LuoLuoTrip
         public IReadOnlyList<EncounterWave> Waves => _waves;
         public IReadOnlyList<EncounterSpawnPoint> SpawnPoints => _spawnPoints;
         public int PendingWaveCount { get; private set; }
+        public bool HasStarted => _hasStarted;
+        public bool HasCompleted => _hasCompleted;
+        public string LastOutcome => _lastOutcome;
+        public int TotalSpawnedCount => _totalSpawnedCount;
+        public IReadOnlyCollection<string> SpawnedWaveIds => _spawnedWaveIds;
 
         public void Initialize(EncounterDefinition definition)
         {
@@ -135,12 +146,14 @@ namespace LuoLuoTrip
             for (int i = 0; i < _units.Count; i++)
             {
                 var u = _units[i];
+                if (u == null || u.Entity == null || u.Entity.Data == null) continue;
                 if (u.Race == race && u.WasAliveAtStart && !u.IsAlive)
                     count++;
             }
             for (int i = 0; i < _spawnedUnits.Count; i++)
             {
                 var u = _spawnedUnits[i];
+                if (u == null || u.Entity == null || u.Entity.Data == null) continue;
                 if (u.Race == race && u.WasAliveAtStart && !u.IsAlive)
                     count++;
             }
@@ -203,6 +216,14 @@ namespace LuoLuoTrip
 
         public int SpawnWave(EncounterWave wave)
         {
+            if (wave == null) return 0;
+            if (!string.IsNullOrEmpty(wave.waveId) && _spawnedWaveIds.Contains(wave.waveId))
+            {
+                Debug.Log($"[EncounterRuntime] Skip duplicate wave '{wave.waveId}' (already spawned)");
+                wave.spawned = true;
+                return 0;
+            }
+
             int spawned = 0;
             var spawnPoint = FindSpawnPoint(wave.faction);
             var count = Mathf.RoundToInt(wave.unitCount * GetFactionMultiplier(wave.faction));
@@ -233,6 +254,11 @@ namespace LuoLuoTrip
                     }
                 }
             }
+
+            if (!string.IsNullOrEmpty(wave.waveId))
+                _spawnedWaveIds.Add(wave.waveId);
+            wave.spawned = true;
+            _totalSpawnedCount += spawned;
 
             if (spawned > 0)
                 Debug.Log($"[EncounterRuntime] Spawned wave '{wave.waveId}': {spawned} {wave.faction} units (behavior={wave.initialBehavior})");
@@ -265,8 +291,147 @@ namespace LuoLuoTrip
         {
             _units.Clear();
             _spawnedUnits.Clear();
+            _spawnedWaveIds.Clear();
             _waveTimer = 0f;
             PendingWaveCount = 0;
+            _totalSpawnedCount = 0;
+            _hasStarted = false;
+            _hasCompleted = false;
+            _lastOutcome = null;
+        }
+
+        public void StartEncounter()
+        {
+            if (_hasCompleted)
+            {
+                Debug.Log($"[EncounterRuntime] StartEncounter ignored: '{_definition?.encounterId}' already completed");
+                return;
+            }
+            _hasStarted = true;
+        }
+
+        public void CompleteEncounter(string outcome = null)
+        {
+            _hasCompleted = true;
+            _hasStarted = false;
+            _lastOutcome = outcome;
+        }
+
+        public void ResetEncounter()
+        {
+            ClearSpawnedUnits();
+            CharacterRuntimeComponentGuard.ResetWarnings();
+            _spawnedWaveIds.Clear();
+            _waveTimer = 0f;
+            for (int i = 0; i < _waves.Count; i++)
+                _waves[i].spawned = false;
+            PendingWaveCount = 0;
+            for (int i = 0; i < _waves.Count; i++)
+                if (_waves[i].IsReady) PendingWaveCount++;
+            _totalSpawnedCount = 0;
+            _hasStarted = false;
+            _hasCompleted = false;
+            _lastOutcome = null;
+        }
+
+        public int ClearSpawnedUnits()
+        {
+            int destroyed = 0;
+            for (int i = 0; i < _spawnedUnits.Count; i++)
+            {
+                var u = _spawnedUnits[i];
+                if (u?.Entity != null && u.Entity.gameObject != null)
+                {
+                    if (Application.isPlaying)
+                        Destroy(u.Entity.gameObject);
+                    else
+                        DestroyImmediate(u.Entity.gameObject);
+                    destroyed++;
+                }
+            }
+            _spawnedUnits.Clear();
+            return destroyed;
+        }
+
+        public int DespawnDeadUnits()
+        {
+            int destroyed = 0;
+            for (int i = _spawnedUnits.Count - 1; i >= 0; i--)
+            {
+                var u = _spawnedUnits[i];
+                if (u?.Entity == null || u.Entity.gameObject == null)
+                {
+                    _spawnedUnits.RemoveAt(i);
+                    continue;
+                }
+                if (u.Entity.Data == null || !u.Entity.Data.IsAlive)
+                {
+                    if (Application.isPlaying)
+                        Destroy(u.Entity.gameObject);
+                    else
+                        DestroyImmediate(u.Entity.gameObject);
+                    _spawnedUnits.RemoveAt(i);
+                    destroyed++;
+                }
+            }
+            return destroyed;
+        }
+
+        public EncounterSnapshot GetSnapshot()
+        {
+            var snapshot = new EncounterSnapshot
+            {
+                encounterId = _definition?.encounterId ?? gameObject.name,
+                hasStarted = _hasStarted,
+                hasCompleted = _hasCompleted,
+                lastOutcome = _lastOutcome,
+                totalSpawnedCount = _totalSpawnedCount,
+                defeatedUnitCount = CountAllSpawnedDefeated(),
+            };
+            snapshot.spawnedWaveIds.Clear();
+            foreach (var id in _spawnedWaveIds)
+                snapshot.spawnedWaveIds.Add(id);
+            return snapshot;
+        }
+
+        public void RestoreSnapshot(EncounterSnapshot snapshot)
+        {
+            if (snapshot == null) return;
+            ClearSpawnedUnits();
+            CharacterRuntimeComponentGuard.ResetWarnings();
+            _spawnedWaveIds.Clear();
+            if (snapshot.spawnedWaveIds != null)
+                for (int i = 0; i < snapshot.spawnedWaveIds.Count; i++)
+                    if (!string.IsNullOrEmpty(snapshot.spawnedWaveIds[i]))
+                        _spawnedWaveIds.Add(snapshot.spawnedWaveIds[i]);
+
+            _hasStarted = snapshot.hasStarted;
+            _hasCompleted = snapshot.hasCompleted;
+            _lastOutcome = snapshot.lastOutcome;
+            _totalSpawnedCount = snapshot.totalSpawnedCount;
+
+            for (int i = 0; i < _waves.Count; i++)
+            {
+                var w = _waves[i];
+                w.spawned = !string.IsNullOrEmpty(w.waveId) && _spawnedWaveIds.Contains(w.waveId);
+            }
+            PendingWaveCount = 0;
+            for (int i = 0; i < _waves.Count; i++)
+                if (_waves[i].IsReady) PendingWaveCount++;
+            _waveTimer = 0f;
+        }
+
+        private int CountAllSpawnedDefeated()
+        {
+            int count = 0;
+            for (int i = 0; i < _spawnedUnits.Count; i++)
+            {
+                var u = _spawnedUnits[i];
+                if (u == null) continue;
+                if (u.Entity == null) { count++; continue; }
+                if (u.Entity.Data == null || !u.Entity.Data.IsAlive) count++;
+            }
+            return count;
         }
     }
 }

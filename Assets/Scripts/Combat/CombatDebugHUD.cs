@@ -34,25 +34,30 @@ namespace LuoLuoTrip.Combat
 
             if (combatant == null) return;
 
+            var stats = combatant.Stats;
             if (!combatant.IsAlive)
             {
-                var deadRect = new Rect(Screen.width / 2f - 150f, Screen.height / 2f - 30f, 300f, 60f);
+                var deadRect = new Rect(Screen.width / 2f - 180f, Screen.height / 2f - 50f, 360f, 100f);
                 var prev = GUI.color;
                 GUI.color = new Color(0.4f, 0f, 0f, 0.75f);
                 GUI.DrawTexture(deadRect, Texture2D.whiteTexture);
                 GUI.color = Color.white;
-                var style = new GUIStyle(GUI.skin.label)
+                var titleStyle = new GUIStyle(GUI.skin.label)
                 {
                     fontSize = 28,
                     fontStyle = FontStyle.Bold,
                     alignment = TextAnchor.MiddleCenter
                 };
-                GUI.Label(deadRect, "PLAYER DEAD", style);
+                var hintStyle = new GUIStyle(GUI.skin.label)
+                {
+                    fontSize = 14,
+                    alignment = TextAnchor.MiddleCenter
+                };
+                GUI.Label(new Rect(deadRect.x, deadRect.y + 6f, deadRect.width, 34f), "PLAYER DEAD", titleStyle);
+                GUI.Label(new Rect(deadRect.x, deadRect.y + 46f, deadRect.width, 20f), "Input disabled: player is dead", hintStyle);
+                GUI.Label(new Rect(deadRect.x, deadRect.y + 68f, deadRect.width, 20f), "Press F2 to revive in prototype", hintStyle);
                 GUI.color = prev;
-                return;
             }
-
-            var stats = combatant.Stats;
             var y = 10f;
             DrawBar(10, y, 200, 16, combatant.CurrentHealth / stats.maxHealth, Color.red, "HP");
             y += 22;
@@ -90,8 +95,16 @@ namespace LuoLuoTrip.Combat
 
             if (_playerCombat != null)
             {
-                GUI.Label(new Rect(10, y, 400, 20),
+                GUI.Label(new Rect(10, y, 520, 20),
                     $"Input: {(_playerCombat.IsInputEnabled ? "ON" : "OFF")} | Speed: {_playerCombat.MoveSpeed:F1}");
+                y += 20;
+                GUI.Label(new Rect(10, y, 640, 20),
+                    $"Attack: {_playerCombat.LastAttackResult}  Reason: {_playerCombat.LastAttackRejectReason}");
+                y += 20;
+                var dist = _playerCombat.LastAttackDistance >= 0f ? _playerCombat.LastAttackDistance.ToString("F1") : "-";
+                var range = _playerCombat.LastAttackRange >= 0f ? _playerCombat.LastAttackRange.ToString("F1") : "-";
+                GUI.Label(new Rect(10, y, 640, 20),
+                    $"Target: {_playerCombat.LastAttackTargetName}  Distance: {dist}/{range}  State: {_playerCombat.LastAttackState}");
             }
         }
 

@@ -15,13 +15,12 @@ namespace LuoLuoTrip.Tests.EditMode
                 var u1 = new GameObject("B1");
                 var entity1 = u1.AddComponent<CharacterEntity>();
                 entity1.Bind(CharacterData.Create("b1", "Beast1", SubFactionId.BeastIronClaw, CharacterRole.Minion));
-                entity1.Data.IsAlive = false;
                 encounter.RegisterUnit(entity1);
+                entity1.Data.IsAlive = false;
 
                 var u2 = new GameObject("B2");
                 var entity2 = u2.AddComponent<CharacterEntity>();
                 entity2.Bind(CharacterData.Create("b2", "Beast2", SubFactionId.BeastIronClaw, CharacterRole.Minion));
-
                 encounter.RegisterUnit(entity2);
                 Assert.That(encounter.CountCasualties(SubFactionId.BeastIronClaw), Is.EqualTo(1));
                 Object.DestroyImmediate(u2);

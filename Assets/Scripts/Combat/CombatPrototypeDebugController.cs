@@ -74,7 +74,7 @@ namespace LuoLuoTrip.Combat
                 if (c.CharacterEntity?.Data != null)
                     c.CharacterEntity.Data.IsAlive = true;
             }
-            Debug.Log("[CombatDebug] F2: Reset all HP/Stamina/Poise to full");
+            Debug.Log("[PROTOTYPE DEBUG] F2: Reset all HP/Stamina/Poise to full");
         }
 
         private void ResetPositions()
@@ -84,7 +84,7 @@ namespace LuoLuoTrip.Combat
                 if (snap.combatant == null) continue;
                 snap.combatant.transform.position = snap.position;
             }
-            Debug.Log("[CombatDebug] F3: Reset positions to scene-start");
+            Debug.Log("[PROTOTYPE DEBUG] F3: Reset positions to scene-start");
         }
 
         private static void ResetEnemyStates()
@@ -97,7 +97,7 @@ namespace LuoLuoTrip.Combat
                 if (c.CharacterEntity?.Data != null)
                     c.CharacterEntity.Data.IsAlive = true;
             }
-            Debug.Log("[CombatDebug] F4: Reset all enemy states (revive + full HP)");
+            Debug.Log("[PROTOTYPE DEBUG] F4: Reset all enemy states (revive + full HP)");
         }
 
         private void OnGUI()

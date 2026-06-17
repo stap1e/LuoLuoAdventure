@@ -12,6 +12,8 @@ namespace LuoLuoTrip.Combat
         [SerializeField] private KeyCode _lockToggleKey = KeyCode.Q;
         [SerializeField] private KeyCode _lockSwitchKey = KeyCode.Tab;
         [SerializeField] private bool _debugInput;
+        [SerializeField] private float _autoAcquireExtraRange = 2.5f;
+        [SerializeField] private float _autoAcquireForwardAngle = 90f;
 
         private Combatant _self;
         private CharacterEntity _entity;
@@ -22,6 +24,14 @@ namespace LuoLuoTrip.Combat
         private bool _moveSpeedWarned;
         private float _debugLogTimer;
         private Vector3 _lastPosition;
+
+        public float LastAttackAttemptTime { get; private set; } = -999f;
+        public string LastAttackResult { get; private set; } = "None";
+        public string LastAttackRejectReason { get; private set; } = "None";
+        public string LastAttackTargetName { get; private set; } = "None";
+        public float LastAttackDistance { get; private set; } = -1f;
+        public float LastAttackRange { get; private set; } = -1f;
+        public CombatState LastAttackState { get; private set; } = CombatState.Idle;
 
         public bool IsInputEnabled => _inputEnabled;
         public float MoveSpeed => _moveSpeed;
@@ -34,20 +44,42 @@ namespace LuoLuoTrip.Combat
 
         private void Awake()
         {
-            _self = GetComponent<Combatant>();
-            _entity = GetComponent<CharacterEntity>();
-            _motor = GetComponent<CharacterMovementMotor>();
-            if (_motor == null)
-                _motor = gameObject.AddComponent<CharacterMovementMotor>();
-            _camera = Camera.main;
+            EnsureReferences();
             _lastPosition = transform.position;
+        }
+
+        private void EnsureReferences()
+        {
+            if (_self == null) _self = GetComponent<Combatant>();
+            if (_entity == null) _entity = GetComponent<CharacterEntity>();
+            if (_motor == null) _motor = GetComponent<CharacterMovementMotor>();
+            if (_motor == null) _motor = gameObject.AddComponent<CharacterMovementMotor>();
+            if (_camera == null) _camera = Camera.main;
         }
 
         private void Update()
         {
-            if (!_self.IsAlive) return;
+            EnsureReferences();
+            if (_self == null)
+            {
+                if (Input.GetKeyDown(_attackKey))
+                    RecordAttackAttempt("BLOCKED", "CombatantMissing", null, -1f, -1f, CombatState.Idle);
+                return;
+            }
 
-            if (!_inputEnabled) return;
+            if (!_self.IsAlive)
+            {
+                if (Input.GetKeyDown(_attackKey))
+                    RecordAttackAttempt("BLOCKED", "PlayerDead", null, -1f, _self.Stats.attackRange, _self.State);
+                return;
+            }
+
+            if (!_inputEnabled)
+            {
+                if (Input.GetKeyDown(_attackKey))
+                    RecordAttackAttempt("BLOCKED", "InputDisabled", null, -1f, _self.Stats.attackRange, _self.State);
+                return;
+            }
 
             HandleLockOn();
             HandleMovement();
@@ -126,10 +158,7 @@ namespace LuoLuoTrip.Combat
         private void HandleCombatInput()
         {
             if (Input.GetKeyDown(_attackKey))
-            {
-                var target = _lockTarget != null && _lockTarget.IsAlive ? _lockTarget : FindNearestHostile();
-                _self.TryLightAttack(target);
-            }
+                AttemptAttack();
 
             if (Input.GetKeyDown(_dodgeKey))
             {
@@ -137,6 +166,128 @@ namespace LuoLuoTrip.Combat
                 var dir = input.sqrMagnitude > 0.01f ? new Vector3(input.x, 0f, input.y) : -transform.forward;
                 _self.TryDodge(dir);
             }
+        }
+
+        public bool AttemptAttack(Combatant explicitTarget = null)
+        {
+            EnsureReferences();
+            if (_self == null)
+            {
+                RecordAttackAttempt("BLOCKED", "CombatantMissing", null, -1f, -1f, CombatState.Idle);
+                return false;
+            }
+
+            var range = _self.Stats.attackRange;
+            if (!_self.IsAlive)
+            {
+                RecordAttackAttempt("BLOCKED", "PlayerDead", null, -1f, range, _self.State);
+                return false;
+            }
+            if (!_inputEnabled)
+            {
+                RecordAttackAttempt("BLOCKED", "InputDisabled", null, -1f, range, _self.State);
+                return false;
+            }
+
+            if (!_self.CanStartLightAttack(out var blockReason))
+            {
+                RecordAttackAttempt("BLOCKED", blockReason, null, -1f, range, _self.State);
+                return false;
+            }
+
+            var target = explicitTarget != null ? explicitTarget : FindPreferredAttackTarget();
+            var dist = target != null ? Vector3.Distance(transform.position, target.transform.position) : -1f;
+
+            if (target != null && !target.IsAlive)
+            {
+                RecordAttackAttempt("BLOCKED", "TargetDead", target, dist, range, _self.State);
+                return false;
+            }
+
+            if (target != null && dist > range + 0.5f)
+            {
+                var startedOutOfRange = _self.TryLightAttack(target);
+                RecordAttackAttempt(startedOutOfRange ? "MISS" : "BLOCKED", startedOutOfRange ? "OutOfRange" : "ActionBlocked", target, dist, range, _self.State);
+                return startedOutOfRange;
+            }
+
+            if (target == null)
+            {
+                var whiffStarted = _self.TryLightAttack(null);
+                RecordAttackAttempt(whiffStarted ? "MISS" : "BLOCKED", whiffStarted ? "NoTargetInRange" : "ActionBlocked", null, -1f, range, _self.State);
+                return whiffStarted;
+            }
+
+            var started = _self.TryLightAttack(target);
+            RecordAttackAttempt(started ? "STARTED" : "BLOCKED", started ? "None" : "ActionBlocked", target, dist, range, _self.State);
+            return started;
+        }
+
+        public void SetLockTargetForTests(Combatant target)
+        {
+            _lockTarget = target;
+        }
+
+        private void RecordAttackAttempt(string result, string reason, Combatant target, float distance, float range, CombatState state)
+        {
+            LastAttackAttemptTime = Time.time;
+            LastAttackResult = result;
+            LastAttackRejectReason = reason;
+            LastAttackTargetName = target != null ? target.name : "None";
+            LastAttackDistance = distance;
+            LastAttackRange = range;
+            LastAttackState = state;
+        }
+
+        private Combatant FindPreferredAttackTarget()
+        {
+            if (_lockTarget != null && _lockTarget.IsAlive && IsHostile(_lockTarget))
+                return _lockTarget;
+
+            var selected = GetCommanderSelectedTarget();
+            if (selected != null && selected.IsAlive && IsHostile(selected))
+                return selected;
+
+            return FindForwardHostileForAttack();
+        }
+
+        private Combatant GetCommanderSelectedTarget()
+        {
+            var selector = GetComponent<CommanderTargetSelector>();
+            if (selector == null || selector.CurrentTarget == null) return null;
+            return selector.CurrentTarget.GetComponent<Combatant>();
+        }
+
+        private Combatant FindForwardHostileForAttack()
+        {
+            Combatant best = null;
+            var range = Mathf.Max(0.5f, _self.Stats.attackRange + _autoAcquireExtraRange);
+            var bestScore = float.MaxValue;
+            var forward = transform.forward;
+            forward.y = 0f;
+            if (forward.sqrMagnitude < 0.01f) forward = Vector3.forward;
+            forward.Normalize();
+
+            foreach (var other in FindObjectsOfType<Combatant>())
+            {
+                if (other == _self || !other.IsAlive) continue;
+                if (!IsHostile(other)) continue;
+
+                var to = other.transform.position - transform.position;
+                to.y = 0f;
+                var dist = to.magnitude;
+                if (dist > range) continue;
+                var dir = dist > 0.001f ? to / dist : forward;
+                var angle = Vector3.Angle(forward, dir);
+                if (angle > _autoAcquireForwardAngle) continue;
+                var score = angle * 0.75f + dist;
+                if (score < bestScore)
+                {
+                    bestScore = score;
+                    best = other;
+                }
+            }
+            return best;
         }
 
         private void DebugLogInput(Vector2 input)

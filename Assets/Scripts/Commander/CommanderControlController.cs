@@ -87,6 +87,14 @@ namespace LuoLuoTrip
 
         private void TryInteract()
         {
+            var playerCombatant = _state?.OriginalPlayerEntity != null ? _state.OriginalPlayerEntity.GetComponent<Combatant>() : null;
+            if (playerCombatant != null && !playerCombatant.IsAlive)
+            {
+                if (_debugHud != null)
+                    _debugHud.SetLastControlResult(ControlPermissionResult.DeniedResult("PlayerDead"));
+                return;
+            }
+
             if (_state.IsSyncAssistActive)
             {
                 if (_debugHud != null)
@@ -99,6 +107,12 @@ namespace LuoLuoTrip
             {
                 if (_debugHud != null)
                     _debugHud.SetLastControlResult(ControlPermissionResult.DeniedResult("No target selected (Tab)"));
+                return;
+            }
+            if (!target.Data.IsAlive)
+            {
+                if (_debugHud != null)
+                    _debugHud.SetLastControlResult(ControlPermissionResult.DeniedResult("TargetDead"));
                 return;
             }
 

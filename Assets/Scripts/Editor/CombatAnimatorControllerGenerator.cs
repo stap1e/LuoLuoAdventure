@@ -283,19 +283,16 @@ namespace LuoLuoTrip.Editor
             so.FindProperty("_animator").objectReferenceValue = animator;
             so.ApplyModifiedPropertiesWithoutUndo();
 
-            var driver = go.GetComponent<CombatAnimationDriver>();
-            if (driver != null)
-            {
-                var driverSo = new SerializedObject(driver);
-                driverSo.FindProperty("_preferAnimatorBridge").boolValue = true;
-                driverSo.FindProperty("_useProceduralFallback").boolValue = false;
-                driverSo.ApplyModifiedPropertiesWithoutUndo();
-            }
+            if (go.GetComponent<ProceduralCombatAnimator>() == null)
+                go.AddComponent<ProceduralCombatAnimator>();
 
-            // 移除程序化动画（若存在）
-            var procedural = go.GetComponent<ProceduralCombatAnimator>();
-            if (procedural != null)
-                Object.DestroyImmediate(procedural);
+            var driver = go.GetComponent<CombatAnimationDriver>();
+            if (driver == null)
+                driver = go.AddComponent<CombatAnimationDriver>();
+            var driverSo = new SerializedObject(driver);
+            driverSo.FindProperty("_preferAnimatorBridge").boolValue = false;
+            driverSo.FindProperty("_useProceduralFallback").boolValue = true;
+            driverSo.ApplyModifiedPropertiesWithoutUndo();
 
             Debug.Log($"[LuoLuoTrip] 已将 Combat Animator 应用到: {go.name}");
         }

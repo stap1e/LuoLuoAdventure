@@ -54,6 +54,7 @@ namespace LuoLuoTrip.Save
             var combatStates = CollectCombatStates();
             var position = FindPlayerPosition();
             var save = context.ExportSave(_playerCharacterId, position, combatStates);
+            CollectEncounterSnapshots(save);
             SaveService.Write(save, _saveFileName);
 
             if (!silent)
@@ -64,7 +65,7 @@ namespace LuoLuoTrip.Save
                     : "none";
                 var activeMission = chainState?.ActiveMissionId ?? "none";
                 var controlled = context.CommanderProfile != null ? "self" : "none";
-                Debug.Log($"[Save] Quick save complete (F5) | Commander Lv.{context.CommanderProfile.CommanderLevel} XP:{context.CommanderProfile.Experience} | Controlled:{controlled} | Factions:{context.ReputationService.StandingsCount} | Chain completed:{chainState?.CompletedMissions.Count ?? 0} | Last outcome:{lastOutcome} | Active mission:{activeMission} | Characters:{save.characters.Count}");
+                Debug.Log($"[Save] Quick save complete (F5) | Commander Lv.{context.CommanderProfile.CommanderLevel} XP:{context.CommanderProfile.Experience} | Controlled:{controlled} | Factions:{context.ReputationService.StandingsCount} | Chain completed:{chainState?.CompletedMissions.Count ?? 0} | Last outcome:{lastOutcome} | Active mission:{activeMission} | Characters:{save.characters.Count} | Encounters:{save.encounterSnapshots.Count}");
             }
         }
 
@@ -86,6 +87,7 @@ namespace LuoLuoTrip.Save
             context.ApplySave(save);
             RestoreCombatStateFromSave(save);
             RestorePlayerPosition(save);
+            RestoreEncounterSnapshots(save);
 
             var commanderOk = context.CommanderProfile != null;
             var factionOk = context.ReputationService != null;
@@ -96,7 +98,7 @@ namespace LuoLuoTrip.Save
             var chainCompleted = chainState?.CompletedMissions.Count ?? 0;
             var chainUnlocked = chainState?.UnlockedMissionIds.Count ?? 0;
 
-            Debug.Log($"[Save] Load complete | Commander:{(commanderOk ? $"Lv.{context.CommanderProfile.CommanderLevel} XP:{context.CommanderProfile.Experience}" : "MISSING")} | Factions:{(factionOk ? $"OK({context.ReputationService.StandingsCount})" : "MISSING")} | Mission:{(missionOk ? "OK" : "MISSING")} | Chain:{(chainOk ? $"completed:{chainCompleted} unlocked:{chainUnlocked}" : "MISSING")} | Version:{save.version} | Time:{save.savedAtUtc}");
+            Debug.Log($"[Save] Load complete | Commander:{(commanderOk ? $"Lv.{context.CommanderProfile.CommanderLevel} XP:{context.CommanderProfile.Experience}" : "MISSING")} | Factions:{(factionOk ? $"OK({context.ReputationService.StandingsCount})" : "MISSING")} | Mission:{(missionOk ? "OK" : "MISSING")} | Chain:{(chainOk ? $"completed:{chainCompleted} unlocked:{chainUnlocked}" : "MISSING")} | Encounters:{save.encounterSnapshots?.Count ?? 0} | Version:{save.version} | Time:{save.savedAtUtc}");
 
             if (save.missionChainState != null)
                 Debug.Log($"[Save] MissionChainState restored: {save.missionChainState.CompletedMissions.Count} entries, {save.missionChainState.UnlockedMissionIds.Count} unlocked");
@@ -110,6 +112,7 @@ namespace LuoLuoTrip.Save
         public void ClearSave()
         {
             SaveService.Delete(_saveFileName);
+            ClearAllEncounters();
             Debug.Log("[Save] Save file cleared (F10). Restart scene to fully reset runtime objects.");
         }
 
@@ -235,6 +238,59 @@ namespace LuoLuoTrip.Save
                 if (id != null && lookup.TryGetValue(id, out var entry))
                     combatant.RestoreRuntimeState(entry.currentHealth, entry.currentStamina, entry.currentPoise);
             }
+        }
+
+        private static void CollectEncounterSnapshots(GameSaveData save)
+        {
+            save.encounterSnapshots.Clear();
+            foreach (var encounter in FindObjectsOfType<EncounterRuntime>())
+            {
+                if (encounter == null) continue;
+                save.encounterSnapshots.Add(encounter.GetSnapshot());
+            }
+        }
+
+        private static void RestoreEncounterSnapshots(GameSaveData save)
+        {
+            if (save.encounterSnapshots == null || save.encounterSnapshots.Count == 0) return;
+
+            var encounters = FindObjectsOfType<EncounterRuntime>();
+            int restored = 0;
+            int cleared = 0;
+            foreach (var encounter in encounters)
+            {
+                if (encounter == null) continue;
+                var encounterId = encounter.Definition?.encounterId ?? encounter.gameObject.name;
+                EncounterSnapshot match = null;
+                for (int i = 0; i < save.encounterSnapshots.Count; i++)
+                {
+                    if (save.encounterSnapshots[i] != null && save.encounterSnapshots[i].encounterId == encounterId)
+                    {
+                        match = save.encounterSnapshots[i];
+                        break;
+                    }
+                }
+                if (match == null)
+                {
+                    encounter.ResetEncounter();
+                    cleared++;
+                    continue;
+                }
+                encounter.RestoreSnapshot(match);
+                restored++;
+            }
+
+            Debug.Log($"[Save] Encounter snapshots restored: {restored}, reset: {cleared}");
+        }
+
+        private static void ClearAllEncounters()
+        {
+            foreach (var encounter in FindObjectsOfType<EncounterRuntime>())
+            {
+                if (encounter == null) continue;
+                encounter.ResetEncounter();
+            }
+            CharacterRuntimeComponentGuard.ResetWarnings();
         }
     }
 }

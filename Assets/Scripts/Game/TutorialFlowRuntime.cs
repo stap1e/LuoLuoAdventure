@@ -117,8 +117,8 @@ namespace LuoLuoTrip
             {
                 TutorialStep.Welcome => "Welcome! Press any key to start the tutorial.",
                 TutorialStep.Movement => "Use WASD to move your character.",
-                TutorialStep.LockOn => "Press Q to lock onto an enemy.",
-                TutorialStep.Attack => "Press Left Mouse Button to attack.",
+                TutorialStep.LockOn => "Press Q to lock onto an enemy, or attack without lock-on to auto-acquire nearby hostile.",
+                TutorialStep.Attack => "Press Left Mouse Button to attack. If no target is found, you will whiff with a MISS reason.",
                 TutorialStep.Dodge => "Press Space to dodge. You are invulnerable during dodge!",
                 TutorialStep.CommanderSelect => "Press Tab to select a commander target.",
                 TutorialStep.CommanderControl => "Press E to attempt control of the selected target.",
