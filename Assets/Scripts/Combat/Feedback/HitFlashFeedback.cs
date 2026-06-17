@@ -116,6 +116,24 @@ namespace LuoLuoTrip.Combat.Feedback
             if (_flashTimer <= 0f) RestoreImmediate();
         }
 
+        /// <summary>Advances the flash timer by deltaTime. For EditMode tests where Update does not run.</summary>
+        public void Tick(float deltaTime)
+        {
+            if (!_isFlashing) return;
+            _flashTimer -= deltaTime;
+            if (_flashTimer <= 0f) RestoreImmediate();
+        }
+
+        private void OnDisable()
+        {
+            if (_isFlashing) RestoreImmediate();
+        }
+
+        private void OnDestroy()
+        {
+            if (_isFlashing) RestoreImmediate();
+        }
+
         public int RendererCount
         {
             get

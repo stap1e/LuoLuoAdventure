@@ -37,12 +37,12 @@ namespace LuoLuoTrip.Tests.EditMode
                 var c = CreateCombatant(go, "u", SubFactionId.BeastIronClaw);
                 c.AutoTickEnabled = false;
                 var p = go.AddComponent<CombatantHealthBarPresenter>();
-                p.Invoke("Awake", 0f); // ensure binding (Awake already ran)
-                p.SendMessage("LateUpdate");
+                p.EnsureInitialized();
+                p.RefreshBar();
                 Assert.AreEqual(1f, p.Bar.Ratio, 0.01f);
 
                 c.ApplyHealthDamage(c.Stats.maxHealth * 0.5f);
-                p.SendMessage("LateUpdate");
+                p.RefreshBar();
                 Assert.That(p.Bar.Ratio, Is.LessThan(0.6f));
                 Assert.That(p.Bar.Ratio, Is.GreaterThan(0.4f));
             }
@@ -59,7 +59,7 @@ namespace LuoLuoTrip.Tests.EditMode
                 c.AutoTickEnabled = false;
                 var p = go.AddComponent<CombatantHealthBarPresenter>();
                 c.ApplyHealthDamage(99999f);
-                p.SendMessage("LateUpdate");
+                p.RefreshBar();
                 Assert.IsTrue(p.Bar.IsDead);
             }
             finally { Object.DestroyImmediate(go); }
@@ -72,7 +72,7 @@ namespace LuoLuoTrip.Tests.EditMode
             try
             {
                 var p = go.AddComponent<CombatantHealthBarPresenter>();
-                Assert.DoesNotThrow(() => p.SendMessage("LateUpdate"));
+                Assert.DoesNotThrow(() => p.RefreshBar());
             }
             finally { Object.DestroyImmediate(go); }
         }

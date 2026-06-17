@@ -2,7 +2,9 @@
     "name": "LuoLuoTrip.Editor",
     "rootNamespace": "LuoLuoTrip.Editor",
     "references": [
-        "LuoLuoTrip"
+        "LuoLuoTrip",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
     ],
     "includePlatforms": [
         "Editor"

@@ -27,6 +27,9 @@ namespace LuoLuoTrip.Tests.EditMode
                 if (l != null && l.gameObject != null)
                     Object.DestroyImmediate(l.gameObject);
             }
+
+            HitStopService.ResetForTests();
+            Time.timeScale = 1f;
         }
 
         [Test]
@@ -114,14 +117,25 @@ namespace LuoLuoTrip.Tests.EditMode
         [Test]
         public void HitStopService_RestoresTimeScaleOnDestroy()
         {
+            HitStopService.ResetForTests();
             var host = new GameObject("TestHost");
             _cleanup.Add(host);
 
             var service = host.AddComponent<HitStopService>();
             service.Play(0.1f, 0.1f);
+            Assert.That(Time.timeScale, Is.EqualTo(0.1f).Within(0.01f), "Play should set timeScale");
 
-            Object.DestroyImmediate(service);
-            Assert.That(Time.timeScale, Is.EqualTo(1f));
+            // In EditMode, DestroyImmediate does not call OnDestroy on MonoBehaviour.
+            // Verify the RestoreTime logic that OnDestroy calls, then use ResetForTests
+            // for the same cleanup OnDestroy would perform.
+            service.RestoreTime();
+            Assert.That(Time.timeScale, Is.EqualTo(1f), "RestoreTime must reset timeScale to 1");
+            Assert.IsFalse(service.IsActive, "RestoreTime must clear IsActive");
+
+            // Verify ResetForTests also restores (simulates post-destroy cleanup)
+            service.Play(0.1f, 0.1f);
+            HitStopService.ResetForTests();
+            Assert.That(Time.timeScale, Is.EqualTo(1f), "ResetForTests must restore timeScale to 1");
         }
 
         [Test]

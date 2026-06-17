@@ -60,6 +60,9 @@ UNITY_VERSION_COMPATIBILITY_REPORT.md
 CompatibilityCheck_Report.txt
 TestResults_*.xml
 
+# Test runner output (batchmode XML + Editor logs)
+TestResults/
+
 # Packages (auto-resolved)
 [Pp]ackages/*/
 ![Pp]ackages/manifest.json

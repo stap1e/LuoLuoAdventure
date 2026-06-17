@@ -40,11 +40,28 @@ namespace LuoLuoTrip.Combat.Feedback
 
         private void OnDestroy()
         {
-            if (Instance == this)
-            {
+            // If this service was actively controlling Time.timeScale, restore it.
+            // Uses _isActive (instance field) rather than _instance (static) because
+            // the static may be unreliable during DestroyImmediate in EditMode tests.
+            if (_isActive)
                 RestoreTime();
-                Instance = null;
-            }
+            if (System.Object.ReferenceEquals(_instance, this))
+                _instance = null;
+        }
+
+        private void OnDisable()
+        {
+            if (_isActive)
+                RestoreTime();
+        }
+
+        /// <summary>Resets static state and Time.timeScale for test isolation.</summary>
+        public static void ResetForTests()
+        {
+            if (_instance != null && _instance._isActive)
+                _instance.RestoreTime();
+            _instance = null;
+            Time.timeScale = 1f;
         }
 
         private void Update()

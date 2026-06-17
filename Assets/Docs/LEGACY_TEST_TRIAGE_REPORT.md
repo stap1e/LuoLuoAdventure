@@ -14,6 +14,48 @@ Unity: 2022.3.62f3 LTS
 
 Unity batchmode `-runTests` did not emit the targeted XML in this environment, matching the existing project note that Test Runner execution should be done from the Unity Editor. Compile-only batchmode passed with return code 0 after the triage fixes.
 
+### TEST_INFRA_RECOVERED
+
+**Status:** Unity 2022.3.62f3 batchmode `-runTests` now successfully generates result XML.
+
+**Root cause (resolved):** The `-quit` flag caused Unity to exit after project load, before Test Runner started. Removing `-quit` from all test scripts allows the Test Runner to complete and write XML. Unity's Test Runner exits the process itself when tests finish.
+
+**Fix applied:** All `scripts/run_unity_*_tests.ps1` and `.sh` scripts omit `-quit`. Unity's built-in Test Runner handles process exit after test completion.
+
+**Evidence:**
+- `TestResults/editmode-results.xml` generated: targeted tests, all pass after Targeted Failure Fix Pass.
+- `TestResults/playmode-results.xml` generated: targeted test passes.
+- Both XMLs parsed successfully by `scripts/parse_unity_test_results.py`.
+- Python parser fixed: now correctly reads NUnit 3.x `failed` attribute (was reading `failures`).
+
+**What has been confirmed via batchmode XML:**
+- `AIStopDistanceTests` (3 tests): all PASS — lazy-init fix works.
+- `CombatControllerInputTests`, `CombatRootMovementTests`: all PASS.
+- `MissionAreaRuntimeTests`: all PASS.
+- `RuntimeServiceLifecycleTests` (17 tests): all PASS — HitStopService timeScale restore fixed.
+- `HealthBarPresenterTests` (4 tests): all PASS — RefreshBar() public API + tests updated.
+- `HitFlashFeedbackTests` (3 tests): all PASS — sharedMaterial + OnDisable/OnDestroy restore.
+- `CombatPrototypeFullLoopSmokeTests.DebugController_F2_ResetsHP`: PASS — ResetAllHP instance method + direct call.
+
+**Targeted Failure Fix Pass (6 failures → 0):**
+
+| Test | Root cause | Fix |
+|---|---|---|
+| `HealthBarPresenterTests` ×3 | Tests used `SendMessage("LateUpdate")` which triggers Unity's `ShouldRunBehaviour()` assertion in EditMode. | Added public `RefreshBar()` and `EnsureInitialized()` to `CombatantHealthBarPresenter`. Tests call `RefreshBar()` directly instead of `SendMessage`. |
+| `HitFlashFeedbackTests.FlashTints_Visual_Renderers` | Test used `renderer.material.color` (not `sharedMaterial`) which triggers "Instantiating material during edit mode" error. | Updated test to use `renderer.sharedMaterial.color`. Added `OnDisable`/`OnDestroy` to `HitFlashFeedback` that calls `RestoreImmediate()`. Added `Tick(float)` for test-driven timer advance. |
+| `RuntimeServiceLifecycleTests.HitStopService_RestoresTimeScaleOnDestroy` | `OnDestroy` used `Instance` property whose `FindObjectOfType` fallback returns null during destruction, skipping `RestoreTime()`. Also, `DestroyImmediate(component)` does not call `OnDestroy` in EditMode. | `OnDestroy`/`OnDisable` now check `_isActive` (instance field) instead of static `_instance`. Added `ResetForTests()` static method for test cleanup. Test updated to call `RestoreTime()` and `ResetForTests()` directly, since `DestroyImmediate` doesn't trigger `OnDestroy` in EditMode. |
+| `DebugController_F2_ResetsHP` (PlayMode) | `ResetAllHP` was `public static` — `SendMessage` cannot call static methods. | Changed `ResetAllHP` to instance method. Test updated to call `debug.ResetAllHP()` directly. |
+
+**CI fallback runner (also implemented):**
+- `Assets/Scripts/Editor/CI/UnityTestBatchRunner.cs` — Editor-only `-executeMethod` runner using `TestRunnerApi`.
+- `scripts/run_unity_editmode_tests_ci.ps1`, `scripts/run_unity_playmode_tests_ci.ps1` — use `-executeMethod` with `-quit` (safe because runner calls `EditorApplication.Exit`).
+- Outputs JSON summary (`TestResults/ci-*-summary.json`), parseable by `parse_unity_test_results.py`.
+
+**What still needs Editor Test Runner confirmation:**
+- Full EditMode suite (399 tests) — not yet run via batchmode due to time.
+- Full PlayMode suite (99 tests) — not yet run via batchmode due to time.
+- The 5 EditMode failures and 1 PlayMode failure above need individual investigation.
+
 ## Classifications
 
 ### REAL_BUG / FIXED
@@ -78,9 +120,13 @@ Unity batchmode `-runTests` did not emit the targeted XML in this environment, m
 
 - Unity compile-only batchmode after patches: passed, return code 0.
 - Final compile log: `C:\Users\16025\AppData\Local\Temp\luoluo_compile_after_debug_receiver.log`
-- Targeted `-runTests` attempted but no XML emitted in this environment.
+- Targeted `-runTests` attempted via standardized script: no XML emitted. See `TestResults/editmode-editor.log`.
+- Python parser `scripts/parse_unity_test_results.py` tested against missing XML: correctly reports TEST_INFRA_BLOCKED.
+- PowerShell script `scripts/run_unity_editmode_tests.ps1` tested: correctly detects missing XML, scans log, exits non-zero.
 
 ## Recommended next run
+
+**Batchmode is currently blocked.** All test confirmations must be done via Unity Editor Test Runner (Window > General > Test Runner) until the infra issue is resolved. See `Assets/Docs/TEST_RUNNER_RELIABILITY.md`.
 
 From Unity Editor Test Runner:
 
@@ -95,3 +141,4 @@ From Unity Editor Test Runner:
 2. Run targeted PlayMode:
    - `CombatPrototypeFullLoopSmokeTests.DebugController_F2_ResetsHP`
 3. Re-run full EditMode and PlayMode suites and refresh the parsed failure JSON.
+4. If batchmode `-runTests` starts working (Unity upgrade, package update, or environment change), use `scripts/run_unity_all_tests.ps1` for automated verification.

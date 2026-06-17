@@ -33,14 +33,14 @@ namespace LuoLuoTrip.Tests.EditMode
                 Object.DestroyImmediate(prim.GetComponent<Collider>());
                 var renderer = prim.GetComponent<Renderer>();
                 renderer.sharedMaterial = new Material(Shader.Find("Standard"));
-                var original = renderer.material.color;
+                var original = renderer.sharedMaterial.color;
 
                 var f = go.AddComponent<HitFlashFeedback>();
                 Assert.That(f.RendererCount, Is.GreaterThan(0));
 
                 f.PlayHitFlash();
                 Assert.IsTrue(f.IsFlashing);
-                Assert.AreNotEqual(original, renderer.material.color);
+                Assert.AreNotEqual(original, renderer.sharedMaterial.color);
 
                 f.RestoreImmediate();
                 Assert.IsFalse(f.IsFlashing);

@@ -174,7 +174,7 @@ namespace LuoLuoTrip.Tests.PlayMode
                 yield return null;
                 Assert.Less(player.CurrentHealth, player.Stats.maxHealth);
 
-                debug.SendMessage("ResetAllHP");
+                debug.ResetAllHP();
                 yield return null;
 
                 Assert.AreEqual(player.Stats.maxHealth, player.CurrentHealth, 0.1f, "F2 must reset HP");

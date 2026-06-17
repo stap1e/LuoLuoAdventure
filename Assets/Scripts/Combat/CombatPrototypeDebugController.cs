@@ -65,7 +65,7 @@ namespace LuoLuoTrip.Combat
                 c.ShowAttackDebug = enabled;
         }
 
-        public static void ResetAllHP()
+        public void ResetAllHP()
         {
             foreach (var c in FindObjectsOfType<Combatant>())
             {

@@ -33,22 +33,20 @@ namespace LuoLuoTrip.UI
             if (_bar != null) _bar.Follow = combatant != null ? combatant.transform : null;
         }
 
-        private void Awake()
+        /// <summary>
+        /// Ensures references are initialized. Safe to call from tests or runtime.
+        /// </summary>
+        public void EnsureInitialized()
         {
             EnsureReferences();
         }
 
-        private void EnsureReferences()
-        {
-            if (_combatant == null) _combatant = GetComponent<Combatant>();
-            if (_bar == null) _bar = GetComponent<WorldHealthBar>();
-            if (_bar == null) _bar = gameObject.AddComponent<WorldHealthBar>();
-            _bar.Follow = _combatant != null ? _combatant.transform : transform;
-            _bar.WorldOffset = _worldOffset;
-            if (!string.IsNullOrEmpty(_label)) _bar.SetLabel(_label);
-        }
-
-        private void LateUpdate()
+        /// <summary>
+        /// Refreshes the health bar from the bound Combatant. Public so tests
+        /// can call it directly without SendMessage("LateUpdate") which triggers
+        /// Unity's ShouldRunBehaviour assertion in EditMode.
+        /// </summary>
+        public void RefreshBar()
         {
             if (_combatant == null) _combatant = GetComponent<Combatant>();
             if (_combatant != null && _bar == null) EnsureReferences();
@@ -73,6 +71,26 @@ namespace LuoLuoTrip.UI
                 _bar.IsVisible = false;
             else
                 _bar.IsVisible = true;
+        }
+
+        private void Awake()
+        {
+            EnsureReferences();
+        }
+
+        private void EnsureReferences()
+        {
+            if (_combatant == null) _combatant = GetComponent<Combatant>();
+            if (_bar == null) _bar = GetComponent<WorldHealthBar>();
+            if (_bar == null) _bar = gameObject.AddComponent<WorldHealthBar>();
+            _bar.Follow = _combatant != null ? _combatant.transform : transform;
+            _bar.WorldOffset = _worldOffset;
+            if (!string.IsNullOrEmpty(_label)) _bar.SetLabel(_label);
+        }
+
+        private void LateUpdate()
+        {
+            RefreshBar();
         }
     }
 }
