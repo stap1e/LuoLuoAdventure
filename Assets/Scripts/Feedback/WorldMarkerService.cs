@@ -14,7 +14,15 @@ namespace LuoLuoTrip.Feedback
         [SerializeField] private int _fontSize = 14;
 
         private static WorldMarkerService _instance;
-        public static WorldMarkerService Instance => _instance;
+        public static WorldMarkerService Instance
+        {
+            get
+            {
+                if (_instance == null)
+                    _instance = FindObjectOfType<WorldMarkerService>();
+                return _instance;
+            }
+        }
 
         private readonly List<WorldMarker> _markers = new List<WorldMarker>();
 

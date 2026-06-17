@@ -19,7 +19,15 @@ namespace LuoLuoTrip.Audio
         private AudioSource _uiSource;
 
         private static AudioFeedbackService _instance;
-        public static AudioFeedbackService Instance => _instance;
+        public static AudioFeedbackService Instance
+        {
+            get
+            {
+                if (_instance == null)
+                    _instance = FindObjectOfType<AudioFeedbackService>();
+                return _instance;
+            }
+        }
 
         public AudioFeedbackProfileSO Profile => _profile;
 

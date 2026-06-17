@@ -56,8 +56,9 @@ namespace LuoLuoTrip.Combat.Feedback
             {
                 if (r == null) continue;
                 _renderers.Add(r);
-                if (r.material != null && r.material.HasProperty("_Color"))
-                    _originalColors.Add(r.material.color);
+                var material = r.sharedMaterial;
+                if (material != null && material.HasProperty("_Color"))
+                    _originalColors.Add(material.color);
                 else
                     _originalColors.Add(Color.white);
             }
@@ -87,9 +88,10 @@ namespace LuoLuoTrip.Combat.Feedback
             for (int i = 0; i < _renderers.Count; i++)
             {
                 var r = _renderers[i];
-                if (r == null || r.material == null) continue;
-                if (r.material.HasProperty("_Color"))
-                    r.material.color = _originalColors[i];
+                var material = r != null ? r.sharedMaterial : null;
+                if (material == null) continue;
+                if (material.HasProperty("_Color"))
+                    material.color = _originalColors[i];
             }
             _isFlashing = false;
             _flashTimer = 0f;
@@ -100,9 +102,10 @@ namespace LuoLuoTrip.Combat.Feedback
             for (int i = 0; i < _renderers.Count; i++)
             {
                 var r = _renderers[i];
-                if (r == null || r.material == null) continue;
-                if (r.material.HasProperty("_Color"))
-                    r.material.color = c;
+                var material = r != null ? r.sharedMaterial : null;
+                if (material == null) continue;
+                if (material.HasProperty("_Color"))
+                    material.color = c;
             }
         }
 
@@ -113,6 +116,13 @@ namespace LuoLuoTrip.Combat.Feedback
             if (_flashTimer <= 0f) RestoreImmediate();
         }
 
-        public int RendererCount => _renderers.Count;
+        public int RendererCount
+        {
+            get
+            {
+                ResolveRenderers();
+                return _renderers.Count;
+            }
+        }
     }
 }

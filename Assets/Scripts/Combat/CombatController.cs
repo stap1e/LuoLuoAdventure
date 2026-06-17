@@ -104,7 +104,8 @@ namespace LuoLuoTrip.Combat
 
         public void ApplyMoveInput(Vector2 input)
         {
-            if (_self.State != CombatState.Idle) return;
+            EnsureReferences();
+            if (_self != null && _self.State != CombatState.Idle) return;
 
             var dir = new Vector3(input.x, 0f, input.y);
             if (dir.sqrMagnitude < 0.01f) return;

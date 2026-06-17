@@ -17,7 +17,14 @@ namespace LuoLuoTrip.UI
 
         private bool _missingWarned;
 
-        public WorldHealthBar Bar => _bar;
+        public WorldHealthBar Bar
+        {
+            get
+            {
+                EnsureReferences();
+                return _bar;
+            }
+        }
         public Combatant Combatant => _combatant;
 
         public void SetCombatant(Combatant combatant)
@@ -28,7 +35,13 @@ namespace LuoLuoTrip.UI
 
         private void Awake()
         {
+            EnsureReferences();
+        }
+
+        private void EnsureReferences()
+        {
             if (_combatant == null) _combatant = GetComponent<Combatant>();
+            if (_bar == null) _bar = GetComponent<WorldHealthBar>();
             if (_bar == null) _bar = gameObject.AddComponent<WorldHealthBar>();
             _bar.Follow = _combatant != null ? _combatant.transform : transform;
             _bar.WorldOffset = _worldOffset;
@@ -37,6 +50,8 @@ namespace LuoLuoTrip.UI
 
         private void LateUpdate()
         {
+            if (_combatant == null) _combatant = GetComponent<Combatant>();
+            if (_combatant != null && _bar == null) EnsureReferences();
             if (_combatant == null)
             {
                 if (!_missingWarned)

@@ -64,8 +64,24 @@ namespace LuoLuoTrip.Combat
         public bool IsWindingUp => _isWindingUp;
         public AICombatNavigationController NavController => _navController;
         public float StopDistance => EffectiveStopDistance;
-        public float EffectiveStopDistance =>
-            _stopDistance > 0f ? _stopDistance : Mathf.Max(0.5f, _self.Stats.attackRange * 0.8f);
+        public float EffectiveStopDistance
+        {
+            get
+            {
+                EnsureReferences();
+                var attackRange = _self != null ? _self.Stats.attackRange : CombatStats.CreateDefault().attackRange;
+                return _stopDistance > 0f ? _stopDistance : Mathf.Max(0.5f, attackRange * 0.8f);
+            }
+        }
+
+        private void EnsureReferences()
+        {
+            if (_self == null) _self = GetComponent<Combatant>();
+            if (_entity == null) _entity = GetComponent<CharacterEntity>();
+            if (_motor == null) _motor = GetComponent<CharacterMovementMotor>();
+            if (_motor == null) _motor = gameObject.AddComponent<CharacterMovementMotor>();
+            if (_navController == null) _navController = GetComponent<AICombatNavigationController>();
+        }
 
         public void ApplyTuning(CombatTuningConfigSO config)
         {
@@ -78,11 +94,7 @@ namespace LuoLuoTrip.Combat
 
         private void Awake()
         {
-            _self = GetComponent<Combatant>();
-            _entity = GetComponent<CharacterEntity>();
-            _motor = GetComponent<CharacterMovementMotor>();
-            if (_motor == null)
-                _motor = gameObject.AddComponent<CharacterMovementMotor>();
+            EnsureReferences();
             _spawnPoint = transform.position;
             _attackIntervalOffset = UnityEngine.Random.Range(-_attackIntervalVariance, _attackIntervalVariance);
             CombatantQuery = CombatantQuery ?? (() => FindObjectsOfType<Combatant>());

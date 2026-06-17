@@ -21,12 +21,19 @@ namespace LuoLuoTrip
 
         private void Awake()
         {
+            EnsureRetreatTracker();
+        }
+
+        private void EnsureRetreatTracker()
+        {
+            if (_retreatTracker != null) return;
             _retreatTracker = new RetreatTracker();
             _retreatTracker.Configure(_retreatTime);
         }
 
         public void Activate(string missionId)
         {
+            EnsureRetreatTracker();
             _missionId = missionId;
             _isActive = true;
             _isComplete = false;
