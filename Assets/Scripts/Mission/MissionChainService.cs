@@ -18,8 +18,19 @@ namespace LuoLuoTrip
         }
 
         public void RecordMissionResult(string missionId, MissionOutcomeType outcome, int xpDelta,
-            bool sharedEnergy = false, bool convoyDestroyed = false, bool beastRaidDefeated = false)
+            bool sharedEnergy = false, bool convoyDestroyed = false, bool beastRaidDefeated = false,
+            bool allowDuplicate = false)
         {
+            // Mission chain entries are append-only by sequence index. Re-completing
+            // the same missionId is normally a bug (mission flow re-entry / double
+            // trigger). Block by default unless allowDuplicate is set (used by
+            // explicit debug reset paths only).
+            if (!allowDuplicate && _state.HasCompleted(missionId))
+            {
+                UnityEngine.Debug.LogWarning($"[MissionChain] Skip duplicate mission outcome '{missionId}' (already recorded). Pass allowDuplicate=true for debug reset.");
+                return;
+            }
+
             var entry = new MissionHistoryEntry
             {
                 MissionId = missionId,

@@ -34,6 +34,11 @@ namespace LuoLuoTrip.Save
         public int defeatedUnitCount;
         public int totalSpawnedCount;
         public List<string> spawnedWaveIds = new List<string>();
+        // Lifecycle hint: when an in-progress encounter is loaded, the runtime
+        // marks NeedsRestartAfterLoad=true because dynamic unit HP/position is
+        // not serialized in the prototype. Consumers may decide to ResetEncounter
+        // and replay waves, or display a "restart suggested" hint.
+        public bool needsRestartAfterLoad;
     }
 
     [Serializable]

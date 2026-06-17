@@ -113,7 +113,7 @@ namespace LuoLuoTrip.Save
         {
             SaveService.Delete(_saveFileName);
             ClearAllEncounters();
-            Debug.Log("[Save] Save file cleared (F10). Restart scene to fully reset runtime objects.");
+            Debug.Log("[Save] Save file cleared (F10). Encounter snapshots cleared. Restart scene to fully reset runtime objects.");
         }
 
         public void NewGame()
@@ -254,9 +254,16 @@ namespace LuoLuoTrip.Save
         {
             if (save.encounterSnapshots == null || save.encounterSnapshots.Count == 0) return;
 
+            // Prototype limitation reminder: dynamic spawned units are NOT
+            // serialized with full HP/position state. We only restore lifecycle
+            // state (started / completed / spawnedWaveIds). In-progress
+            // encounters are flagged NeedsRestartAfterLoad on the runtime.
+            Debug.LogWarning("[EncounterRuntime] Dynamic units are not fully serialized; restoring lifecycle state only.");
+
             var encounters = FindObjectsOfType<EncounterRuntime>();
             int restored = 0;
             int cleared = 0;
+            int needsRestart = 0;
             foreach (var encounter in encounters)
             {
                 if (encounter == null) continue;
@@ -278,9 +285,10 @@ namespace LuoLuoTrip.Save
                 }
                 encounter.RestoreSnapshot(match);
                 restored++;
+                if (encounter.NeedsRestartAfterLoad) needsRestart++;
             }
 
-            Debug.Log($"[Save] Encounter snapshots restored: {restored}, reset: {cleared}");
+            Debug.Log($"[Save] Encounter snapshots restored: {restored}, reset: {cleared}, needsRestart: {needsRestart}");
         }
 
         private static void ClearAllEncounters()

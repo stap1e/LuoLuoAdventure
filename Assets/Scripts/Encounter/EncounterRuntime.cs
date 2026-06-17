@@ -298,6 +298,7 @@ namespace LuoLuoTrip
             _hasStarted = false;
             _hasCompleted = false;
             _lastOutcome = null;
+            NeedsRestartAfterLoad = false;
         }
 
         public void StartEncounter()
@@ -307,14 +308,26 @@ namespace LuoLuoTrip
                 Debug.Log($"[EncounterRuntime] StartEncounter ignored: '{_definition?.encounterId}' already completed");
                 return;
             }
+            if (_hasStarted)
+            {
+                Debug.Log($"[EncounterRuntime] StartEncounter ignored: '{_definition?.encounterId}' already started");
+                return;
+            }
             _hasStarted = true;
+            Debug.Log($"[EncounterRuntime] StartEncounter '{_definition?.encounterId ?? gameObject.name}'");
         }
 
         public void CompleteEncounter(string outcome = null)
         {
+            if (_hasCompleted)
+            {
+                Debug.Log($"[EncounterRuntime] CompleteEncounter ignored: '{_definition?.encounterId}' already completed");
+                return;
+            }
             _hasCompleted = true;
             _hasStarted = false;
             _lastOutcome = outcome;
+            Debug.Log($"[EncounterRuntime] CompleteEncounter '{_definition?.encounterId ?? gameObject.name}' outcome={outcome ?? "(none)"}");
         }
 
         public void ResetEncounter()
@@ -332,6 +345,8 @@ namespace LuoLuoTrip
             _hasStarted = false;
             _hasCompleted = false;
             _lastOutcome = null;
+            NeedsRestartAfterLoad = false;
+            Debug.Log($"[EncounterRuntime] ResetEncounter '{_definition?.encounterId ?? gameObject.name}'");
         }
 
         public int ClearSpawnedUnits()
@@ -350,6 +365,8 @@ namespace LuoLuoTrip
                 }
             }
             _spawnedUnits.Clear();
+            if (destroyed > 0)
+                Debug.Log($"[EncounterRuntime] ClearSpawnedUnits '{_definition?.encounterId ?? gameObject.name}' destroyed={destroyed} (manual scene units preserved)");
             return destroyed;
         }
 
@@ -377,6 +394,8 @@ namespace LuoLuoTrip
             return destroyed;
         }
 
+        public bool NeedsRestartAfterLoad { get; private set; }
+
         public EncounterSnapshot GetSnapshot()
         {
             var snapshot = new EncounterSnapshot
@@ -387,6 +406,9 @@ namespace LuoLuoTrip
                 lastOutcome = _lastOutcome,
                 totalSpawnedCount = _totalSpawnedCount,
                 defeatedUnitCount = CountAllSpawnedDefeated(),
+                // In-progress encounters have not committed an outcome and dynamic
+                // unit HP/position is not serialized — mark for caller awareness.
+                needsRestartAfterLoad = _hasStarted && !_hasCompleted,
             };
             snapshot.spawnedWaveIds.Clear();
             foreach (var id in _spawnedWaveIds)
@@ -409,6 +431,7 @@ namespace LuoLuoTrip
             _hasCompleted = snapshot.hasCompleted;
             _lastOutcome = snapshot.lastOutcome;
             _totalSpawnedCount = snapshot.totalSpawnedCount;
+            NeedsRestartAfterLoad = !_hasCompleted && _hasStarted;
 
             for (int i = 0; i < _waves.Count; i++)
             {
@@ -419,6 +442,10 @@ namespace LuoLuoTrip
             for (int i = 0; i < _waves.Count; i++)
                 if (_waves[i].IsReady) PendingWaveCount++;
             _waveTimer = 0f;
+
+            string lifecycleTag = _hasCompleted ? "completed"
+                : (_hasStarted ? "in-progress (NeedsRestartAfterLoad=true)" : "not-started");
+            Debug.Log($"[EncounterRuntime] RestoreSnapshot '{_definition?.encounterId ?? gameObject.name}' state={lifecycleTag} waveIds={_spawnedWaveIds.Count} totalSpawned={_totalSpawnedCount}");
         }
 
         private int CountAllSpawnedDefeated()

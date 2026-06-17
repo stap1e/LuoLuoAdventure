@@ -1,6 +1,6 @@
 # Full Test Baseline Report
 
-Date: 2026-06-17 (Phase 3 — Remaining Test Alignment & DynamicHostility Design)
+Date: 2026-06-17 (Phase 4 — Encounter Persistence & Mission Lifecycle Hardening)
 Unity: 2022.3.62f3 LTS
 Test Framework: com.unity.test-framework@1.4.5
 
@@ -8,11 +8,64 @@ Test Framework: com.unity.test-framework@1.4.5
 
 | Suite | Total | Passed | Failed | Errors | Skipped |
 |---|---|---|---|---|---|
-| EditMode | 400 | 400 | 0 | 0 | 0 |
+| EditMode | 408 | 408 | 0 | 0 | 0 |
 | PlayMode | 99 | 99 | 0 | 0 | 0 |
-| **Combined** | **499** | **499** | **0** | **0** | **0** |
+| **Combined** | **507** | **507** | **0** | **0** | **0** |
 
 Pass rate: **100%**.
+
+Phase 4 added 8 new EditMode tests (`MissionChainIdempotencyTests` ×4 + `EncounterSnapshotTests` lifecycle hint ×4). PlayMode count unchanged (existing persistence smokes already cover the round-trip).
+
+## Phase 4 changes
+
+### Source
+
+| File | Change |
+|---|---|
+| `Assets/Scripts/Encounter/EncounterRuntime.cs` | Added `NeedsRestartAfterLoad` property. `StartEncounter` / `CompleteEncounter` now log with `[EncounterRuntime]` prefix and short-circuit when already in-state. `ClearSpawnedUnits` / `ResetEncounter` log when they do work. `RestoreSnapshot` logs lifecycle outcome and sets `NeedsRestartAfterLoad`. |
+| `Assets/Scripts/Save/GameSaveData.cs` | `EncounterSnapshot.needsRestartAfterLoad` field added (in-progress hint). |
+| `Assets/Scripts/Save/SaveLoadManager.cs` | F9 restore now logs the dynamic-units serialization warning once and reports `needsRestart` count. F10 ClearSave log clarifies that snapshots were cleared. |
+| `Assets/Scripts/Mission/MissionChainService.cs` | `RecordMissionResult` now blocks duplicate `missionId` writes by default. New optional `allowDuplicate` parameter for explicit debug-reset paths. |
+| `Assets/Scripts/Editor/VerticalSliceValidator.cs` | `CheckEncounterPersistence` now also verifies `NeedsRestartAfterLoad` property, `EncounterSnapshot.needsRestartAfterLoad` field, dynamic-units warning string in `SaveLoadManager`, `MissionChainService.RecordMissionResult.allowDuplicate` parameter, and `ENCOUNTER_PERSISTENCE_DESIGN.md` presence. |
+
+### Tests
+
+| File | Change |
+|---|---|
+| `Assets/Tests/EditMode/MissionChainIdempotencyTests.cs` | New: 4 tests verifying duplicate guard, allowDuplicate override, mixed mission ids, and unlock-still-fires. |
+| `Assets/Tests/EditMode/EncounterSnapshotTests.cs` | Added 4 new tests for `needsRestartAfterLoad` flag (in-progress, completed, restore-in-progress, restore-completed). |
+| `Assets/Tests/EditMode/DebugTriggerMissionChainTests.cs` | Updated `MultipleRealRecordings_UseLastOutcome` to use `allowDuplicate=true` (matches new contract). |
+
+### Docs
+
+| File | Change |
+|---|---|
+| `Assets/Docs/ENCOUNTER_PERSISTENCE_DESIGN.md` | New: full design and limitations writeup. |
+| `Assets/Docs/FULL_TEST_BASELINE_REPORT.md` | Phase 4 update (this file). |
+| `Assets/Docs/LEGACY_TEST_TRIAGE_REPORT.md` | Phase 4 section appended. |
+
+## Lifecycle guarantees verified by tests
+
+- `EncounterRuntime.StartEncounter` is no-op once completed.
+- `EncounterRuntime.CompleteEncounter` is no-op once already completed.
+- `EncounterRuntime.SpawnWave` skips duplicate `waveId` and returns 0.
+- `EncounterRuntime.ClearSpawnedUnits` only destroys dynamic spawned units; manually placed scene units are preserved.
+- `EncounterRuntime.RestoreSnapshot(null)` does not throw.
+- `EncounterRuntime.RestoreSnapshot` sets `NeedsRestartAfterLoad=true` only for in-progress encounters.
+- `GameSaveData` round-trips `encounterSnapshots` (including `spawnedWaveIds`).
+- `MissionTriggerZone.ForceStart` is no-op once completed.
+- `BorderRetaliationRuntime.ConfigureDynamicWaves` is idempotent (`_wavesConfigured` flag).
+- `MissionChainService.RecordMissionResult` blocks duplicate missionId by default; `allowDuplicate=true` permits debug-reset re-record.
+
+## Known limitations
+
+(unchanged from Phase 3 plus Phase 4 additions)
+
+- Dynamic spawned-unit HP/position/AI/animator state is NOT serialized. Reload restores lifecycle only — see `Assets/Docs/ENCOUNTER_PERSISTENCE_DESIGN.md`.
+- In-progress encounters at save time set `NeedsRestartAfterLoad=true` on restore. Mission scripts decide whether to reset+replay or show a hint.
+- `DebugUILayoutTests.LeftPanelLayouts_DoNotOverlapRightPanelLayouts` only validates layout when `Screen.width >= 1024`. In headless CI this test passes via `Assert.Pass`.
+- `Combatant.UpdateStateTimer` advances only one state transition per Tick — tests must call Tick once per phase to traverse the full sequence.
+- PlayMode tests may modify `ProjectSettings/TimeManager.asset` as a side effect; always `git checkout` after runs.
 
 ## Phase 3 fixes (16 failures → 0)
 

@@ -77,6 +77,54 @@ namespace LuoLuoTrip.Tests.EditMode
         }
 
         [Test]
+        public void GetSnapshot_InProgress_FlagsNeedsRestart()
+        {
+            _encounter.StartEncounter();
+            var snap = _encounter.GetSnapshot();
+            Assert.That(snap.hasStarted, Is.True);
+            Assert.That(snap.hasCompleted, Is.False);
+            Assert.That(snap.needsRestartAfterLoad, Is.True,
+                "In-progress encounters must flag needsRestartAfterLoad");
+        }
+
+        [Test]
+        public void GetSnapshot_Completed_DoesNotFlagNeedsRestart()
+        {
+            _encounter.StartEncounter();
+            _encounter.CompleteEncounter("MechaVictory");
+            var snap = _encounter.GetSnapshot();
+            Assert.That(snap.needsRestartAfterLoad, Is.False);
+        }
+
+        [Test]
+        public void RestoreSnapshot_InProgress_SetsRuntimeNeedsRestartFlag()
+        {
+            var snap = new EncounterSnapshot
+            {
+                encounterId = "snap_test",
+                hasStarted = true,
+                hasCompleted = false,
+            };
+            _encounter.RestoreSnapshot(snap);
+            Assert.That(_encounter.NeedsRestartAfterLoad, Is.True);
+        }
+
+        [Test]
+        public void RestoreSnapshot_Completed_DoesNotSetNeedsRestartFlag()
+        {
+            var snap = new EncounterSnapshot
+            {
+                encounterId = "snap_test",
+                hasStarted = false,
+                hasCompleted = true,
+                lastOutcome = "MechaVictory"
+            };
+            _encounter.RestoreSnapshot(snap);
+            Assert.That(_encounter.NeedsRestartAfterLoad, Is.False);
+            Assert.That(_encounter.HasCompleted, Is.True);
+        }
+
+        [Test]
         public void GameSaveData_HasEncounterSnapshotsField()
         {
             var save = new GameSaveData();

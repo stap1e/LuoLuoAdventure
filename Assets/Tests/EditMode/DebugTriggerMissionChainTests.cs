@@ -61,15 +61,20 @@ namespace LuoLuoTrip.Tests.EditMode
         [Test]
         public void MultipleRealRecordings_UseLastOutcome()
         {
+            // Phase 4: RecordMissionResult is idempotent per missionId by default,
+            // but explicit debug-reset flows pass allowDuplicate=true. When that
+            // happens, GetLastOutcome must reflect the most recent recording.
             var chainService = new MissionChainService();
 
             chainService.RecordMissionResult("convoy_energy_conflict",
                 MissionOutcomeType.MechaVictory, 100);
             chainService.RecordMissionResult("convoy_energy_conflict",
-                MissionOutcomeType.BeastVictory, 80);
+                MissionOutcomeType.BeastVictory, 80, allowDuplicate: true);
 
             var lastOutcome = chainService.GetLastOutcome("convoy_energy_conflict");
             Assert.That(lastOutcome, Is.EqualTo(MissionOutcomeType.BeastVictory));
+            Assert.That(chainService.State.CompletedMissions.Count, Is.EqualTo(2),
+                "Both entries must be present when allowDuplicate=true");
         }
     }
 }

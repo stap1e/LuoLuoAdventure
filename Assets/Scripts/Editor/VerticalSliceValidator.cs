@@ -1655,7 +1655,7 @@ namespace LuoLuoTrip.Editor
                         errors++;
                     }
                 }
-                var props = new[] { "HasStarted", "HasCompleted", "LastOutcome", "TotalSpawnedCount", "SpawnedWaveIds" };
+                var props = new[] { "HasStarted", "HasCompleted", "LastOutcome", "TotalSpawnedCount", "SpawnedWaveIds", "NeedsRestartAfterLoad" };
                 foreach (var p in props)
                 {
                     if (encounterType.GetProperty(p) != null)
@@ -1681,6 +1681,64 @@ namespace LuoLuoTrip.Editor
                     report.Add("  ERROR: GameSaveData.encounterSnapshots field missing");
                     errors++;
                 }
+            }
+
+            // Validate the EncounterSnapshot type carries needsRestartAfterLoad
+            if (snapshotType != null)
+            {
+                var nrField = snapshotType.GetField("needsRestartAfterLoad");
+                if (nrField != null)
+                    report.Add("  OK: EncounterSnapshot.needsRestartAfterLoad field exists");
+                else
+                {
+                    report.Add("  WARNING: EncounterSnapshot.needsRestartAfterLoad field missing");
+                    warnings++;
+                }
+            }
+
+            // Validate SaveLoadManager logs the dynamic-units limitation on restore.
+            try
+            {
+                var saveLoadPath = System.IO.Path.Combine("Assets", "Scripts", "Save", "SaveLoadManager.cs");
+                if (System.IO.File.Exists(saveLoadPath))
+                {
+                    var src = System.IO.File.ReadAllText(saveLoadPath);
+                    if (src.Contains("Dynamic units are not fully serialized"))
+                        report.Add("  OK: SaveLoadManager logs dynamic-units serialization limitation on restore");
+                    else
+                    {
+                        report.Add("  WARNING: SaveLoadManager missing dynamic-units serialization warning");
+                        warnings++;
+                    }
+                }
+            }
+            catch { /* validator must not crash on IO */ }
+
+            // Validate MissionChainService duplicate guard.
+            var missionChainType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "MissionChainService");
+            if (missionChainType != null)
+            {
+                var record = missionChainType.GetMethod("RecordMissionResult");
+                if (record != null && System.Linq.Enumerable.Any(record.GetParameters(),
+                    p => p.Name == "allowDuplicate"))
+                    report.Add("  OK: MissionChainService.RecordMissionResult has allowDuplicate guard");
+                else
+                {
+                    report.Add("  WARNING: MissionChainService.RecordMissionResult missing allowDuplicate guard");
+                    warnings++;
+                }
+            }
+
+            // Reference the design doc as a soft check.
+            var designPath = System.IO.Path.Combine("Assets", "Docs", "ENCOUNTER_PERSISTENCE_DESIGN.md");
+            if (System.IO.File.Exists(designPath))
+                report.Add("  OK: ENCOUNTER_PERSISTENCE_DESIGN.md exists");
+            else
+            {
+                report.Add("  WARNING: ENCOUNTER_PERSISTENCE_DESIGN.md missing");
+                warnings++;
             }
 
             var triggerType = System.AppDomain.CurrentDomain.GetAssemblies()

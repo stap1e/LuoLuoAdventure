@@ -3,14 +3,27 @@
 Date: 2026-06-17
 Unity: 2022.3.62f3 LTS
 
-## Current full-suite baseline (Phase 3 — Remaining Test Alignment & DynamicHostility Design)
+## Current full-suite baseline (Phase 4 — Encounter Persistence & Mission Lifecycle Hardening)
 
-- EditMode: **400 total, 400 passed, 0 failed**
+- EditMode: **408 total, 408 passed, 0 failed** (+8 new MissionChainIdempotency / EncounterSnapshot lifecycle tests)
 - PlayMode: **99 total, 99 passed, 0 failed**
-- Combined pass rate: **100%**
+- Combined: **507/507 passed, 0 failed**
 - EditMode XML: `TestResults/editmode-results.xml`
 - PlayMode XML: `TestResults/playmode-results.xml`
-- Full baseline report: `Assets/Docs/FULL_TEST_BASELINE_REPORT.md`
+- Persistence design: `Assets/Docs/ENCOUNTER_PERSISTENCE_DESIGN.md`
+
+### Phase 4 highlights
+
+- `EncounterRuntime.NeedsRestartAfterLoad` flag added; `RestoreSnapshot` flags in-progress encounters for the mission flow to react to.
+- `EncounterSnapshot.needsRestartAfterLoad` field carried through save round-trip.
+- `MissionChainService.RecordMissionResult` now blocks duplicate `missionId` writes; `allowDuplicate=true` opt-in for explicit debug-reset paths.
+- `SaveLoadManager` F9 emits the dynamic-units serialization warning once and reports `restored / reset / needsRestart` counts. F10 log clarifies snapshot clearing.
+- `EncounterRuntime` lifecycle methods all log under `[EncounterRuntime]` for grep-friendly observability.
+- `VerticalSliceValidator.CheckEncounterPersistence` extended to verify the new property/field/strings/parameters and the design doc presence.
+
+### Phase 3 baseline (carried over)
+
+(See prior section. All 16 Phase-3 failures resolved before Phase 4 started.)
 
 ### Phase 3 fixes (16 failures → 0)
 
