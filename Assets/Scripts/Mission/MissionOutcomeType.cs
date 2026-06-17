@@ -6,6 +6,12 @@ namespace LuoLuoTrip
         BeastVictory = 1,
         BalancedResolution = 2,
         Failed = 3,
-        PartialSuccess = 4
+        PartialSuccess = 4,
+        // Mission 3 — CityGateDispute outcomes
+        BalancedMediation = 5,
+        MechaSuppression = 6,
+        BeastNegotiation = 7,
+        FailedEscalation = 8,
+        PartialContainment = 9
     }
 }

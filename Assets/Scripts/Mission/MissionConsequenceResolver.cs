@@ -29,6 +29,21 @@ namespace LuoLuoTrip
                 case MissionOutcomeType.BalancedResolution:
                     ResolveBalancedResolution(state, consequence);
                     break;
+                case MissionOutcomeType.BalancedMediation:
+                    ResolveBalancedMediation(state, consequence);
+                    break;
+                case MissionOutcomeType.MechaSuppression:
+                    ResolveMechaSuppression(state, consequence);
+                    break;
+                case MissionOutcomeType.BeastNegotiation:
+                    ResolveBeastNegotiation(state, consequence);
+                    break;
+                case MissionOutcomeType.FailedEscalation:
+                    ResolveFailedEscalation(state, consequence);
+                    break;
+                case MissionOutcomeType.PartialContainment:
+                    ResolvePartialContainment(state, consequence);
+                    break;
                 case MissionOutcomeType.PartialSuccess:
                     ResolvePartialSuccess(state, consequence);
                     break;
@@ -83,6 +98,52 @@ namespace LuoLuoTrip
             }
         }
 
+        private static void ResolveBalancedMediation(MissionRuntimeState state, MissionConsequence consequence)
+        {
+            foreach (SubFactionId id in Enum.GetValues(typeof(SubFactionId)))
+            {
+                consequence.FactionDeltas.Add(FactionStandingDelta.Create(id, trust: 8, respect: 5, hostility: -12));
+            }
+        }
+
+        private static void ResolveMechaSuppression(MissionRuntimeState state, MissionConsequence consequence)
+        {
+            foreach (SubFactionId id in Enum.GetValues(typeof(SubFactionId)))
+            {
+                if (GameConstants.IsMotorSubFaction(id))
+                    consequence.FactionDeltas.Add(FactionStandingDelta.Create(id, trust: 10, respect: 5));
+                else
+                    consequence.FactionDeltas.Add(FactionStandingDelta.Create(id, trust: -10, hostility: 20));
+            }
+        }
+
+        private static void ResolveBeastNegotiation(MissionRuntimeState state, MissionConsequence consequence)
+        {
+            foreach (SubFactionId id in Enum.GetValues(typeof(SubFactionId)))
+            {
+                if (GameConstants.IsBeastSubFaction(id))
+                    consequence.FactionDeltas.Add(FactionStandingDelta.Create(id, trust: 5, hostility: -15));
+                else
+                    consequence.FactionDeltas.Add(FactionStandingDelta.Create(id, trust: -5, respect: -5));
+            }
+        }
+
+        private static void ResolveFailedEscalation(MissionRuntimeState state, MissionConsequence consequence)
+        {
+            foreach (SubFactionId id in Enum.GetValues(typeof(SubFactionId)))
+            {
+                consequence.FactionDeltas.Add(FactionStandingDelta.Create(id, respect: -10, hostility: 15));
+            }
+        }
+
+        private static void ResolvePartialContainment(MissionRuntimeState state, MissionConsequence consequence)
+        {
+            foreach (SubFactionId id in Enum.GetValues(typeof(SubFactionId)))
+            {
+                consequence.FactionDeltas.Add(FactionStandingDelta.Create(id, respect: -3, trust: -3));
+            }
+        }
+
         private static void ResolvePartialSuccess(MissionRuntimeState state, MissionConsequence consequence)
         {
             foreach (SubFactionId id in Enum.GetValues(typeof(SubFactionId)))
@@ -130,8 +191,13 @@ namespace LuoLuoTrip
                 MissionOutcomeType.MechaVictory => 200,
                 MissionOutcomeType.BeastVictory => 200,
                 MissionOutcomeType.BalancedResolution => 300,
+                MissionOutcomeType.BalancedMediation => 350,
+                MissionOutcomeType.MechaSuppression => 250,
+                MissionOutcomeType.BeastNegotiation => 250,
+                MissionOutcomeType.PartialContainment => 100,
                 MissionOutcomeType.PartialSuccess => 80,
                 MissionOutcomeType.Failed => 30,
+                MissionOutcomeType.FailedEscalation => 30,
                 _ => 0
             };
         }

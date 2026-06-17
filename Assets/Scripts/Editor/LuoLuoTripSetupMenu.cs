@@ -302,6 +302,99 @@ namespace LuoLuoTrip.Editor
             CreateAreaLabel("Area_ConvoyMission", new Vector3(0f, 0f, 5f), "Convoy Mission", new Color(0.3f, 1f, 0.5f));
             CreateAreaLabel("Area_BorderRetaliation", new Vector3(25f, 0f, 0f), "Border Retaliation", new Color(1f, 0.6f, 0.3f));
             CreateAreaLabel("Area_AdvancedShowcase", new Vector3(22f, 0f, -2f), "Advanced Units", new Color(1f, 0.85f, 0.2f));
+            CreateAreaLabel("Area_CityGateDispute", new Vector3(50f, 0f, 0f), "City Gate Dispute", new Color(0.8f, 0.5f, 1f));
+
+            // === Mission 3: CityGateDispute ===
+            var cityGateTriggerGo = new GameObject("CityGateDisputeTrigger");
+            cityGateTriggerGo.transform.position = new Vector3(50f, 0f, 0f);
+            var cityGateTrigger = cityGateTriggerGo.AddComponent<MissionTriggerZone>();
+            var cityGateTriggerSo = new SerializedObject(cityGateTrigger);
+            cityGateTriggerSo.FindProperty("_missionId").stringValue = "city_gate_dispute";
+            cityGateTriggerSo.FindProperty("_zoneRadius").floatValue = 12f;
+            cityGateTriggerSo.ApplyModifiedPropertiesWithoutUndo();
+
+            var cityGateCoreObj = CreateObjective("CityGateCore_Objective", new Vector3(50f, 0.3f, 2f),
+                PlaceholderAssetGenerator.EnergyNodePrefab);
+            var cityGateCoreEntity = cityGateCoreObj.AddComponent<CharacterEntity>();
+            cityGateCoreEntity.Bind(CharacterData.Create("citygate_core", "CityGateCore", SubFactionId.MotorIronRiders, CharacterRole.Minion));
+            var cityGateCoreCombatant = cityGateCoreObj.GetComponent<Combatant>();
+            if (cityGateCoreCombatant == null)
+                cityGateCoreCombatant = cityGateCoreObj.AddComponent<Combatant>();
+            var cityGateCoreBar = cityGateCoreObj.AddComponent<CombatantHealthBarPresenter>();
+            var cityGateCoreBarSo = new SerializedObject(cityGateCoreBar);
+            cityGateCoreBarSo.FindProperty("_combatant").objectReferenceValue = cityGateCoreCombatant;
+            cityGateCoreBarSo.FindProperty("_hideOnDeath").boolValue = true;
+            cityGateCoreBarSo.FindProperty("_label").stringValue = "CityGate Core";
+            cityGateCoreBarSo.ApplyModifiedPropertiesWithoutUndo();
+
+            var mechaGuardData = CharacterData.Create("mecha_guard_001", "MechaGateGuard", SubFactionId.MotorIronRiders, CharacterRole.Minion);
+            mechaGuardData.CommandRank = 1;
+            mechaGuardData.TrustToPlayer = 20;
+            var mechaGuardGo = CreateCombatCharacter("MechaGateGuard", new Vector3(47f, 0.5f, 1f), mechaGuardData,
+                PlaceholderAssetGenerator.MechaMinionPrefab, isPlayer: false);
+
+            var mechaHardlinerData = CharacterData.Create("mecha_hardliner_001", "MechaHardliner", SubFactionId.MotorStormGang, CharacterRole.Minion);
+            mechaHardlinerData.CommandRank = 2;
+            mechaHardlinerData.RequiredCommanderLevel = 5;
+            mechaHardlinerData.TrustToPlayer = 10;
+            mechaHardlinerData.AllowDirectControl = false;
+            mechaHardlinerData.AllowTacticalCommand = true;
+            CreateCombatCharacter("MechaHardliner", new Vector3(46f, 0.5f, 3f), mechaHardlinerData,
+                PlaceholderAssetGenerator.MechaMinionPrefab, isPlayer: false);
+
+            var beastNegotiatorData = CharacterData.Create("beast_negotiator_001", "BeastNegotiator", SubFactionId.BeastShadowFang, CharacterRole.Minion);
+            beastNegotiatorData.CommandRank = 1;
+            beastNegotiatorData.TrustToPlayer = 5;
+            beastNegotiatorData.AllowDirectControl = true;
+            var beastNegotiatorGo = CreateCombatCharacter("BeastNegotiator", new Vector3(53f, 0.5f, 1f), beastNegotiatorData,
+                PlaceholderAssetGenerator.BeastMinionPrefab, isPlayer: false);
+            var beastNegotiatorEntity = beastNegotiatorGo.GetComponent<CharacterEntity>();
+
+            var cityLordData = CharacterData.Create("city_lord_gate_001", "CityLord", SubFactionId.MotorIronRiders, CharacterRole.CityLord);
+            CreateCombatCharacter("CityLord_HighRank", new Vector3(48f, 0.5f, -2f), cityLordData,
+                PlaceholderAssetGenerator.CityLordPrefab, isPlayer: false);
+
+            var warKingGateData = CharacterData.Create("war_king_gate_001", "WarKing", SubFactionId.BeastIronClaw, CharacterRole.WarKing);
+            CreateCombatCharacter("WarKing_HighRank", new Vector3(54f, 0.5f, -2f), warKingGateData,
+                PlaceholderAssetGenerator.WarKingPrefab, isPlayer: false);
+
+            var cityGateConflictGo = new GameObject("CityGateDispute");
+            var cityGateConflict = cityGateConflictGo.AddComponent<CityGateDisputeRuntime>();
+            cityGateConflictGo.AddComponent<EncounterRuntime>();
+            cityGateConflictGo.AddComponent<MissionAreaRuntime>();
+            var cityGateConflictSo = new SerializedObject(cityGateConflict);
+            cityGateConflictSo.FindProperty("_triggerZone").objectReferenceValue = cityGateTrigger;
+            cityGateConflictSo.FindProperty("_objectiveHud").objectReferenceValue = objectiveHud;
+            cityGateConflictSo.FindProperty("_cityGateCore").objectReferenceValue = cityGateCoreCombatant;
+            cityGateConflictSo.FindProperty("_beastNegotiator").objectReferenceValue = beastNegotiatorEntity;
+            cityGateConflictSo.ApplyModifiedPropertiesWithoutUndo();
+
+            var cityGateBeastSpawn = new GameObject("CityGateSpawnPoint_Beast");
+            cityGateBeastSpawn.transform.position = new Vector3(55f, 0f, 3f);
+            var cityGateBeastSpawnComp = cityGateBeastSpawn.AddComponent<EncounterSpawnPoint>();
+            var cityGateBeastSpawnSo = new SerializedObject(cityGateBeastSpawnComp);
+            cityGateBeastSpawnSo.FindProperty("_spawnPointId").stringValue = "citygate_beast_spawn";
+            cityGateBeastSpawnSo.FindProperty("_faction").enumValueIndex = (int)SubFactionId.BeastIronClaw;
+            cityGateBeastSpawnSo.ApplyModifiedPropertiesWithoutUndo();
+
+            var cityGateMechaSpawn = new GameObject("CityGateSpawnPoint_Mecha");
+            cityGateMechaSpawn.transform.position = new Vector3(45f, 0f, -1f);
+            var cityGateMechaSpawnComp = cityGateMechaSpawn.AddComponent<EncounterSpawnPoint>();
+            var cityGateMechaSpawnSo = new SerializedObject(cityGateMechaSpawnComp);
+            cityGateMechaSpawnSo.FindProperty("_spawnPointId").stringValue = "citygate_mecha_spawn";
+            cityGateMechaSpawnSo.FindProperty("_faction").enumValueIndex = (int)SubFactionId.MotorIronRiders;
+            cityGateMechaSpawnSo.ApplyModifiedPropertiesWithoutUndo();
+
+            if (cityGateConflictGo.GetComponent<EncounterRuntime>() is EncounterRuntime cityGateEncounter)
+            {
+                cityGateEncounter.AddSpawnPoint(cityGateBeastSpawnComp);
+                cityGateEncounter.AddSpawnPoint(cityGateMechaSpawnComp);
+                cityGateEncounter.SetWaves(new List<EncounterWave>
+                {
+                    new EncounterWave { waveId = "citygate_beast_raid_1", faction = SubFactionId.BeastIronClaw, role = CharacterRole.Minion, unitCount = 2, delaySeconds = 12f },
+                    new EncounterWave { waveId = "citygate_beast_raid_2", faction = SubFactionId.BeastIronClaw, role = CharacterRole.Minion, unitCount = 3, delaySeconds = 30f },
+                });
+            }
 
             var conflictGo = new GameObject("ConvoyEnergyConflict");
             var conflict = conflictGo.AddComponent<ConvoyEnergyConflictRuntime>();
@@ -436,9 +529,9 @@ namespace LuoLuoTrip.Editor
             EditorSceneManager.SaveScene(scene, CommanderScenePath);
             AssetDatabase.Refresh();
             Debug.Log($"[LuoLuoTrip] Commander Mission Prototype Scene 已创建: {CommanderScenePath}");
-            Debug.Log("Controls: WASD move | LClick attack | Space dodge | Q lock-on | Tab select target | E interact | R release control | 1/2/3 test missions | F5 save | F9 load | F10 clear save");
-            Debug.Log("Areas: Tutorial (0,0,0) | Convoy Mission (0,0,5) | Border Retaliation (25,0,0) | Advanced Units (22,0,-2)");
-            Debug.Log("Mission 1: ConvoyEnergyConflict at (0,0,2) | Mission 2: BorderRetaliation at (25,0,0)");
+            Debug.Log("Controls: WASD move | LClick attack | Space dodge | Q lock-on | Tab select target | E interact | R release control | 1/2/3 test missions | F7 CityGate test | F5 save | F9 load | F10 clear save");
+            Debug.Log("Areas: Tutorial (0,0,0) | Convoy Mission (0,0,5) | Border Retaliation (25,0,0) | Advanced Units (22,0,-2) | City Gate Dispute (50,0,0)");
+            Debug.Log("Mission 1: ConvoyEnergyConflict at (0,0,2) | Mission 2: BorderRetaliation at (25,0,0) | Mission 3: CityGateDispute at (50,0,0)");
             Debug.Log("Services: AudioFeedbackService + WorldMarkerService spawned (profiles in Resources/)");
             Debug.Log("Encounter: EncounterRuntime + MissionAreaRuntime on each mission | NavMeshAgent on AI units (fallback if no NavMesh baked)");
             Debug.Log("Manual validation: Play scene → complete tutorial → trigger mission 1 → complete → walk to mission 2 → verify branch → F5/F9 cycle → F10 clear");

@@ -58,6 +58,8 @@ namespace LuoLuoTrip.Editor
             CheckEncounterReliability(report, ref errors, ref warnings);
             CheckEncounterPersistence(report, ref errors, ref warnings);
             CheckPlayerAttackUsability(report, ref errors, ref warnings);
+            CheckCityGateDispute(report, ref errors, ref warnings);
+            CheckCityGateDispute(report, ref errors, ref warnings);
 
             report.Add("");
             report.Add("========================================");
@@ -1755,6 +1757,89 @@ namespace LuoLuoTrip.Editor
                     report.Add("  WARNING: MissionTriggerZone missing started/completed guards");
                     warnings++;
                 }
+            }
+        }
+
+        private static void CheckCityGateDispute(List<string> report, ref int errors, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- City Gate Dispute (Mission 3) ---");
+
+            var runtimeType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "CityGateDisputeRuntime");
+            if (runtimeType != null)
+            {
+                report.Add("  OK: CityGateDisputeRuntime type exists");
+
+                var requiredProps = new[] { "Phase", "Encounter", "CityGateCore", "BeastNegotiator", "BeastRaidersDefeated", "NegotiatorSurvived", "CoreSurvived", "MechaCasualties", "BeastCasualties" };
+                foreach (var p in requiredProps)
+                {
+                    if (runtimeType.GetProperty(p) != null)
+                        report.Add($"  OK: CityGateDisputeRuntime.{p} exists");
+                    else
+                    {
+                        report.Add($"  WARNING: CityGateDisputeRuntime.{p} missing");
+                        warnings++;
+                    }
+                }
+
+                var resolveMethod = runtimeType.GetMethod("ResolveOutcome", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
+                if (resolveMethod != null)
+                    report.Add("  OK: CityGateDisputeRuntime.ResolveOutcome static method exists");
+                else
+                {
+                    report.Add("  WARNING: CityGateDisputeRuntime.ResolveOutcome missing");
+                    warnings++;
+                }
+            }
+            else
+            {
+                report.Add("  ERROR: CityGateDisputeRuntime type missing");
+                errors++;
+            }
+
+            var outcomeType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "MissionOutcomeType");
+            if (outcomeType != null && outcomeType.IsEnum)
+            {
+                var requiredOutcomes = new[] { "BalancedMediation", "MechaSuppression", "BeastNegotiation", "FailedEscalation", "PartialContainment" };
+                foreach (var name in requiredOutcomes)
+                {
+                    if (System.Enum.Parse(outcomeType, name) != null)
+                        report.Add($"  OK: MissionOutcomeType.{name} exists");
+                    else
+                    {
+                        report.Add($"  ERROR: MissionOutcomeType.{name} missing");
+                        errors++;
+                    }
+                }
+            }
+
+            var chainType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                .FirstOrDefault(t => t.Name == "MissionChainService");
+            if (chainType != null)
+            {
+                var recordMethod = chainType.GetMethod("RecordMissionResult");
+                if (recordMethod != null && System.Linq.Enumerable.Any(recordMethod.GetParameters(),
+                    p => p.Name == "allowDuplicate"))
+                    report.Add("  OK: MissionChainService.RecordMissionResult has allowDuplicate guard");
+                else
+                {
+                    report.Add("  WARNING: MissionChainService.RecordMissionResult missing allowDuplicate guard");
+                    warnings++;
+                }
+            }
+
+            var designPath = System.IO.Path.Combine("Assets", "Docs", "CITY_GATE_DISPUTE_DESIGN.md");
+            if (System.IO.File.Exists(designPath))
+                report.Add("  OK: CITY_GATE_DISPUTE_DESIGN.md exists");
+            else
+            {
+                report.Add("  WARNING: CITY_GATE_DISPUTE_DESIGN.md missing");
+                warnings++;
             }
         }
 

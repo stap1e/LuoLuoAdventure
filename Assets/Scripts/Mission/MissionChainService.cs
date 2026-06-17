@@ -6,7 +6,7 @@ namespace LuoLuoTrip
     public class MissionChainService
     {
         private readonly MissionChainState _state;
-        private static readonly string[] MissionChainOrder = { "convoy_energy_conflict", "border_retaliation" };
+        private static readonly string[] MissionChainOrder = { "convoy_energy_conflict", "border_retaliation", "city_gate_dispute" };
 
         public MissionChainState State => _state;
 
@@ -80,8 +80,17 @@ namespace LuoLuoTrip
                 Description = "Default conditions"
             };
 
-            if (nextMissionId != "border_retaliation") return modifier;
+            if (nextMissionId == "border_retaliation")
+                return BuildBorderRetaliationModifier(modifier);
 
+            if (nextMissionId == "city_gate_dispute")
+                return BuildCityGateDisputeModifier(modifier);
+
+            return modifier;
+        }
+
+        private MissionModifier BuildBorderRetaliationModifier(MissionModifier modifier)
+        {
             var convoyOutcome = GetLastOutcome("convoy_energy_conflict");
             if (convoyOutcome == null) return modifier;
 
@@ -114,6 +123,44 @@ namespace LuoLuoTrip
                     modifier.LowTrustMode = true;
                     modifier.InitialHostilityOffset = 10f;
                     modifier.Description = "Low trust after previous failure";
+                    break;
+            }
+
+            return modifier;
+        }
+
+        private MissionModifier BuildCityGateDisputeModifier(MissionModifier modifier)
+        {
+            var borderOutcome = GetLastOutcome("border_retaliation");
+            if (borderOutcome == null) return modifier;
+
+            modifier.SourceMissionId = "border_retaliation";
+            modifier.SourceOutcome = borderOutcome.Value;
+
+            switch (borderOutcome.Value)
+            {
+                case MissionOutcomeType.MechaVictory:
+                    modifier.ModifierId = "citygate_hardliner_pressure";
+                    modifier.BeastHostilityMultiplier = 1.3f;
+                    modifier.Description = "Mecha hardliners emboldened after border victory";
+                    break;
+                case MissionOutcomeType.BeastVictory:
+                    modifier.ModifierId = "citygate_beast_emboldened";
+                    modifier.BeastHostilityMultiplier = 1.4f;
+                    modifier.Description = "Beast raiders emboldened after border victory";
+                    break;
+                case MissionOutcomeType.BalancedResolution:
+                    modifier.ModifierId = "citygate_ceasefire_fragile";
+                    modifier.CeasefireActive = true;
+                    modifier.InitialHostilityOffset = -10f;
+                    modifier.Description = "Fragile ceasefire carries into city gate";
+                    break;
+                case MissionOutcomeType.PartialSuccess:
+                case MissionOutcomeType.Failed:
+                    modifier.ModifierId = "citygate_low_trust";
+                    modifier.LowTrustMode = true;
+                    modifier.InitialHostilityOffset = 8f;
+                    modifier.Description = "Low trust after border failure";
                     break;
             }
 

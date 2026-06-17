@@ -50,6 +50,17 @@ namespace LuoLuoTrip
                 TestBeastVictory();
             if (Input.GetKeyDown(KeyCode.Alpha3))
                 TestBalancedResolution();
+            if (Input.GetKeyDown(KeyCode.F7))
+                TestCityGateDispute();
+        }
+
+        private void TestCityGateDispute()
+        {
+            Debug.Log("[DEBUG TRIGGER] F7: Test CityGateDispute BalancedMediation (not recorded to chain)");
+            _profileBefore = CloneProfile();
+            _missionService.StartMission("test_citygate");
+            var consequence = _missionService.CompleteMissionWithOutcome(MissionOutcomeType.BalancedMediation);
+            RecordAndShow(consequence, "test_citygate", MissionOutcomeType.BalancedMediation);
         }
 
         private void TestMechaVictory()

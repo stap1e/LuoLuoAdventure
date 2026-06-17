@@ -1,6 +1,6 @@
 # Full Test Baseline Report
 
-Date: 2026-06-17 (Phase 4 — Encounter Persistence & Mission Lifecycle Hardening)
+Date: 2026-06-17 (Phase 5 — Mission 3 CityGateDispute Vertical Slice)
 Unity: 2022.3.62f3 LTS
 Test Framework: com.unity.test-framework@1.4.5
 
@@ -8,11 +8,58 @@ Test Framework: com.unity.test-framework@1.4.5
 
 | Suite | Total | Passed | Failed | Errors | Skipped |
 |---|---|---|---|---|---|
-| EditMode | 408 | 408 | 0 | 0 | 0 |
-| PlayMode | 99 | 99 | 0 | 0 | 0 |
-| **Combined** | **507** | **507** | **0** | **0** | **0** |
+| EditMode | 437 | 437 | 0 | 0 | 0 |
+| PlayMode | 116 | 116 | 0 | 0 | 0 |
+| **Combined** | **553** | **553** | **0** | **0** | **0** |
 
 Pass rate: **100%**.
+
+## Phase 5 — Mission 3: CityGateDispute (new)
+
+### New runtime
+- `Assets/Scripts/Mission/Runtime/CityGateDisputeRuntime.cs` — full mission runtime with phases (NotStarted → Tension → Active → Resolved/Failed), objectives (protect core, protect negotiator, defeat raiders), and 5-branch outcome resolver.
+
+### New outcomes
+- `MissionOutcomeType.BalancedMediation` — best outcome: core+negotiator alive, low casualties, raiders defeated
+- `MissionOutcomeType.MechaSuppression` — raiders defeated but negotiator dead or high casualties
+- `MissionOutcomeType.BeastNegotiation` — negotiator mediates, timer expires, low beast casualties
+- `MissionOutcomeType.FailedEscalation` — core destroyed
+- `MissionOutcomeType.PartialContainment` — core saved but casualties exceed balanced threshold
+
+### MissionChain integration
+- `MissionChainOrder` extended to `["convoy_energy_conflict", "border_retaliation", "city_gate_dispute"]`
+- `BuildMissionModifiers("city_gate_dispute")` generates modifiers from border_retaliation outcome
+- Duplicate outcome guard via `allowDuplicate` parameter
+
+### Scene setup
+- CityGateDispute area at (50, 0, 0) with trigger zone, CityGateCore, MechaGateGuard, MechaHardliner, BeastNegotiator, CityLord, WarKing, BeastRaider spawn points
+- F7 debug trigger for CityGateDispute BalancedMediation test
+
+### Tests added (29 EditMode + 17 PlayMode = 46 new tests)
+
+EditMode:
+- `CityGateDisputeObjectiveTests` (6 tests)
+- `CityGateDisputeOutcomeTests` (5 tests)
+- `CityGateCommanderControlTests` (5 tests)
+- `CityGateEncounterSnapshotTests` (5 tests)
+- `CityGateMissionChainTests` (6 tests)
+- `CityGateDisputeObjectiveTests` outcome resolver tests (2 tests)
+
+PlayMode:
+- `CommanderPrototypeCityGateSmokeTests` (4 tests)
+- `CityGateBalancedMediationSmokeTests` (5 tests)
+- `CityGateControlDenialSmokeTests` (4 tests)
+- `CityGateSaveLoadSmokeTests` (4 tests)
+
+### Validator
+- `VerticalSliceValidator.CheckCityGateDispute` added: checks CityGateDisputeRuntime type, CityGateCore/BeastNegotiator/BeastRaider fields, EncounterRuntime, MissionChainService city_gate_dispute support, design doc presence.
+
+## Known limitations
+
+- PlayMode tests may modify `ProjectSettings/TimeManager.asset`; always `git checkout` after runs.
+- Full PlayMode suite takes ~10-15 minutes in batchmode.
+- `CityGateDisputeRuntime.Start()` requires `GameBootstrap.Context` — in unit tests without context, `_encounter` is not auto-assigned. Tests verify the component exists instead.
+- Dynamic spawned-unit HP/position is NOT serialized (same as existing encounter persistence design).
 
 Phase 4 added 8 new EditMode tests (`MissionChainIdempotencyTests` ×4 + `EncounterSnapshotTests` lifecycle hint ×4). PlayMode count unchanged (existing persistence smokes already cover the round-trip).
 

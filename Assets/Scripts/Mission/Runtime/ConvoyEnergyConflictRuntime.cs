@@ -8,6 +8,7 @@ namespace LuoLuoTrip
     public enum MissionPhase
     {
         Inactive,
+        Tension,
         Active,
         Resolving,
         Completed,
