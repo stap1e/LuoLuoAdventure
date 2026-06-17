@@ -1,5 +1,7 @@
 using LuoLuoTrip.AI;
 using LuoLuoTrip.Combat;
+using LuoLuoTrip.Combat.Feedback;
+using LuoLuoTrip.UI;
 using UnityEngine;
 #if UNITY_2022_3_OR_NEWER
 using UnityEngine.AI;
@@ -23,16 +25,17 @@ namespace LuoLuoTrip
             return transform.position;
         }
 
-        public Vector3 GetRandomSpawnPosition()
+        public Vector3 GetRandomSpawnPosition(float radius = -1f)
         {
-            var offset = Random.insideUnitSphere * _spawnRadius;
+            var r = radius > 0f ? radius : _spawnRadius;
+            var offset = Random.insideUnitSphere * r;
             offset.y = 0f;
             return transform.position + offset;
         }
 
-        public GameObject SpawnUnit(CharacterData data, GameObject prefab = null)
+        public GameObject SpawnUnit(CharacterData data, GameObject prefab = null, float radius = -1f, SpawnBehavior behavior = SpawnBehavior.Chase)
         {
-            var position = GetRandomSpawnPosition();
+            var position = GetRandomSpawnPosition(radius);
             GameObject unitGo;
 
             if (prefab != null)
@@ -73,11 +76,45 @@ namespace LuoLuoTrip
             if (unitGo.GetComponent<NavigationAgentBridge>() == null)
                 unitGo.AddComponent<NavigationAgentBridge>();
 
+            if (unitGo.GetComponent<AICombatNavigationController>() == null)
+                unitGo.AddComponent<AICombatNavigationController>();
+
             var navAgent = unitGo.GetComponent<NavMeshAgent>();
             if (navAgent == null)
                 unitGo.AddComponent<NavMeshAgent>();
 
+            // Combat readability: health bar + hit flash for all dynamic AI units.
+            if (unitGo.GetComponent<CombatantHealthBarPresenter>() == null)
+                unitGo.AddComponent<CombatantHealthBarPresenter>();
+            if (unitGo.GetComponent<HitFlashFeedback>() == null)
+                unitGo.AddComponent<HitFlashFeedback>();
+
+            ApplyInitialBehavior(unitGo, behavior);
+
             return unitGo;
+        }
+
+        private static void ApplyInitialBehavior(GameObject unitGo, SpawnBehavior behavior)
+        {
+            var ai = unitGo.GetComponent<SimpleCombatAI>();
+            if (ai == null) return;
+
+            switch (behavior)
+            {
+                case SpawnBehavior.Hold:
+                    ai.HoldPosition = unitGo.transform.position;
+                    break;
+                case SpawnBehavior.Defend:
+                    ai.HoldPosition = unitGo.transform.position;
+                    break;
+                case SpawnBehavior.Patrol:
+                    // Default AI behavior (chase + return to spawn on disengage) already covers patrol.
+                    break;
+                case SpawnBehavior.Chase:
+                default:
+                    // Default behavior — find and chase hostile targets.
+                    break;
+            }
         }
     }
 }

@@ -26,6 +26,7 @@ namespace LuoLuoTrip.Combat
         [SerializeField] private float _chaseSpeed = 4f;
         [SerializeField] private float _patrolRadius = 5f;
         [SerializeField] private float _repositionDistance = 1.5f;
+        [SerializeField] private float _stopDistance = 1.5f;
 
         [Header("Decision")]
         [SerializeField] private float _thinkInterval = 0.25f;
@@ -52,6 +53,7 @@ namespace LuoLuoTrip.Combat
         private float _targetRefreshTimer;
         private float _attackIntervalOffset;
         private bool _isWindingUp;
+        private bool _showWindupMarker;
         private AICombatNavigationController _navController;
 
         public Func<Combatant[]> CombatantQuery { get; set; }
@@ -61,11 +63,17 @@ namespace LuoLuoTrip.Combat
         public Combatant ForcedAttackTarget { get; set; }
         public bool IsWindingUp => _isWindingUp;
         public AICombatNavigationController NavController => _navController;
+        public float StopDistance => EffectiveStopDistance;
+        public float EffectiveStopDistance =>
+            _stopDistance > 0f ? _stopDistance : Mathf.Max(0.5f, _self.Stats.attackRange * 0.8f);
 
         public void ApplyTuning(CombatTuningConfigSO config)
         {
             if (config == null) return;
             _attackWindupDelay = config.aiAttackWindupDelay;
+            _chaseSpeed = config.aiChaseSpeed;
+            _stopDistance = config.aiStopDistance;
+            _self?.ApplyTuning(config);
         }
 
         private void Awake()
@@ -82,6 +90,24 @@ namespace LuoLuoTrip.Combat
             _navController = GetComponent<AICombatNavigationController>();
             if (_navController == null)
                 _navController = gameObject.AddComponent<AICombatNavigationController>();
+
+            _self.OnStateChanged += HandleCombatantStateChanged;
+        }
+
+        private void OnDestroy()
+        {
+            if (_self != null)
+                _self.OnStateChanged -= HandleCombatantStateChanged;
+        }
+
+        private void HandleCombatantStateChanged(CombatState newState)
+        {
+            if (newState == CombatState.AttackRecovery || newState == CombatState.Idle ||
+                newState == CombatState.Staggered || newState == CombatState.Dead)
+            {
+                _showWindupMarker = false;
+                UpdateWindupMarker(false);
+            }
         }
 
         private void Start()
@@ -151,7 +177,7 @@ namespace LuoLuoTrip.Combat
             direction.y = 0f;
             var dist = direction.magnitude;
 
-            if (dist > 2.5f)
+            if (dist > Mathf.Max(EffectiveStopDistance, 2.5f))
             {
                 _navController.FollowTarget(FollowTarget);
             }
@@ -221,7 +247,7 @@ namespace LuoLuoTrip.Combat
             {
                 case CombatIntent.Chase:
                     FaceTarget();
-                    _navController.ChaseTarget(_target.transform);
+                    _navController.ChaseTarget(_target.transform, EffectiveStopDistance);
                     break;
                 case CombatIntent.Attack:
                     _navController.StopNavigation();
@@ -290,7 +316,8 @@ namespace LuoLuoTrip.Combat
             if (_isWindingUp)
             {
                 _isWindingUp = false;
-                UpdateWindupMarker(false);
+                // Marker stays visible through Combatant AttackWindup+Attacking;
+                // cleared by HandleCombatantStateChanged on AttackRecovery/Idle.
                 _self.TryLightAttack(_target);
                 _attackTimer = GetAttackInterval();
                 return;
@@ -299,6 +326,7 @@ namespace LuoLuoTrip.Combat
             if (_self.State == CombatState.AttackWindup || _self.State == CombatState.Attacking || _self.State == CombatState.AttackRecovery) return;
 
             _isWindingUp = true;
+            _showWindupMarker = true;
             _attackTimer = _attackWindupDelay;
             AudioFeedbackService.Play(AudioEventId.AIWindupWarning, transform.position);
             UpdateWindupMarker(true);
@@ -364,9 +392,9 @@ namespace LuoLuoTrip.Combat
         {
             if (!_showAttackIndicator || !Application.isPlaying) return;
 
-            if (_isWindingUp)
+            if (_showWindupMarker || _self.State == CombatState.AttackWindup || _self.State == CombatState.Attacking)
             {
-                Gizmos.color = Color.red;
+                Gizmos.color = _self.State == CombatState.Attacking ? Color.red : new Color(1f, 0.5f, 0f);
                 Gizmos.DrawWireSphere(transform.position, _self.Stats.attackRange);
             }
         }
@@ -383,6 +411,7 @@ namespace LuoLuoTrip.Combat
 
         private void OnDisable()
         {
+            _showWindupMarker = false;
             UpdateWindupMarker(false);
             if (_navController != null)
                 _navController.ClearNavigation();
@@ -390,7 +419,7 @@ namespace LuoLuoTrip.Combat
 
         private void OnGUI()
         {
-            if (!_showAttackIndicator || !_isWindingUp) return;
+            if (!_showAttackIndicator || !_showWindupMarker) return;
 
             var cam = Camera.main;
             if (cam == null) return;

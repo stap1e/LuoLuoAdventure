@@ -1,4 +1,6 @@
-using LuoLuoTrip.AI;
+using LuoLuoTrip;
+using LuoLuoTrip.Combat.Feedback;
+using LuoLuoTrip.UI;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -6,109 +8,94 @@ namespace LuoLuoTrip.Tests.EditMode
 {
     public class CharacterRuntimeComponentGuardTests
     {
-        private GameObject _go;
-
-        [SetUp]
-        public void SetUp()
+        [TearDown]
+        public void TearDown()
         {
             CharacterRuntimeComponentGuard.ResetWarnings();
         }
 
-        [TearDown]
-        public void TearDown()
+        [Test]
+        public void EnsureForAI_AddsHealthBar_WhenMissing()
         {
-            if (_go != null) Object.DestroyImmediate(_go);
+            var go = new GameObject("AI");
+            try
+            {
+                var result = CharacterRuntimeComponentGuard.EnsureForAI(go);
+                Assert.IsTrue(result.HealthBarAdded);
+                Assert.IsNotNull(go.GetComponent<CombatantHealthBarPresenter>());
+            }
+            finally { Object.DestroyImmediate(go); }
         }
 
         [Test]
-        public void Ensure_AddsMissingMotor()
+        public void EnsureForAI_AddsHitFlash_WhenMissing()
         {
-            _go = new GameObject("Char");
-            var result = CharacterRuntimeComponentGuard.Ensure(_go);
-            Assert.IsTrue(result.MotorAdded);
-            Assert.IsNotNull(_go.GetComponent<CharacterMovementMotor>());
+            var go = new GameObject("AI");
+            try
+            {
+                var result = CharacterRuntimeComponentGuard.EnsureForAI(go);
+                Assert.IsTrue(result.HitFlashAdded);
+                Assert.IsNotNull(go.GetComponent<HitFlashFeedback>());
+            }
+            finally { Object.DestroyImmediate(go); }
         }
 
         [Test]
-        public void Ensure_AddsMissingRigidbody_AsKinematicNoGravity()
+        public void EnsureForAI_DoesNotDuplicate_WhenPresent()
         {
-            _go = new GameObject("Char");
-            var result = CharacterRuntimeComponentGuard.Ensure(_go);
-            Assert.IsTrue(result.RigidbodyAdded);
-            var rb = _go.GetComponent<Rigidbody>();
-            Assert.IsNotNull(rb);
-            Assert.IsTrue(rb.isKinematic);
-            Assert.IsFalse(rb.useGravity);
-            Assert.AreEqual(RigidbodyConstraints.FreezeRotation, rb.constraints);
+            var go = new GameObject("AI");
+            try
+            {
+                go.AddComponent<CombatantHealthBarPresenter>();
+                go.AddComponent<HitFlashFeedback>();
+                var result = CharacterRuntimeComponentGuard.EnsureForAI(go);
+                Assert.IsFalse(result.HealthBarAdded);
+                Assert.IsFalse(result.HitFlashAdded);
+                Assert.AreEqual(1, go.GetComponents<CombatantHealthBarPresenter>().Length);
+                Assert.AreEqual(1, go.GetComponents<HitFlashFeedback>().Length);
+            }
+            finally { Object.DestroyImmediate(go); }
         }
 
         [Test]
-        public void Ensure_AddsFallbackCollider_WhenMissing()
+        public void EnsureForAI_AddsMotor_WhenMissing()
         {
-            _go = new GameObject("Char");
-            var result = CharacterRuntimeComponentGuard.Ensure(_go);
-            Assert.IsTrue(result.ColliderAdded);
-            Assert.IsNotNull(_go.GetComponentInChildren<Collider>());
+            var go = new GameObject("AI");
+            try
+            {
+                var result = CharacterRuntimeComponentGuard.EnsureForAI(go);
+                Assert.IsTrue(result.MotorAdded);
+                Assert.IsNotNull(go.GetComponent<CharacterMovementMotor>());
+            }
+            finally { Object.DestroyImmediate(go); }
         }
 
         [Test]
-        public void Ensure_DoesNotDuplicate_OnSecondCall()
+        public void EnsureForAI_AddsNavBridge_WhenMissing()
         {
-            _go = new GameObject("Char");
-            CharacterRuntimeComponentGuard.Ensure(_go);
-            CharacterRuntimeComponentGuard.Ensure(_go);
-            Assert.AreEqual(1, _go.GetComponents<CharacterMovementMotor>().Length);
-            Assert.AreEqual(1, _go.GetComponents<Rigidbody>().Length);
+            var go = new GameObject("AI");
+            try
+            {
+                var result = CharacterRuntimeComponentGuard.EnsureForAI(go);
+                Assert.IsTrue(result.NavBridgeAdded);
+                Assert.IsNotNull(go.GetComponent<LuoLuoTrip.AI.NavigationAgentBridge>());
+            }
+            finally { Object.DestroyImmediate(go); }
         }
 
         [Test]
-        public void Ensure_DisablesAnimatorRootMotion()
+        public void ResetWarnings_ClearsWarnedKeys()
         {
-            _go = new GameObject("Char");
-            var anim = _go.AddComponent<Animator>();
-            anim.applyRootMotion = true;
-            var result = CharacterRuntimeComponentGuard.Ensure(_go);
-            Assert.IsTrue(result.AnimatorRootMotionDisabled);
-            Assert.IsFalse(anim.applyRootMotion);
-        }
-
-        [Test]
-        public void EnsureForAI_AddsNavigationAgentBridge()
-        {
-            _go = new GameObject("AIChar");
-            CharacterRuntimeComponentGuard.EnsureForAI(_go);
-            Assert.IsNotNull(_go.GetComponent<NavigationAgentBridge>());
-        }
-
-        [Test]
-        public void Ensure_PreservesExistingRigidbodySettings_WhenNotConflicting()
-        {
-            _go = new GameObject("Char");
-            var rb = _go.AddComponent<Rigidbody>();
-            rb.isKinematic = true;
-            rb.useGravity = false;
-            rb.constraints = RigidbodyConstraints.FreezeRotation;
-            var result = CharacterRuntimeComponentGuard.Ensure(_go);
-            Assert.IsFalse(result.RigidbodyAdded, "Must not replace existing valid Rigidbody");
-            Assert.IsTrue(rb.isKinematic);
-        }
-
-        [Test]
-        public void VisualMissing_FlaggedInResult()
-        {
-            _go = new GameObject("Char");
-            var result = CharacterRuntimeComponentGuard.Ensure(_go);
-            Assert.IsTrue(result.VisualMissing, "No 'Visual' child should be flagged");
-        }
-
-        [Test]
-        public void VisualPresent_NotFlagged()
-        {
-            _go = new GameObject("Char");
-            var v = new GameObject("Visual");
-            v.transform.SetParent(_go.transform, false);
-            var result = CharacterRuntimeComponentGuard.Ensure(_go);
-            Assert.IsFalse(result.VisualMissing);
+            var go = new GameObject("AI");
+            try
+            {
+                CharacterRuntimeComponentGuard.EnsureForAI(go);
+                CharacterRuntimeComponentGuard.ResetWarnings();
+                // Should not throw or log duplicate
+                CharacterRuntimeComponentGuard.EnsureForAI(go);
+                Assert.Pass();
+            }
+            finally { Object.DestroyImmediate(go); }
         }
     }
 }

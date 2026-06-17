@@ -217,7 +217,7 @@ namespace LuoLuoTrip
 
                 GameObject unitGo = null;
                 if (spawnPoint != null)
-                    unitGo = spawnPoint.SpawnUnit(data);
+                    unitGo = spawnPoint.SpawnUnit(data, null, wave.spawnRadius, wave.initialBehavior);
 
                 if (unitGo != null)
                 {
@@ -235,7 +235,7 @@ namespace LuoLuoTrip
             }
 
             if (spawned > 0)
-                Debug.Log($"[EncounterRuntime] Spawned wave '{wave.waveId}': {spawned} {wave.faction} units");
+                Debug.Log($"[EncounterRuntime] Spawned wave '{wave.waveId}': {spawned} {wave.faction} units (behavior={wave.initialBehavior})");
 
             return spawned;
         }

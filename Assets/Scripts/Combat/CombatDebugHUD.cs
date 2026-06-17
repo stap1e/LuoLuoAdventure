@@ -31,7 +31,26 @@ namespace LuoLuoTrip.Combat
         private void OnGUI()
         {
             var combatant = _target != null ? _target : _player;
-            if (combatant == null || !combatant.IsAlive) return;
+
+            if (combatant == null) return;
+
+            if (!combatant.IsAlive)
+            {
+                var deadRect = new Rect(Screen.width / 2f - 150f, Screen.height / 2f - 30f, 300f, 60f);
+                var prev = GUI.color;
+                GUI.color = new Color(0.4f, 0f, 0f, 0.75f);
+                GUI.DrawTexture(deadRect, Texture2D.whiteTexture);
+                GUI.color = Color.white;
+                var style = new GUIStyle(GUI.skin.label)
+                {
+                    fontSize = 28,
+                    fontStyle = FontStyle.Bold,
+                    alignment = TextAnchor.MiddleCenter
+                };
+                GUI.Label(deadRect, "PLAYER DEAD", style);
+                GUI.color = prev;
+                return;
+            }
 
             var stats = combatant.Stats;
             var y = 10f;
@@ -43,17 +62,25 @@ namespace LuoLuoTrip.Combat
             y += 24;
 
             var stateColor = StateColor(combatant.State);
-            var prev = GUI.color;
+            var prevColor = GUI.color;
             GUI.color = stateColor;
             GUI.Label(new Rect(10, y, 400, 20), $"State: {combatant.State}");
-            GUI.color = prev;
+            GUI.color = prevColor;
             y += 20;
 
             if (combatant.State == CombatState.Attacking)
             {
                 GUI.color = Color.red;
                 GUI.Label(new Rect(10, y, 400, 20), "ATTACK ACTIVE");
-                GUI.color = prev;
+                GUI.color = prevColor;
+                y += 20;
+            }
+
+            if (combatant.State == CombatState.Staggered)
+            {
+                GUI.color = Color.magenta;
+                GUI.Label(new Rect(10, y, 400, 20), "STAGGERED");
+                GUI.color = prevColor;
                 y += 20;
             }
 

@@ -27,6 +27,8 @@ namespace LuoLuoTrip.Combat
         [SerializeField] private float _attackActive = 0.2f;
         [SerializeField] private float _attackRecovery = 0.3f;
         [SerializeField] private float _dodgeInvulnerableDuration = 0.3f;
+        [SerializeField] private float _poiseBreakThreshold = 0f;
+        [SerializeField] private float _staggerDamageThreshold = 0f;
 
         private CharacterEntity _entity;
         private CharacterMovementMotor _motor;
@@ -68,17 +70,68 @@ namespace LuoLuoTrip.Combat
         public bool IsAttackActiveWindow => _state == CombatState.Attacking;
         public float LastHitDamage => _lastHitDamage;
         public bool ShowAttackDebug { get => _showAttackDebug; set => _showAttackDebug = value; }
+        public float PoiseBreakThreshold => _poiseBreakThreshold;
+        public float StaggerDamageThreshold => _staggerDamageThreshold;
+
+        private bool _isPlayerRole;
+        private bool _roleResolved;
+        public bool IsPlayerRole
+        {
+            get
+            {
+                if (!_roleResolved)
+                {
+                    _isPlayerRole = GetComponent<CombatController>() != null;
+                    _roleResolved = true;
+                }
+                return _isPlayerRole;
+            }
+        }
 
         public void ApplyTuning(CombatTuningConfigSO config)
         {
             if (config == null) return;
-            _attackWindup = config.playerAttackWindup;
-            _attackActive = config.playerAttackActive;
-            _attackRecovery = config.playerAttackRecovery;
+
+            if (IsPlayerRole)
+            {
+                _attackWindup = config.playerAttackWindup;
+                _attackActive = config.playerAttackActive;
+                _attackRecovery = config.playerAttackRecovery;
+            }
+            else
+            {
+                _attackWindup = config.enemyAttackWindup;
+                _attackActive = config.enemyAttackActiveDuration;
+                _attackRecovery = config.enemyAttackRecovery;
+            }
+
             _dodgeDuration = config.dodgeDuration;
             _dodgeDistance = config.dodgeDistance;
             _dodgeInvulnerableDuration = config.dodgeInvulnerableDuration;
             _staggerDuration = config.staggerDuration;
+            _poiseBreakThreshold = config.poiseBreakThreshold;
+            _staggerDamageThreshold = config.staggerDamageThreshold;
+        }
+
+        public void ApplyStatOverrides(CombatTuningConfigSO config)
+        {
+            if (config == null || _stats.maxHealth <= 0f) return;
+
+            var player = IsPlayerRole;
+            var hpOverride = player ? config.playerMaxHp : config.enemyMaxHp;
+            var dmgOverride = player ? config.playerAttackDamage : config.enemyAttackDamage;
+            var rangeOverride = player ? config.playerAttackRange : config.enemyAttackRange;
+
+            if (hpOverride > 0f)
+            {
+                var ratio = _currentHealth / Mathf.Max(1f, _stats.maxHealth);
+                _stats.maxHealth = hpOverride;
+                _currentHealth = hpOverride * ratio;
+            }
+            if (dmgOverride > 0f)
+                _stats.attackPower = dmgOverride;
+            if (rangeOverride > 0f)
+                _stats.attackRange = rangeOverride;
         }
 
         private void Awake()
@@ -93,6 +146,7 @@ namespace LuoLuoTrip.Combat
         {
             var tuning = CombatTuningConfigSO.LoadOrDefault();
             ApplyTuning(tuning);
+            ApplyStatOverrides(tuning);
             CombatHitFeedbackHub.Instance?.Register(this);
         }
 
@@ -206,6 +260,9 @@ namespace LuoLuoTrip.Combat
             OnHitLanded?.Invoke(hitEvent);
             AudioFeedbackService.Play(AudioEventId.Hit, target.transform.position);
 
+            if (_staggerDamageThreshold > 0f && result.finalDamage >= _staggerDamageThreshold && target.IsAlive)
+                target.ForceStagger();
+
             if (_showAttackDebug)
                 Debug.Log($"[Combatant] {name} HIT {target.name} dmg={result.finalDamage:F1} fatal={result.wasFatal}");
         }
@@ -259,13 +316,19 @@ namespace LuoLuoTrip.Combat
             if (!IsAlive || IsInvulnerable) return false;
 
             _currentPoise -= amount;
-            if (_currentPoise <= 0f)
+            if (_currentPoise <= _poiseBreakThreshold)
             {
-                _currentPoise = 0f;
+                _currentPoise = _poiseBreakThreshold;
                 EnterStagger();
                 return true;
             }
             return false;
+        }
+
+        public void ForceStagger()
+        {
+            if (!IsAlive || _state == CombatState.Staggered || _state == CombatState.Dead) return;
+            EnterStagger();
         }
 
         private void EnterStagger()
@@ -277,6 +340,7 @@ namespace LuoLuoTrip.Combat
 
         private void Die()
         {
+            if (_state == CombatState.Dead) return;
             _currentHealth = 0f;
             _pendingAttackTarget = null;
             SetState(CombatState.Dead);

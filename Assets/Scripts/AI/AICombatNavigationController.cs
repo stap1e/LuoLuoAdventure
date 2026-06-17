@@ -26,9 +26,13 @@ namespace LuoLuoTrip.AI
 
         public void ChaseTarget(Transform target)
         {
+            ChaseTarget(target, _attackStopDistance);
+        }
+
+        public void ChaseTarget(Transform target, float stopDistance)
+        {
             if (target == null) return;
-            var speed = _chaseSpeed;
-            _bridge.SetDestination(NavigationMoveRequest.Follow(target, speed, _attackStopDistance));
+            _bridge.SetDestination(NavigationMoveRequest.Follow(target, _chaseSpeed, stopDistance));
         }
 
         public void FollowTarget(Transform target)

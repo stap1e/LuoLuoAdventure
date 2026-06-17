@@ -207,32 +207,41 @@ namespace LuoLuoTrip
         private void ConfigureDynamicWaves()
         {
             _dynamicWaves.Clear();
-            var beastCount = Mathf.RoundToInt(2 * (_encounter?.GetFactionMultiplier(SubFactionId.BeastIronClaw) ?? 1f));
-            var mechaSupport = Mathf.RoundToInt(1 * (_encounter?.GetFactionMultiplier(SubFactionId.MotorIronRiders) ?? 1f));
+            var beastMult = _encounter?.GetFactionMultiplier(SubFactionId.BeastIronClaw) ?? 1f;
+            var mechaMult = _encounter?.GetFactionMultiplier(SubFactionId.MotorIronRiders) ?? 1f;
+            var beastCount = Mathf.RoundToInt(2 * beastMult);
+            var mechaSupport = Mathf.RoundToInt(1 * mechaMult);
 
             switch (_modifier.ModifierId)
             {
                 case "border_beast_retaliation":
-                    _dynamicWaves.Add(new EncounterWave { waveId = "beast_wave1", faction = SubFactionId.BeastIronClaw, role = CharacterRole.Minion, unitCount = beastCount, delaySeconds = 10f });
-                    _dynamicWaves.Add(new EncounterWave { waveId = "beast_wave2", faction = SubFactionId.BeastIronClaw, role = CharacterRole.Minion, unitCount = beastCount + 1, delaySeconds = 30f });
+                    // MechaVictory in Mission 1 => Beast retaliates harder
+                    _dynamicWaves.Add(new EncounterWave { waveId = "beast_wave1", faction = SubFactionId.BeastIronClaw, role = CharacterRole.Minion, unitCount = beastCount, delaySeconds = 10f, initialBehavior = SpawnBehavior.Chase, isHostile = true });
+                    _dynamicWaves.Add(new EncounterWave { waveId = "beast_wave2", faction = SubFactionId.BeastIronClaw, role = CharacterRole.Minion, unitCount = beastCount + 1, delaySeconds = 30f, initialBehavior = SpawnBehavior.Chase, isHostile = true });
                     break;
                 case "border_mecha_distrust":
-                    _dynamicWaves.Add(new EncounterWave { waveId = "beast_wave1", faction = SubFactionId.BeastIronClaw, role = CharacterRole.Minion, unitCount = beastCount, delaySeconds = 15f });
+                    // BeastVictory in Mission 1 => Mecha support reduced (mechaMult < 1)
+                    _dynamicWaves.Add(new EncounterWave { waveId = "beast_wave1", faction = SubFactionId.BeastIronClaw, role = CharacterRole.Minion, unitCount = beastCount, delaySeconds = 15f, initialBehavior = SpawnBehavior.Chase, isHostile = true });
                     break;
                 case "border_ceasefire":
+                    // BalancedResolution in Mission 1 => fewer enemies, lower hostility
+                    _dynamicWaves.Add(new EncounterWave { waveId = "beast_wave1", faction = SubFactionId.BeastIronClaw, role = CharacterRole.Minion, unitCount = Mathf.Max(1, beastCount - 1), delaySeconds = 25f, initialBehavior = SpawnBehavior.Defend, isHostile = true });
                     break;
                 default:
-                    _dynamicWaves.Add(new EncounterWave { waveId = "beast_wave1", faction = SubFactionId.BeastIronClaw, role = CharacterRole.Minion, unitCount = beastCount, delaySeconds = 20f });
+                    // Low trust / failed / partial => both sides reduced, retreat pressure
+                    _dynamicWaves.Add(new EncounterWave { waveId = "beast_wave1", faction = SubFactionId.BeastIronClaw, role = CharacterRole.Minion, unitCount = Mathf.Max(1, beastCount - 1), delaySeconds = 20f, initialBehavior = SpawnBehavior.Chase, isHostile = true });
                     break;
             }
 
             if (mechaSupport > 0 && _modifier.ModifierId != "border_mecha_distrust")
             {
-                _dynamicWaves.Add(new EncounterWave { waveId = "mecha_support", faction = SubFactionId.MotorIronRiders, role = CharacterRole.Minion, unitCount = mechaSupport, delaySeconds = 25f });
+                _dynamicWaves.Add(new EncounterWave { waveId = "mecha_support", faction = SubFactionId.MotorIronRiders, role = CharacterRole.Minion, unitCount = mechaSupport, delaySeconds = 25f, initialBehavior = SpawnBehavior.Defend, isHostile = false });
             }
 
             if (_encounter != null)
                 _encounter.SetWaves(_dynamicWaves);
+
+            Debug.Log($"[BorderRetaliation] Configured {_dynamicWaves.Count} dynamic waves for modifier '{_modifier.ModifierId}': beastCount={beastCount}, mechaSupport={mechaSupport}");
         }
 
         private void RefreshEnemyEntities()

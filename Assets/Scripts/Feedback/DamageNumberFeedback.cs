@@ -49,6 +49,12 @@ namespace LuoLuoTrip.Feedback
         }
 
         public int ActiveCount => _entries.Count;
+        public float Lifetime => _lifetime;
+
+        public void ApplyTuning(float duration)
+        {
+            if (duration > 0f) _lifetime = duration;
+        }
 
         public static DamageNumberFeedback EnsureInstance()
         {

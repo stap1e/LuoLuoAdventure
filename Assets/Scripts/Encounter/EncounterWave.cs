@@ -3,6 +3,14 @@ using UnityEngine;
 
 namespace LuoLuoTrip
 {
+    public enum SpawnBehavior
+    {
+        Hold,
+        Chase,
+        Patrol,
+        Defend
+    }
+
     [Serializable]
     public class EncounterWave
     {
@@ -12,6 +20,12 @@ namespace LuoLuoTrip
         public int unitCount;
         public float delaySeconds;
         public bool spawned;
+        [Tooltip("Radius around spawn point to scatter units. 0 = use spawn point default.")]
+        public float spawnRadius;
+        [Tooltip("Initial AI behavior after spawn.")]
+        public SpawnBehavior initialBehavior = SpawnBehavior.Chase;
+        [Tooltip("If true, spawned units are hostile to player faction.")]
+        public bool isHostile = true;
 
         public bool IsReady => !spawned;
     }

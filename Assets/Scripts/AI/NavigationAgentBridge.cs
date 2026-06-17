@@ -13,6 +13,13 @@ namespace LuoLuoTrip.AI
         Stopped
     }
 
+    public enum NavMeshMode
+    {
+        NavMesh,
+        Fallback,
+        Mixed
+    }
+
     public class NavigationAgentBridge : MonoBehaviour
     {
         [SerializeField] private float _fallbackSpeed = 4f;
@@ -34,6 +41,17 @@ namespace LuoLuoTrip.AI
             ? Vector3.Distance(transform.position, _currentRequest.Destination)
             : 0f;
         public bool UseNavMesh => _useNavMesh;
+        public bool HasNavMeshAgent => _navAgent != null;
+        public bool IsOnNavMesh => _navAgent != null && _navAgent.isOnNavMesh;
+        public NavMeshMode Mode
+        {
+            get
+            {
+                if (_navAgent == null) return NavMeshMode.Fallback;
+                if (_navAgent.isOnNavMesh) return NavMeshMode.NavMesh;
+                return NavMeshMode.Fallback;
+            }
+        }
 
         private void Awake()
         {
@@ -115,12 +133,13 @@ namespace LuoLuoTrip.AI
 
         public void TickFallback(float deltaTime)
         {
-            if (_useNavMesh) return;
+            // If NavMesh is available and agent is on NavMesh, let NavMeshAgent handle movement.
+            if (_useNavMesh && _navAgent != null && _navAgent.isOnNavMesh) return;
             if (_stopped || _currentRequest == null) return;
 
             if (!_fallbackWarned)
             {
-                Debug.LogWarning("[NavigationAgentBridge] No NavMeshAgent found, using transform fallback movement");
+                Debug.LogWarning($"[NavigationAgentBridge] {name} using fallback movement (no NavMesh or not on NavMesh)");
                 _fallbackWarned = true;
             }
 
@@ -144,7 +163,11 @@ namespace LuoLuoTrip.AI
             if (_motor != null)
                 _motor.MoveDirection(diff.normalized, speed, deltaTime);
             else
-                transform.position += diff.normalized * (speed * deltaTime);
+            {
+                var delta = diff.normalized * (speed * deltaTime);
+                delta.y = 0f;
+                transform.position += delta;
+            }
 
             if (diff.sqrMagnitude > 0.01f)
                 transform.rotation = Quaternion.LookRotation(diff.normalized);
@@ -159,10 +182,9 @@ namespace LuoLuoTrip.AI
             {
                 if (_navMeshAvailable && !_fallbackWarned)
                 {
-                    Debug.LogWarning("[NavigationAgentBridge] NavMeshAgent lost NavMesh, switching to fallback");
+                    Debug.LogWarning($"[NavigationAgentBridge] {name} NavMeshAgent lost NavMesh, switching to fallback");
                     _fallbackWarned = true;
                     _navMeshAvailable = false;
-                    _useNavMesh = false;
                 }
                 return;
             }
@@ -175,6 +197,23 @@ namespace LuoLuoTrip.AI
                     _currentRequest = null;
                 }
             }
+        }
+
+        public static NavMeshMode GetSceneMode()
+        {
+            bool anyNavMesh = false;
+            bool anyFallback = false;
+            var bridges = FindObjectsOfType<NavigationAgentBridge>();
+            for (int i = 0; i < bridges.Length; i++)
+            {
+                if (bridges[i].Mode == NavMeshMode.NavMesh)
+                    anyNavMesh = true;
+                else
+                    anyFallback = true;
+            }
+            if (anyNavMesh && anyFallback) return NavMeshMode.Mixed;
+            if (anyNavMesh) return NavMeshMode.NavMesh;
+            return NavMeshMode.Fallback;
         }
     }
 }

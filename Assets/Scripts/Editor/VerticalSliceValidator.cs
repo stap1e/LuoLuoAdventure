@@ -1,4 +1,6 @@
 #if UNITY_EDITOR
+using LuoLuoTrip.Combat;
+using LuoLuoTrip.Combat.Feedback;
 using LuoLuoTrip.Save;
 using System.Collections.Generic;
 using System.IO;
@@ -51,6 +53,8 @@ namespace LuoLuoTrip.Editor
             CheckAnimationClipBindings(report, ref warnings);
             CheckGameplayScriptAttachment(report, ref warnings);
             CheckCombatReadability(report, ref errors, ref warnings);
+            CheckCombatBalance(report, ref errors, ref warnings);
+            CheckEncounterReliability(report, ref errors, ref warnings);
 
             report.Add("");
             report.Add("========================================");
@@ -1353,6 +1357,266 @@ namespace LuoLuoTrip.Editor
             finally
             {
                 EditorSceneManager.CloseScene(scene, true);
+            }
+        }
+
+        private static void CheckCombatBalance(List<string> report, ref int errors, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- Combat Balance ---");
+
+            // 1. CombatTuningConfig exists and is valid
+            var configPath = "Assets/Data/Combat/CombatTuningConfig.asset";
+            var config = AssetDatabase.LoadAssetAtPath<CombatTuningConfigSO>(configPath);
+            if (config == null)
+            {
+                report.Add("  ERROR: CombatTuningConfig.asset missing");
+                errors++;
+            }
+            else
+            {
+                report.Add("  OK: CombatTuningConfig.asset exists");
+                if (!config.Validate(out var firstError))
+                {
+                    report.Add($"  ERROR: CombatTuningConfig invalid: {firstError}");
+                    errors++;
+                }
+                else
+                {
+                    report.Add("  OK: CombatTuningConfig values valid");
+                }
+
+                if (config.playerAttackDamage > 0f)
+                    report.Add($"  OK: playerAttackDamage override = {config.playerAttackDamage}");
+                if (config.enemyAttackDamage > 0f)
+                    report.Add($"  OK: enemyAttackDamage override = {config.enemyAttackDamage}");
+                if (config.playerAttackRange > 0f)
+                    report.Add($"  OK: playerAttackRange override = {config.playerAttackRange}");
+                if (config.enemyAttackRange > 0f)
+                    report.Add($"  OK: enemyAttackRange override = {config.enemyAttackRange}");
+            }
+
+            // 2. Player has hit feedback (HitFlashFeedback)
+            CheckScenePlayerHasHitFeedback("Assets/Scenes/CombatPrototype.unity", "CombatPrototype", report, ref warnings);
+
+            // 3. CombatPrototypeDebugController exists in CombatPrototype
+            CheckSceneHasDebugController("Assets/Scenes/CombatPrototype.unity", report, ref warnings);
+
+            // 4. Enemy AI attack feedback (windup marker)
+            CheckSceneEnemyAIHasWindupFeedback("Assets/Scenes/CombatPrototype.unity", "CombatPrototype", report, ref warnings);
+        }
+
+        private static void CheckScenePlayerHasHitFeedback(string scenePath, string label, List<string> report, ref int warnings)
+        {
+            if (!File.Exists(scenePath)) { report.Add($"  SKIP: {label} not found for player feedback check"); return; }
+
+            var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
+            try
+            {
+                bool foundPlayer = false;
+                bool hasFlash = false;
+                foreach (var go in scene.GetRootGameObjects())
+                {
+                    var ctrl = go.GetComponentInChildren<CombatController>(true);
+                    if (ctrl == null) continue;
+                    foundPlayer = true;
+                    if (ctrl.GetComponent<HitFlashFeedback>() != null)
+                        hasFlash = true;
+                }
+                if (!foundPlayer)
+                {
+                    report.Add($"  WARNING: {label} no player (CombatController) found");
+                    warnings++;
+                }
+                else if (!hasFlash)
+                {
+                    report.Add($"  WARNING: {label} player missing HitFlashFeedback");
+                    warnings++;
+                }
+                else
+                {
+                    report.Add($"  OK: {label} player has HitFlashFeedback");
+                }
+            }
+            finally
+            {
+                EditorSceneManager.CloseScene(scene, true);
+            }
+        }
+
+        private static void CheckSceneHasDebugController(string scenePath, List<string> report, ref int warnings)
+        {
+            if (!File.Exists(scenePath)) { report.Add("  SKIP: CombatPrototype not found for debug controller check"); return; }
+
+            var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
+            try
+            {
+                var type = System.AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                    .FirstOrDefault(t => t.Name == "CombatPrototypeDebugController");
+                if (type == null)
+                {
+                    report.Add("  WARNING: CombatPrototypeDebugController type not found");
+                    warnings++;
+                    return;
+                }
+
+                bool found = false;
+                foreach (var go in scene.GetRootGameObjects())
+                {
+                    if (go.GetComponentInChildren(type, true) != null)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (found)
+                    report.Add("  OK: CombatPrototypeDebugController present in CombatPrototype");
+                else
+                {
+                    report.Add("  WARNING: CombatPrototypeDebugController missing from CombatPrototype");
+                    warnings++;
+                }
+            }
+            finally
+            {
+                EditorSceneManager.CloseScene(scene, true);
+            }
+        }
+
+        private static void CheckSceneEnemyAIHasWindupFeedback(string scenePath, string label, List<string> report, ref int warnings)
+        {
+            if (!File.Exists(scenePath)) { report.Add($"  SKIP: {label} not found for AI feedback check"); return; }
+
+            var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
+            try
+            {
+                int aiCount = 0;
+                int aiWithIndicator = 0;
+                foreach (var go in scene.GetRootGameObjects())
+                {
+                    foreach (var mb in go.GetComponentsInChildren<MonoBehaviour>(true))
+                    {
+                        if (mb == null) continue;
+                        if (mb.GetType().Name != "SimpleCombatAI") continue;
+                        aiCount++;
+                        var indicatorField = mb.GetType().GetField("_showAttackIndicator",
+                            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                        if (indicatorField != null && (bool)indicatorField.GetValue(mb))
+                            aiWithIndicator++;
+                    }
+                }
+                if (aiCount == 0)
+                {
+                    report.Add($"  WARNING: {label} no AI units");
+                    warnings++;
+                }
+                else if (aiWithIndicator < aiCount)
+                {
+                    report.Add($"  WARNING: {label} {aiCount - aiWithIndicator}/{aiCount} AI units have attack indicator disabled");
+                    warnings++;
+                }
+                else
+                {
+                    report.Add($"  OK: {label} all {aiCount} AI units have attack indicator enabled");
+                }
+            }
+            finally
+            {
+                EditorSceneManager.CloseScene(scene, true);
+            }
+        }
+
+        private static void CheckEncounterReliability(List<string> report, ref int errors, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- Encounter Reliability ---");
+
+            // 1. aiStopDistance <= attackRange or warning
+            var config = AssetDatabase.LoadAssetAtPath<CombatTuningConfigSO>("Assets/Data/Combat/CombatTuningConfig.asset");
+            if (config != null && config.aiStopDistance > 0f)
+            {
+                // Check against typical attack range (2.2 + roleWeight*0.3 for Common = 2.5)
+                var typicalRange = 2.5f;
+                if (config.aiStopDistance > typicalRange)
+                {
+                    report.Add($"  WARNING: aiStopDistance ({config.aiStopDistance}) > typical attackRange ({typicalRange}) — AI may stop out of attack range");
+                    warnings++;
+                }
+                else
+                    report.Add($"  OK: aiStopDistance ({config.aiStopDistance}) <= typical attackRange ({typicalRange})");
+            }
+            else
+                report.Add("  OK: aiStopDistance uses fallback (attackRange*0.8)");
+
+            // 2. NavMesh mode report for CombatPrototype
+            if (File.Exists("Assets/Scenes/CombatPrototype.unity"))
+            {
+                var scene = EditorSceneManager.OpenScene("Assets/Scenes/CombatPrototype.unity", OpenSceneMode.Additive);
+                try
+                {
+                    var bridgeType = System.AppDomain.CurrentDomain.GetAssemblies()
+                        .SelectMany(a => { try { return a.GetTypes(); } catch { return System.Type.EmptyTypes; } })
+                        .FirstOrDefault(t => t.Name == "NavigationAgentBridge");
+                    int withBridge = 0;
+                    int withNavAgent = 0;
+                    foreach (var go in scene.GetRootGameObjects())
+                    {
+                        foreach (var mb in go.GetComponentsInChildren<MonoBehaviour>(true))
+                        {
+                            if (mb == null) continue;
+                            if (mb.GetType().Name != "SimpleCombatAI") continue;
+                            withBridge++;
+                            if (mb.GetComponent<UnityEngine.AI.NavMeshAgent>() != null) withNavAgent++;
+                        }
+                    }
+                    if (withBridge == 0)
+                        report.Add("  WARNING: CombatPrototype has no AI units with NavigationAgentBridge");
+                    else
+                    {
+                        report.Add($"  OK: CombatPrototype {withBridge} AI units, {withNavAgent} have NavMeshAgent");
+                        if (withNavAgent < withBridge)
+                            report.Add($"  NOTE: {withBridge - withNavAgent} AI units will use fallback movement (no NavMeshAgent)");
+                    }
+                }
+                finally
+                {
+                    EditorSceneManager.CloseScene(scene, true);
+                }
+            }
+
+            // 3. CommanderPrototype: EncounterSpawnPoint count
+            if (File.Exists("Assets/Scenes/CommanderPrototype.unity"))
+            {
+                var scene = EditorSceneManager.OpenScene("Assets/Scenes/CommanderPrototype.unity", OpenSceneMode.Additive);
+                try
+                {
+                    int spawnPoints = 0;
+                    int encounterRuntimes = 0;
+                    foreach (var go in scene.GetRootGameObjects())
+                    {
+                        spawnPoints += go.GetComponentsInChildren<EncounterSpawnPoint>(true).Length;
+                        encounterRuntimes += go.GetComponentsInChildren<EncounterRuntime>(true).Length;
+                    }
+                    if (encounterRuntimes > 0)
+                        report.Add($"  OK: CommanderPrototype has {encounterRuntimes} EncounterRuntime(s)");
+                    else
+                    {
+                        report.Add("  WARNING: CommanderPrototype has no EncounterRuntime");
+                        warnings++;
+                    }
+                    if (spawnPoints > 0)
+                        report.Add($"  OK: CommanderPrototype has {spawnPoints} EncounterSpawnPoint(s)");
+                    else
+                    {
+                        report.Add("  WARNING: CommanderPrototype has no EncounterSpawnPoint — dynamic waves cannot spawn");
+                        warnings++;
+                    }
+                }
+                finally
+                {
+                    EditorSceneManager.CloseScene(scene, true);
+                }
             }
         }
     }

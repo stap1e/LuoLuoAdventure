@@ -23,6 +23,13 @@ namespace LuoLuoTrip.Combat.Feedback
         private bool _resolved;
 
         public bool IsFlashing => _isFlashing;
+        public float Duration => _duration;
+
+        public void ApplyTuning(float hitDuration, float deathDuration)
+        {
+            if (hitDuration > 0f) _duration = hitDuration;
+            if (deathDuration > 0f) _deathDuration = deathDuration;
+        }
 
         private void Awake()
         {

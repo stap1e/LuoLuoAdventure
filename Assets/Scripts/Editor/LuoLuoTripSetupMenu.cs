@@ -134,6 +134,9 @@ namespace LuoLuoTrip.Editor
 
             bootstrapGo.AddComponent<RuntimeCameraBootstrap>();
 
+            var debugGo = new GameObject("CombatPrototypeDebug");
+            debugGo.AddComponent<CombatPrototypeDebugController>();
+
             EditorSceneManager.SaveScene(scene, CombatScenePath);
             AssetDatabase.Refresh();
             Debug.Log($"[LuoLuoTrip] 战斗原型场景已创建: {CombatScenePath}");
@@ -609,10 +612,23 @@ namespace LuoLuoTrip.Editor
             }
 
             // Combat readability stack: damage numbers + central feedback broadcaster.
-            if (bootstrapGo.GetComponent<DamageNumberFeedback>() == null)
-                bootstrapGo.AddComponent<DamageNumberFeedback>();
-            if (bootstrapGo.GetComponent<CombatFeedbackBroadcaster>() == null)
-                bootstrapGo.AddComponent<CombatFeedbackBroadcaster>();
+            var damageNum = bootstrapGo.GetComponent<DamageNumberFeedback>();
+            if (damageNum == null)
+                damageNum = bootstrapGo.AddComponent<DamageNumberFeedback>();
+            var broadcaster = bootstrapGo.GetComponent<CombatFeedbackBroadcaster>();
+            if (broadcaster == null)
+                broadcaster = bootstrapGo.AddComponent<CombatFeedbackBroadcaster>();
+
+            // Apply tuning durations from config.
+            CreateCombatTuningConfig();
+            var tuning = AssetDatabase.LoadAssetAtPath<CombatTuningConfigSO>(
+                "Assets/Data/Combat/CombatTuningConfig.asset");
+            if (tuning != null)
+            {
+                damageNum.ApplyTuning(tuning.damageNumberDuration);
+                foreach (var flash in UnityEngine.Object.FindObjectsOfType<HitFlashFeedback>())
+                    flash.ApplyTuning(tuning.hitFlashDuration, tuning.hitFlashDuration * 5f);
+            }
         }
 
         private static GameObject CreateCombatCharacter(string name, Vector3 position, CharacterData data, string prefabPath, bool isPlayer)

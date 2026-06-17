@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using LuoLuoTrip.AI;
 using LuoLuoTrip.Combat;
+using LuoLuoTrip.Combat.Feedback;
+using LuoLuoTrip.UI;
 using UnityEngine;
 
 namespace LuoLuoTrip
@@ -24,6 +26,9 @@ namespace LuoLuoTrip
             public bool ColliderAdded;
             public bool AnimatorRootMotionDisabled;
             public bool VisualMissing;
+            public bool HealthBarAdded;
+            public bool HitFlashAdded;
+            public bool NavBridgeAdded;
         }
 
         public static void ResetWarnings()
@@ -95,15 +100,33 @@ namespace LuoLuoTrip
             return result;
         }
 
-        public static void EnsureForAI(GameObject go)
+        public static GuardResult EnsureForAI(GameObject go)
         {
-            Ensure(go, isPlayer: false);
+            var result = Ensure(go, isPlayer: false);
 
             if (go.GetComponent<NavigationAgentBridge>() == null)
             {
                 go.AddComponent<NavigationAgentBridge>();
+                result.NavBridgeAdded = true;
                 WarnOnce(go, "missing NavigationAgentBridge for AI unit", "nav_bridge");
             }
+
+            // Combat readability: AI units get health bar + hit flash if missing.
+            if (go.GetComponent<CombatantHealthBarPresenter>() == null)
+            {
+                go.AddComponent<CombatantHealthBarPresenter>();
+                result.HealthBarAdded = true;
+                WarnOnce(go, "missing CombatantHealthBarPresenter for AI unit", "healthbar");
+            }
+
+            if (go.GetComponent<HitFlashFeedback>() == null)
+            {
+                go.AddComponent<HitFlashFeedback>();
+                result.HitFlashAdded = true;
+                WarnOnce(go, "missing HitFlashFeedback for AI unit", "hitflash");
+            }
+
+            return result;
         }
 
         public static void EnsureForPlayer(GameObject go)
