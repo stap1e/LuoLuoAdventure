@@ -64,6 +64,28 @@ namespace LuoLuoTrip
             _candidates.Clear();
         }
 
+        public bool TrySelectTarget(CharacterEntity target)
+        {
+            if (target == null || target == _ownerEntity || target.Data == null || !target.Data.IsAlive)
+                return false;
+
+            RefreshCandidates();
+            if (!_candidates.Contains(target))
+                return false;
+
+            CurrentTarget = target;
+            _currentIndex = _candidates.IndexOf(target);
+            return true;
+        }
+
+        public void ForceSelectTargetForTests(CharacterEntity target)
+        {
+            CurrentTarget = target;
+            _currentIndex = -1;
+        }
+
+        public float ScanRadius => _scanRadius;
+
         private void RefreshCandidates()
         {
             _candidates.Clear();

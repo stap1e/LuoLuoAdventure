@@ -1,3 +1,4 @@
+using LuoLuoTrip.UI;
 using NUnit.Framework;
 
 namespace LuoLuoTrip.Tests.EditMode
@@ -53,6 +54,45 @@ namespace LuoLuoTrip.Tests.EditMode
             service.RecordMissionResult("convoy_energy_conflict", MissionOutcomeType.MechaVictory, 200);
 
             Assert.That(service.IsUnlocked("border_retaliation"), Is.True);
+        }
+
+        [Test]
+        public void CityGateBalancedMediationSummary_IsReadable()
+        {
+            var summary = MissionResultSummaryPanel.BuildOutcomeSummary(MissionOutcomeType.BalancedMediation);
+
+            Assert.That(summary, Does.Contain("hostility").IgnoreCase);
+            Assert.That(summary, Does.Contain("extremists").IgnoreCase);
+        }
+
+        [Test]
+        public void MechaSuppressionSummary_IsReadable()
+        {
+            var summary = MissionResultSummaryPanel.BuildOutcomeSummary(MissionOutcomeType.MechaSuppression);
+
+            Assert.That(summary, Does.Contain("Mecha"));
+            Assert.That(summary, Does.Contain("Beast"));
+        }
+
+        [TestCase(MissionOutcomeType.MechaVictory)]
+        [TestCase(MissionOutcomeType.BeastVictory)]
+        [TestCase(MissionOutcomeType.BalancedResolution)]
+        [TestCase(MissionOutcomeType.PartialSuccess)]
+        [TestCase(MissionOutcomeType.Failed)]
+        public void LegacyOutcomes_HaveReadableSummaries(MissionOutcomeType outcome)
+        {
+            var summary = MissionResultSummaryPanel.BuildOutcomeSummary(outcome);
+
+            Assert.That(summary, Is.Not.Empty);
+            Assert.That(summary, Is.Not.EqualTo("No consequence data"));
+        }
+
+        [Test]
+        public void UnknownOutcomeFallback_IsSafe()
+        {
+            var summary = MissionResultSummaryPanel.BuildOutcomeSummary((MissionOutcomeType)999);
+
+            Assert.That(summary, Is.EqualTo("No consequence data"));
         }
     }
 }

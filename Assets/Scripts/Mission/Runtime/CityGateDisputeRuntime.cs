@@ -48,6 +48,8 @@ namespace LuoLuoTrip
         private bool _beastRaidersDefeated;
         private bool _negotiatorSurvived = true;
         private bool _coreSurvived = true;
+        private bool _modifierApplied;
+        private bool _missingContextWarned;
 
         public MissionPhase Phase => _phase;
         public EncounterRuntime Encounter => _encounter;
@@ -59,15 +61,32 @@ namespace LuoLuoTrip
         public bool CoreSurvived => _coreSurvived;
         public int MechaCasualties => _mechaCasualties;
         public int BeastCasualties => _beastCasualties;
+        public bool IsInitialized { get; private set; }
 
         private void Start()
         {
-            var context = GameBootstrap.Context;
-            if (context == null) return;
+            Initialize(GameBootstrap.Context);
+        }
+
+        public void Initialize(LuoLuoTripGameContext context)
+        {
+            if (IsInitialized)
+                return;
+
+            if (context == null)
+            {
+                if (!_missingContextWarned)
+                {
+                    Debug.LogWarning("[CityGateDispute] Initialize skipped: missing LuoLuoTripGameContext");
+                    _missingContextWarned = true;
+                }
+                return;
+            }
+
             _missionService = context.MissionService;
             _chainService = context.MissionChainService;
             _modifier = _chainService?.BuildMissionModifiers("city_gate_dispute") ?? new MissionModifier();
-            ApplyModifierToHostility();
+            ApplyModifierToHostility(context);
 
             _encounter = GetComponent<EncounterRuntime>();
             if (_encounter == null)
@@ -88,6 +107,7 @@ namespace LuoLuoTrip
             if (_triggerZone != null)
                 _areaRuntime.ConfigureBoundary(_triggerZone);
             _areaRuntime.SetRetreatTime(15f);
+            IsInitialized = true;
         }
 
         private void Update()
@@ -151,9 +171,10 @@ namespace LuoLuoTrip
             _encounter.StartEncounter();
             _areaRuntime.Activate("city_gate_dispute");
 
-            _missionState.Objectives.Add(new MissionObjective { ObjectiveId = "protect_core", Description = "Protect the City Gate Core", RequiredProgress = 1 });
-            _missionState.Objectives.Add(new MissionObjective { ObjectiveId = "protect_negotiator", Description = "Keep the Beast Negotiator alive", RequiredProgress = 1 });
-            _missionState.Objectives.Add(new MissionObjective { ObjectiveId = "defeat_raiders", Description = "Defeat or repel Beast Raiders", RequiredProgress = 1 });
+            _missionState.Objectives.Add(new MissionObjective { ObjectiveId = "protect_core", Description = "Protect CityGateCore", RequiredProgress = 1 });
+            _missionState.Objectives.Add(new MissionObjective { ObjectiveId = "protect_negotiator", Description = "Keep BeastNegotiator alive", RequiredProgress = 1 });
+            _missionState.Objectives.Add(new MissionObjective { ObjectiveId = "defeat_raiders", Description = "Defeat BeastRaiders", RequiredProgress = 1 });
+            _missionState.Objectives.Add(new MissionObjective { ObjectiveId = "keep_casualties_low", Description = "Keep casualties low", RequiredProgress = 1 });
 
             AttachObjectiveMarker();
             Debug.Log("[CityGateDispute] Phase: Tension — both sides face off at the city gate");
@@ -276,15 +297,17 @@ namespace LuoLuoTrip
             Debug.Log($"[CityGateDispute] Configured {waves.Count} BeastRaider waves (beastCount={beastCount})");
         }
 
-        private void ApplyModifierToHostility()
+        private void ApplyModifierToHostility(LuoLuoTripGameContext context)
         {
-            if (_modifier != null && _modifier.InitialHostilityOffset != 0f && GameBootstrap.Context != null)
+            if (_modifierApplied) return;
+            if (_modifier != null && _modifier.InitialHostilityOffset != 0f && context != null)
             {
-                var rep = GameBootstrap.Context.ReputationService;
+                var rep = context.ReputationService;
                 if (rep != null)
                     foreach (SubFactionId faction in System.Enum.GetValues(typeof(SubFactionId)))
                         rep.ApplyDelta(FactionStandingDelta.Create(faction, hostility: (int)_modifier.InitialHostilityOffset));
             }
+            _modifierApplied = true;
         }
 
         private void CompleteWithOutcome(MissionOutcomeType outcome, string resultTag)
@@ -306,6 +329,8 @@ namespace LuoLuoTrip
                     obj.IsCompleted = _negotiatorSurvived;
                 else if (obj.ObjectiveId == "defeat_raiders")
                     obj.IsCompleted = _beastRaidersDefeated;
+                else if (obj.ObjectiveId == "keep_casualties_low")
+                    obj.IsCompleted = _mechaCasualties <= _maxMechaCasualtiesForBalanced && _beastCasualties <= _maxBeastCasualtiesForBalanced;
             }
 
             var consequence = _missionService.CompleteMissionWithOutcome(outcome);
@@ -316,7 +341,7 @@ namespace LuoLuoTrip
 
             _phase = outcome == MissionOutcomeType.FailedEscalation ? MissionPhase.Failed : MissionPhase.Completed;
             if (_triggerZone != null) _triggerZone.MarkCompleted();
-            _areaRuntime.MarkComplete();
+            if (_areaRuntime != null) _areaRuntime.MarkComplete();
             if (_encounter != null) _encounter.CompleteEncounter(outcome.ToString());
             if (_objectiveHud != null) _objectiveHud.ShowFinalResult(_missionState, _phase);
             DetachObjectiveMarker();

@@ -102,9 +102,9 @@ namespace LuoLuoTrip
         private void StartConflict()
         {
             _missionState = _missionService.StartMission("convoy_energy_conflict");
-            _missionState.Objectives.Add(new MissionObjective { ObjectiveId = "protect_convoy", Description = "Protect the convoy", RequiredProgress = 1 });
-            _missionState.Objectives.Add(new MissionObjective { ObjectiveId = "stop_beast_raid", Description = "Stop the beast raid", RequiredProgress = 1 });
-            _missionState.Objectives.Add(new MissionObjective { ObjectiveId = "share_energy", Description = "Share energy at node", RequiredProgress = 1 });
+            _missionState.Objectives.Add(new MissionObjective { ObjectiveId = "protect_convoy", Description = "Protect convoy", RequiredProgress = 1 });
+            _missionState.Objectives.Add(new MissionObjective { ObjectiveId = "share_energy", Description = "Share energy", RequiredProgress = 1 });
+            _missionState.Objectives.Add(new MissionObjective { ObjectiveId = "avoid_excessive_casualties", Description = "Avoid excessive casualties", RequiredProgress = 1 });
 
             _mechaCasualties = 0;
             _beastCasualties = 0;
@@ -246,17 +246,24 @@ namespace LuoLuoTrip
             if (_convoy != null && _convoy.IsDestroyed)
             {
                 _missionState.EscalatedConflict = true;
+                SetObjectiveFailed("protect_convoy");
                 CompleteWithOutcome(MissionOutcomeType.BeastVictory);
                 return;
             }
             if (_energyNode != null && _energyNode.IsCapturedByBeast)
             {
+                SetObjectiveFailed("share_energy");
                 CompleteWithOutcome(MissionOutcomeType.BeastVictory);
                 return;
             }
             if (_energyNode != null && _energyNode.IsSharedByPlayer)
             {
+                SetObjectiveCompleted("share_energy");
                 var total = _mechaCasualties + _beastCasualties;
+                if (total <= 1)
+                    SetObjectiveCompleted("avoid_excessive_casualties");
+                else
+                    SetObjectiveFailed("avoid_excessive_casualties");
                 CompleteWithOutcome(total <= 1 ? MissionOutcomeType.BalancedResolution : MissionOutcomeType.PartialSuccess);
                 return;
             }
@@ -266,7 +273,32 @@ namespace LuoLuoTrip
             if (allBeastsDead && _beastEntities.Count > 0)
             {
                 _missionState.ProtectedConvoy = true;
+                SetObjectiveCompleted("protect_convoy");
+                SetObjectiveCompleted("avoid_excessive_casualties");
                 CompleteWithOutcome(MissionOutcomeType.MechaVictory);
+            }
+        }
+
+        private void SetObjectiveCompleted(string objectiveId)
+        {
+            SetObjectiveState(objectiveId, true, false);
+        }
+
+        private void SetObjectiveFailed(string objectiveId)
+        {
+            SetObjectiveState(objectiveId, false, true);
+        }
+
+        private void SetObjectiveState(string objectiveId, bool completed, bool failed)
+        {
+            if (_missionState?.Objectives == null) return;
+            foreach (var objective in _missionState.Objectives)
+            {
+                if (objective == null || objective.ObjectiveId != objectiveId) continue;
+                objective.IsCompleted = completed;
+                objective.IsFailed = failed;
+                objective.Progress = completed ? objective.RequiredProgress : 0;
+                return;
             }
         }
 

@@ -27,7 +27,7 @@ namespace LuoLuoTrip
                 CommandRank = data.CommandRank,
                 RequiredCommanderLevel = data.RequiredCommanderLevel,
                 TrustToPlayer = data.TrustToPlayer,
-                IsHeroOrLeader = data.Role == CharacterRole.CityLord || data.Role == CharacterRole.WarKing,
+                IsHeroOrLeader = data.IsHeroOrLeader || data.Role == CharacterRole.CityLord || data.Role == CharacterRole.WarKing,
                 AllowDirectControl = data.AllowDirectControl,
                 AllowTacticalCommand = data.AllowTacticalCommand
             };

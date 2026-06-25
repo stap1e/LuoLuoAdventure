@@ -28,13 +28,15 @@ namespace LuoLuoTrip.UI
             var hints = BuildHints();
             if (hints.Count == 0) return;
 
-            GUI.Box(new Rect(x - 4, y - 4, width + 8, hints.Count * 18 + 8), "");
+            GUI.Box(new Rect(x - 4, y - 4, width + 8, Mathf.Max(layout.height, hints.Count * 18 + 8)), "");
             foreach (var hint in hints)
             {
                 GUI.Label(new Rect(x, y, width, 18), hint);
                 y += 18;
             }
         }
+
+        private static string AllowedText(bool allowed) => allowed ? "Allowed" : "Denied";
 
         private List<string> BuildHints()
         {
@@ -48,7 +50,10 @@ namespace LuoLuoTrip.UI
             else if (_runtimeState.HasActiveCommand)
             {
                 hints.Add("[R] Cancel command");
-                hints.Add("[F] Toggle Follow/HoldPosition");
+                hints.Add("[G] DefendObjective | [F] FocusFire");
+                hints.Add($"Command: {_runtimeState.TacticalCommand.StatusText}");
+                if (_runtimeState.ActiveCommand == CommanderCommandType.FocusFire)
+                    hints.Add($"Responders: {_runtimeState.TacticalCommand.ResponderCount} | Duration: {_runtimeState.TacticalCommand.RemainingDuration(Time.time):F1}s");
             }
             else if (_runtimeState.IsSyncAssistActive)
             {
@@ -56,6 +61,10 @@ namespace LuoLuoTrip.UI
             }
             else if (_runtimeState.SelectedTarget != null)
             {
+                hints.Add($"Target: {_runtimeState.LastSelectedTargetName} Rank {_runtimeState.LastSelectedTargetRank} Trust {_runtimeState.LastSelectedTargetTrust}");
+                var descriptors = CommanderActionPresenter.BuildDescriptors(_runtimeState, _lastResult);
+                hints.Add(string.Join(" | ", descriptors.ConvertAll(CommanderActionPresenter.BuildStatusLine)));
+                hints.Add("[G] DefendObjective | [F] FocusFire");
                 if (_lastResult.IsAllowed)
                 {
                     var modeHint = _lastResult.Mode switch
@@ -71,11 +80,22 @@ namespace LuoLuoTrip.UI
                 {
                     hints.Add($"[E] Cannot control: {_lastResult.Reason}");
                 }
+                if (!string.IsNullOrEmpty(_runtimeState.LastSuggestion))
+                    hints.Add($"Suggestion: {_runtimeState.LastSuggestion}");
+                if (!string.IsNullOrEmpty(_runtimeState.LastInputRoute))
+                    hints.Add($"LastInputRoute: {_runtimeState.LastInputRoute}");
                 hints.Add("[Tab] Switch target");
             }
             else
             {
+                hints.Add("[E] Auto-select nearby low-rank unit");
                 hints.Add("[Tab] Select target in range");
+                if (!string.IsNullOrEmpty(_runtimeState.LastControlRejectReason))
+                    hints.Add($"Reason: {_runtimeState.LastControlRejectReason}");
+                if (!string.IsNullOrEmpty(_runtimeState.LastSuggestion))
+                    hints.Add($"Suggestion: {_runtimeState.LastSuggestion}");
+                if (!string.IsNullOrEmpty(_runtimeState.LastInputRoute))
+                    hints.Add($"LastInputRoute: {_runtimeState.LastInputRoute}");
             }
 
             return hints;

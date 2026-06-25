@@ -1,6 +1,6 @@
 # Full Test Baseline Report
 
-Date: 2026-06-17 (Phase 5 — Mission 3 CityGateDispute Vertical Slice)
+Date: 2026-06-23 (Phase 6 — Framework Consolidation & Demo Readability Pass)
 Unity: 2022.3.62f3 LTS
 Test Framework: com.unity.test-framework@1.4.5
 
@@ -8,11 +8,62 @@ Test Framework: com.unity.test-framework@1.4.5
 
 | Suite | Total | Passed | Failed | Errors | Skipped |
 |---|---|---|---|---|---|
-| EditMode | 437 | 437 | 0 | 0 | 0 |
-| PlayMode | 116 | 116 | 0 | 0 | 0 |
-| **Combined** | **553** | **553** | **0** | **0** | **0** |
+| EditMode | 469 | 469 | 0 | 0 | 0 |
+| PlayMode | 119 | 119 | 0 | 0 | 0 |
+| **Combined** | **588** | **588** | **0** | **0** | **0** |
 
 Pass rate: **100%**.
+
+## Pending verification — CommanderAction Expansion Pass
+
+This in-progress pass adds `DefendObjective` and `FocusFire` as additive Commander tactical actions. The target baseline remains **EditMode 0 failed** and **PlayMode 0 failed** on Unity 2022.3.62f3 LTS. This section must be refreshed after the full verification commands complete.
+
+Expected verification commands:
+
+```powershell
+.\scripts\run_unity_editmode_tests.ps1
+python scripts\parse_unity_test_results.py TestResults\editmode-results.xml
+.\scripts\run_unity_playmode_tests.ps1
+python scripts\parse_unity_test_results.py TestResults\playmode-results.xml
+```
+
+If PlayMode modifies `ProjectSettings/TimeManager.asset`, restore it with `git checkout -- ProjectSettings/TimeManager.asset`.
+
+## Phase 6 — Framework Consolidation & Demo Readability Pass
+
+This pass preserves the 564/564 Phase 5 baseline and adds targeted framework/readability coverage. Verified full-suite result: **588/588 passed, 0 failed**.
+
+- `DemoFlowManager` / `DemoFlowHud` guide the three-mission chain without mutating `MissionChainState`.
+- `ConvoyEnergyConflict.asset`, `BorderRetaliation.asset`, and `CityGateDispute.asset` provide MissionDefinitionSO authoring for the chain.
+- `MissionObjectiveHud` shows standardized three-mission objective checklists and falls back to DemoFlow when no mission is active.
+- `MissionResultSummaryPanel` has readable outcome summaries for legacy Convoy/Border outcomes and all five CityGate outcomes.
+- `CommanderActionPresenter` provides display-only DirectControl / TacticalCommand / SyncAssist descriptors for `CommanderDebugHud` and `CommanderControlHintPanel`.
+- `VerticalSliceValidator` covers DemoFlow, mission authoring, commander action readability, CityGate presence, playable demo readability, HUD layout, and mission marker coverage.
+- New design doc: `Assets/Docs/DEMO_FLOW_DESIGN.md`.
+- New executable manual checklist: `Assets/Docs/MANUAL_DEMO_VALIDATION_CHECKLIST.md`.
+
+Verification commands:
+
+```powershell
+.\scripts\run_unity_editmode_tests.ps1
+python scripts\parse_unity_test_results.py TestResults\editmode-results.xml
+.\scripts\run_unity_playmode_tests.ps1
+python scripts\parse_unity_test_results.py TestResults\playmode-results.xml
+```
+
+`ProjectSettings/TimeManager.asset` was restored after PlayMode verification.
+
+## Phase 6 — Commander Control + Mission Guidance Polish (completed)
+
+This polish pass preserved the previous baseline while adding targeted usability coverage:
+
+- Commander control diagnostics now expose selected target, rank, required level, trust, leader/direct/tactical flags, E route, denial reason, and suggestion.
+- E priority is documented as selected target → low-rank auto-acquire → mission/EnergyNode fallback → clear no-target hint.
+- CityGateDispute now has an explicit `CityGateDispute.asset` MissionDefinitionSO, four-objective checklist, objective markers, outcome readability, and F8 debug teleport.
+- Playable demo polish groups OnGUI HUD into DemoFlow / Objective / CommanderControl / Result blocks, adds foldable `DEMO / DEBUG` shortcut help, and validates three-mission marker coverage.
+- `CityGateDisputeRuntime.Initialize(context)` / `IsInitialized` make EditMode setup and tests independent of a live `GameBootstrap`.
+
+Full-suite counts are superseded by the Framework Consolidation summary above.
 
 ## Phase 5 — Mission 3: CityGateDispute (new)
 

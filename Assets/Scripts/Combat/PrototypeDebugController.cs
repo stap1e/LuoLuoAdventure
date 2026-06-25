@@ -6,8 +6,10 @@ namespace LuoLuoTrip.Combat
     public class PrototypeDebugController : MonoBehaviour
     {
         [SerializeField] private bool _debugUIVisible = true;
+        [SerializeField] private Vector3 _cityGateTeleportPosition = new Vector3(50f, 0.5f, -4f);
 
         private readonly List<(Combatant combatant, Vector3 position)> _startSnapshots = new List<(Combatant, Vector3)>();
+        private bool _warnedMissingPlayerForCityGateTeleport;
 
         public bool DebugUIVisible => _debugUIVisible;
 
@@ -33,6 +35,9 @@ namespace LuoLuoTrip.Combat
 
             if (Input.GetKeyDown(KeyCode.F4))
                 ResetEncounterEnemies();
+
+            if (Input.GetKeyDown(KeyCode.F8))
+                TeleportPlayerToCityGateDisputeArea();
         }
 
         public void RefreshSnapshots()
@@ -100,6 +105,52 @@ namespace LuoLuoTrip.Combat
                 encounter.DespawnDeadUnits();
 
             Debug.Log($"[PROTOTYPE DEBUG] F4 reset encounter enemies: {reset}");
+        }
+
+        public void TeleportPlayerToCityGateDisputeArea()
+        {
+            var controller = FindActivePlayerController();
+            if (controller == null)
+            {
+                if (!_warnedMissingPlayerForCityGateTeleport)
+                {
+                    Debug.LogWarning("[DEBUG TRIGGER] F8 CityGate teleport failed: player missing");
+                    _warnedMissingPlayerForCityGateTeleport = true;
+                }
+                return;
+            }
+
+            var destination = ResolveCityGateTeleportPosition();
+            var motor = controller.GetComponent<CharacterMovementMotor>();
+            if (motor != null)
+            {
+                motor.SetGroundY(destination.y);
+                motor.TeleportTo(destination);
+            }
+            else
+            {
+                controller.transform.position = destination;
+            }
+
+            var ai = controller.GetComponent<SimpleCombatAI>();
+            if (ai != null)
+            {
+                ai.ForcedAttackTarget = null;
+                ai.FollowTarget = null;
+                ai.HoldPosition = null;
+                if (ai.NavController != null)
+                    ai.NavController.ClearNavigation();
+            }
+
+            Debug.Log($"[DEBUG TRIGGER] F8: Teleported {controller.name} to CityGateDispute area at {destination}");
+        }
+
+        private Vector3 ResolveCityGateTeleportPosition()
+        {
+            var trigger = GameObject.Find("CityGateDisputeTrigger");
+            if (trigger != null)
+                return trigger.transform.position + new Vector3(0f, 0.5f, -4f);
+            return _cityGateTeleportPosition;
         }
 
         private static CombatController FindActivePlayerController()

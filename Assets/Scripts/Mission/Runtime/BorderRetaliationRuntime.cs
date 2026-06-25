@@ -122,22 +122,10 @@ namespace LuoLuoTrip
             _areaRuntime.Activate("border_retaliation");
             AttachObjectiveMarker();
 
-            switch (_modifier.ModifierId)
-            {
-                case "border_beast_retaliation":
-                    _missionState.Objectives.Add(new MissionObjective { ObjectiveId = "defend_outpost", Description = "Defend the outpost (60s)", RequiredProgress = 1 });
-                    _missionState.Objectives.Add(new MissionObjective { ObjectiveId = "repel_raid", Description = "Repel the beast raid", RequiredProgress = 1 });
-                    break;
-                case "border_mecha_distrust":
-                    _missionState.Objectives.Add(new MissionObjective { ObjectiveId = "recapture", Description = "Recapture the resource point", RequiredProgress = 1 });
-                    break;
-                case "border_ceasefire":
-                    _missionState.Objectives.Add(new MissionObjective { ObjectiveId = "stabilize", Description = "Prevent ceasefire breakdown", RequiredProgress = 1 });
-                    break;
-                default:
-                    _missionState.Objectives.Add(new MissionObjective { ObjectiveId = "evacuate", Description = "Complete evacuation", RequiredProgress = 1 });
-                    break;
-            }
+            _missionState.Objectives.Add(new MissionObjective { ObjectiveId = "survive_retaliation", Description = "Survive retaliation", RequiredProgress = 1 });
+            _missionState.Objectives.Add(new MissionObjective { ObjectiveId = "defeat_raiders", Description = "Defeat raiders", RequiredProgress = 1 });
+            _missionState.Objectives.Add(new MissionObjective { ObjectiveId = "protect_allied_units", Description = "Protect allied units", RequiredProgress = 1 });
+            _missionState.Objectives.Add(new MissionObjective { ObjectiveId = "keep_casualties_low", Description = "Keep casualties low", RequiredProgress = 1 });
         }
 
         private void UpdateDefenseMission()
@@ -315,6 +303,7 @@ namespace LuoLuoTrip
             _phase = MissionPhase.Resolving;
             _completionGuard = true;
             if (_missionState == null) return;
+            UpdateObjectiveChecklist(outcome);
             _missionState.Outcome = outcome;
             _missionState.MechaCasualties = _mechaCasualties;
             _missionState.BeastCasualties = _beastCasualties;
@@ -330,6 +319,27 @@ namespace LuoLuoTrip
             if (_phase == MissionPhase.Failed) AudioFeedbackService.PlayUI(AudioEventId.MissionFailed);
             else AudioFeedbackService.PlayUI(AudioEventId.MissionComplete);
             Debug.Log($"[Mission] BorderRetaliation complete: {outcome} ({resultTag}), XP: +{consequence?.CommanderExperienceDelta ?? 0}");
+        }
+
+        private void UpdateObjectiveChecklist(MissionOutcomeType outcome)
+        {
+            SetObjectiveState("survive_retaliation", outcome != MissionOutcomeType.Failed, outcome == MissionOutcomeType.Failed);
+            SetObjectiveState("defeat_raiders", AreAllEnemiesDefeated(), outcome == MissionOutcomeType.Failed || outcome == MissionOutcomeType.BeastVictory);
+            SetObjectiveState("protect_allied_units", _mechaCasualties <= 2, _mechaCasualties > 2);
+            SetObjectiveState("keep_casualties_low", _mechaCasualties + _beastCasualties <= 3, _mechaCasualties + _beastCasualties > 3);
+        }
+
+        private void SetObjectiveState(string objectiveId, bool completed, bool failed)
+        {
+            if (_missionState?.Objectives == null) return;
+            foreach (var objective in _missionState.Objectives)
+            {
+                if (objective == null || objective.ObjectiveId != objectiveId) continue;
+                objective.IsCompleted = completed;
+                objective.IsFailed = failed;
+                objective.Progress = completed ? objective.RequiredProgress : 0;
+                return;
+            }
         }
 
         private void AttachObjectiveMarker()

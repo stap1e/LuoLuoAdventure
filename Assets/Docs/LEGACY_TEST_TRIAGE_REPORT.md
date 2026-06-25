@@ -3,6 +3,31 @@
 Date: 2026-06-17
 Unity: 2022.3.62f3 LTS
 
+## CommanderAction Expansion Pass — pending verification
+
+- Adds `DefendObjective` (`G`) and `FocusFire` (`F`) as Commander tactical commands without adding Mission 4, boss content, model replacement, Canvas UI, or a combat-system rewrite.
+- Keeps high-rank DirectControl denial semantics intact; new commands are routed through CommanderActionPresenter/HUD and SimpleCombatAI command helpers.
+- Full-suite status must be refreshed after EditMode and PlayMode verification; target remains 0 failed in both suites.
+
+## Phase 6B — Framework Consolidation & Demo Readability Pass
+
+- EditMode: **469 total, 469 passed, 0 failed**
+- PlayMode: **119 total, 119 passed, 0 failed**
+- Combined: **588/588 passed, 0 failed**
+- Added DemoFlow, MissionDefinitionSO authoring, mission objective/result readability, CommanderAction display, validator, and smoke coverage without changing the core combat/commander permission systems.
+- Playable demo polish adds four-block OnGUI HUD layout, foldable `DEMO / DEBUG` shortcut help, full three-mission marker coverage, and `Assets/Docs/MANUAL_DEMO_VALIDATION_CHECKLIST.md` for executable manual validation.
+- `ProjectSettings/TimeManager.asset` was restored after PlayMode verification.
+
+## Phase 6 — Commander Control + Mission Guidance Polish (completed)
+
+This pass is not a combat rewrite. It adds observability and demo guidance around the existing CommanderPrototype and CityGateDispute flow:
+
+- Commander Control Rules and E Input Priority are now documented in `CITY_GATE_DISPUTE_DESIGN.md`.
+- DirectControl denial remains expected for high-rank/leader units; tests should assert readable denial and alternatives instead of expecting DirectControl.
+- Low-rank DirectControl should remain available for configured Minion/Common units with sufficient trust and commander level.
+- CityGateDispute runtime initialization should be tested through `Initialize(context)`, not by depending on a real `GameBootstrap` in EditMode.
+- F8 teleport is a debug/demo affordance and must not write MissionChainState or mission outcomes.
+
 ## Current full-suite baseline (Phase 4 — Encounter Persistence & Mission Lifecycle Hardening)
 
 - EditMode: **408 total, 408 passed, 0 failed** (+8 new MissionChainIdempotency / EncounterSnapshot lifecycle tests)

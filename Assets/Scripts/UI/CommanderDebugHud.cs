@@ -15,6 +15,7 @@ namespace LuoLuoTrip.UI
         public void SetProfile(CommanderProfile profile) => _profile = profile;
         public void SetLastControlResult(ControlPermissionResult result) => _lastResult = result;
         public void SetRuntimeState(CommanderControlRuntimeState state) => _runtimeState = state;
+        private static string AllowedText(bool allowed) => allowed ? "Allowed" : "Denied";
 
         private void OnGUI()
         {
@@ -56,10 +57,21 @@ namespace LuoLuoTrip.UI
                     y += 18;
                     GUI.Label(new Rect(x, y, width, 18), $"  Role: {td.Role} Rank: {td.CommandRank} ReqLv: {td.RequiredCommanderLevel}");
                     y += 18;
+                    GUI.Label(new Rect(x, y, width, 18), $"  Trust: {_runtimeState.LastSelectedTargetTrust} Leader: {_runtimeState.LastSelectedTargetIsLeader}");
+                    y += 18;
+                    var descriptors = CommanderActionPresenter.BuildDescriptors(_runtimeState, _lastResult);
+                    GUI.Label(new Rect(x, y, width + 160, 18), $"  {string.Join(" | ", descriptors.ConvertAll(CommanderActionPresenter.BuildStatusLine))}");
+                    y += 18;
                 }
                 else
                 {
-                    GUI.Label(new Rect(x, y, width, 18), "Target: None (Tab to select)");
+                    GUI.Label(new Rect(x, y, width, 18), "Target: None");
+                    y += 18;
+                }
+
+                if (!string.IsNullOrEmpty(_runtimeState.LastInputRoute))
+                {
+                    GUI.Label(new Rect(x, y, width, 18), $"E Route: {_runtimeState.LastInputRoute}");
                     y += 18;
                 }
 
@@ -70,6 +82,23 @@ namespace LuoLuoTrip.UI
                     GUI.Label(new Rect(x, y, width + 120, 18), $"Control: {_lastResult.Mode} | Sync: {_lastResult.SyncRate:P0}");
                     y += 18;
                     GUI.Label(new Rect(x, y, width + 120, 18), $"Reason: {_lastResult.Reason}");
+                    GUI.color = Color.white;
+                    y += 18;
+                }
+
+                if (!string.IsNullOrEmpty(_runtimeState.LastSuggestion))
+                {
+                    GUI.color = Color.cyan;
+                    GUI.Label(new Rect(x, y, width + 160, 18), $"Suggestion: {_runtimeState.LastSuggestion}");
+                    GUI.color = Color.white;
+                    y += 18;
+                }
+
+                var recommended = CommanderActionPresenter.GetRecommendedAction(_runtimeState);
+                if (!string.IsNullOrEmpty(recommended.DisplayName))
+                {
+                    GUI.color = recommended.IsAllowed ? Color.green : Color.yellow;
+                    GUI.Label(new Rect(x, y, width + 160, 18), $"Recommended: {recommended.DisplayName} - {(recommended.IsAllowed ? "Allowed" : recommended.Suggestion)}");
                     GUI.color = Color.white;
                     y += 18;
                 }
@@ -88,6 +117,18 @@ namespace LuoLuoTrip.UI
                     GUI.Label(new Rect(x, y, width, 18), $"Command: {_runtimeState.TacticalCommand.StatusText}");
                     GUI.color = Color.white;
                     y += 18;
+
+                    if (_runtimeState.ActiveCommand == CommanderCommandType.FocusFire)
+                    {
+                        GUI.Label(new Rect(x, y, width, 18), $"  Responders: {_runtimeState.TacticalCommand.ResponderCount} | Duration: {_runtimeState.TacticalCommand.RemainingDuration(Time.time):F1}s");
+                        y += 18;
+                    }
+
+                    if (_runtimeState.ActiveCommand == CommanderCommandType.DefendObjective)
+                    {
+                        GUI.Label(new Rect(x, y, width + 80, 18), $"  Objective: {_runtimeState.LastObjectiveTargetName} | Radius: {_runtimeState.TacticalCommand.DefendRadius:F1}");
+                        y += 18;
+                    }
 
                     if (_runtimeState.CommandTarget != null)
                     {

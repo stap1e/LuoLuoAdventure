@@ -208,8 +208,72 @@ namespace LuoLuoTrip.Editor
                 AssetDatabase.CreateAsset(balance, "Assets/Data/Missions/BalanceAllocation.asset");
             }
 
+            EnsureMissionChainDefinition(
+                "Assets/Data/Missions/ConvoyEnergyConflict.asset",
+                DemoFlowManager.ConvoyMissionId,
+                "Convoy Energy Conflict",
+                "Protect the convoy, share energy with the contested node, and keep casualties low.",
+                new List<MissionObjective>
+                {
+                    new MissionObjective { ObjectiveId = "protect_convoy", Description = "Protect convoy", RequiredProgress = 1 },
+                    new MissionObjective { ObjectiveId = "share_energy", Description = "Share energy", RequiredProgress = 1 },
+                    new MissionObjective { ObjectiveId = "avoid_excessive_casualties", Description = "Avoid excessive casualties", RequiredProgress = 1 }
+                },
+                BuildSharedMissionOutcomeMappings(
+                    "Mecha convoy secured; Beast hostility rises around the energy route.",
+                    "Beast forces seize leverage; Mecha trust drops.",
+                    "Energy shared; mainstream hostility drops while extremists remain.",
+                    "Convoy survives with unresolved tension and limited trust gain.",
+                    "Convoy route destabilized; both sides lose confidence."));
+
+            EnsureMissionChainDefinition(
+                "Assets/Data/Missions/BorderRetaliation.asset",
+                DemoFlowManager.BorderMissionId,
+                "Border Retaliation",
+                "Survive the border retaliation, defeat raiders, protect allied units, and keep casualties low.",
+                new List<MissionObjective>
+                {
+                    new MissionObjective { ObjectiveId = "survive_retaliation", Description = "Survive retaliation", RequiredProgress = 1 },
+                    new MissionObjective { ObjectiveId = "defeat_raiders", Description = "Defeat raiders", RequiredProgress = 1 },
+                    new MissionObjective { ObjectiveId = "protect_allied_units", Description = "Protect allied units", RequiredProgress = 1 },
+                    new MissionObjective { ObjectiveId = "keep_casualties_low", Description = "Keep casualties low", RequiredProgress = 1 }
+                },
+                BuildSharedMissionOutcomeMappings(
+                    "Mecha border line holds; Beast retaliation pressure increases.",
+                    "Beast retaliation succeeds; Mecha support weakens.",
+                    "Border ceasefire stabilizes the route into City Gate.",
+                    "Retaliation contained, but both sides remain wary.",
+                    "Border defense fails; city stability is at risk."));
+
+            var cityGate = AssetDatabase.LoadAssetAtPath<MissionDefinitionSO>("Assets/Data/Missions/CityGateDispute.asset");
+            if (cityGate == null)
+            {
+                cityGate = ScriptableObject.CreateInstance<MissionDefinitionSO>();
+                AssetDatabase.CreateAsset(cityGate, "Assets/Data/Missions/CityGateDispute.asset");
+            }
+            cityGate.MissionId = "city_gate_dispute";
+            cityGate.DisplayName = "City Gate Dispute";
+            cityGate.Description = "Mediate a city-gate standoff while protecting the core, preserving the Beast negotiator, and containing extremist raiders.";
+            cityGate.RecommendedCommanderLevel = 1;
+            cityGate.DefaultObjectives = new List<MissionObjective>
+            {
+                new MissionObjective { ObjectiveId = "protect_core", Description = "Protect CityGateCore", RequiredProgress = 1 },
+                new MissionObjective { ObjectiveId = "protect_negotiator", Description = "Keep BeastNegotiator alive", RequiredProgress = 1 },
+                new MissionObjective { ObjectiveId = "defeat_raiders", Description = "Defeat BeastRaiders", RequiredProgress = 1 },
+                new MissionObjective { ObjectiveId = "keep_casualties_low", Description = "Keep casualties low", RequiredProgress = 1 }
+            };
+            cityGate.OutcomeConsequences = new List<MissionOutcomeConsequenceMapping>
+            {
+                new MissionOutcomeConsequenceMapping { Outcome = MissionOutcomeType.BalancedMediation, CommanderExperienceDelta = 350, SummaryText = "Mainstream hostility reduced below 40; extremists remain contained." },
+                new MissionOutcomeConsequenceMapping { Outcome = MissionOutcomeType.MechaSuppression, CommanderExperienceDelta = 250, SummaryText = "Mecha order is restored, but Beast trust suffers." },
+                new MissionOutcomeConsequenceMapping { Outcome = MissionOutcomeType.BeastNegotiation, CommanderExperienceDelta = 250, SummaryText = "Beast hostility drops after negotiation, while Mecha support softens." },
+                new MissionOutcomeConsequenceMapping { Outcome = MissionOutcomeType.FailedEscalation, CommanderExperienceDelta = 30, SummaryText = "The city gate collapses into broader faction hostility." },
+                new MissionOutcomeConsequenceMapping { Outcome = MissionOutcomeType.PartialContainment, CommanderExperienceDelta = 100, SummaryText = "The dispute is contained, but casualties leave both sides wary." }
+            };
+
             EditorUtility.SetDirty(raid);
             EditorUtility.SetDirty(balance);
+            EditorUtility.SetDirty(cityGate);
             AssetDatabase.SaveAssets();
             Debug.Log("[LuoLuoTrip] Mission Prototype Data 已创建");
         }
@@ -266,10 +330,12 @@ namespace LuoLuoTrip.Editor
 
             var convoyObj = CreateObjective("Convoy_Objective", new Vector3(-2f, 0.3f, 5f),
                 PlaceholderAssetGenerator.ConvoyPrefab);
+            AttachSceneMarker(convoyObj, WorldMarkerType.MissionObjective, "Convoy");
             var convoyComponent = convoyObj.AddComponent<ConvoyObjective>();
 
             var energyObj = CreateObjective("Energy_Node", new Vector3(4f, 0.2f, -4f),
                 PlaceholderAssetGenerator.EnergyNodePrefab);
+            AttachSceneMarker(energyObj, WorldMarkerType.Interactable, "Energy Node");
             var energyComponent = energyObj.AddComponent<EnergyNodeObjective>();
 
             var triggerGo = new GameObject("MissionTriggerZone");
@@ -294,6 +360,10 @@ namespace LuoLuoTrip.Editor
             var hintPanel = new GameObject("CommanderControlHintPanel").AddComponent<CommanderControlHintPanel>();
             var toastPanel = new GameObject("FactionDeltaToastPanel").AddComponent<FactionDeltaToastPanel>();
             var chainSummaryPanel = new GameObject("MissionChainSummaryPanel").AddComponent<MissionChainSummaryPanel>();
+            var demoFlowManager = new GameObject("DemoFlowManager").AddComponent<DemoFlowManager>();
+            var demoFlowHud = new GameObject("DemoFlowHud").AddComponent<DemoFlowHud>();
+            demoFlowHud.SetFlowManager(demoFlowManager);
+            objectiveHud.SetDemoFlowManager(demoFlowManager);
 
             new GameObject("[AudioFeedbackService]").AddComponent<AudioFeedbackService>();
             new GameObject("[WorldMarkerService]").AddComponent<WorldMarkerService>();
@@ -302,7 +372,7 @@ namespace LuoLuoTrip.Editor
             CreateAreaLabel("Area_ConvoyMission", new Vector3(0f, 0f, 5f), "Convoy Mission", new Color(0.3f, 1f, 0.5f));
             CreateAreaLabel("Area_BorderRetaliation", new Vector3(25f, 0f, 0f), "Border Retaliation", new Color(1f, 0.6f, 0.3f));
             CreateAreaLabel("Area_AdvancedShowcase", new Vector3(22f, 0f, -2f), "Advanced Units", new Color(1f, 0.85f, 0.2f));
-            CreateAreaLabel("Area_CityGateDispute", new Vector3(50f, 0f, 0f), "City Gate Dispute", new Color(0.8f, 0.5f, 1f));
+            CreateAreaLabel("Area_CityGateDispute", new Vector3(50f, 0f, 0f), "City Gate Mission Area", new Color(0.8f, 0.5f, 1f));
 
             // === Mission 3: CityGateDispute ===
             var cityGateTriggerGo = new GameObject("CityGateDisputeTrigger");
@@ -315,6 +385,7 @@ namespace LuoLuoTrip.Editor
 
             var cityGateCoreObj = CreateObjective("CityGateCore_Objective", new Vector3(50f, 0.3f, 2f),
                 PlaceholderAssetGenerator.EnergyNodePrefab);
+            cityGateCoreObj.AddComponent<WorldMarker>().Configure(WorldMarkerType.MissionObjective, cityGateCoreObj.transform, "[CORE] CityGateCore");
             var cityGateCoreEntity = cityGateCoreObj.AddComponent<CharacterEntity>();
             cityGateCoreEntity.Bind(CharacterData.Create("citygate_core", "CityGateCore", SubFactionId.MotorIronRiders, CharacterRole.Minion));
             var cityGateCoreCombatant = cityGateCoreObj.GetComponent<Combatant>();
@@ -332,6 +403,7 @@ namespace LuoLuoTrip.Editor
             mechaGuardData.TrustToPlayer = 20;
             var mechaGuardGo = CreateCombatCharacter("MechaGateGuard", new Vector3(47f, 0.5f, 1f), mechaGuardData,
                 PlaceholderAssetGenerator.MechaMinionPrefab, isPlayer: false);
+            AttachSceneMarker(mechaGuardGo, WorldMarkerType.FriendlyUnit, "Low-Rank Ally: Can Receive Commands");
 
             var mechaHardlinerData = CharacterData.Create("mecha_hardliner_001", "MechaHardliner", SubFactionId.MotorStormGang, CharacterRole.Minion);
             mechaHardlinerData.CommandRank = 2;
@@ -339,8 +411,9 @@ namespace LuoLuoTrip.Editor
             mechaHardlinerData.TrustToPlayer = 10;
             mechaHardlinerData.AllowDirectControl = false;
             mechaHardlinerData.AllowTacticalCommand = true;
-            CreateCombatCharacter("MechaHardliner", new Vector3(46f, 0.5f, 3f), mechaHardlinerData,
+            var mechaHardlinerGo = CreateCombatCharacter("MechaHardliner", new Vector3(46f, 0.5f, 3f), mechaHardlinerData,
                 PlaceholderAssetGenerator.MechaMinionPrefab, isPlayer: false);
+            AttachSceneMarker(mechaHardlinerGo, WorldMarkerType.FriendlyUnit, "High-Rank Unit: Tactical Command Only");
 
             var beastNegotiatorData = CharacterData.Create("beast_negotiator_001", "BeastNegotiator", SubFactionId.BeastShadowFang, CharacterRole.Minion);
             beastNegotiatorData.CommandRank = 1;
@@ -348,15 +421,28 @@ namespace LuoLuoTrip.Editor
             beastNegotiatorData.AllowDirectControl = true;
             var beastNegotiatorGo = CreateCombatCharacter("BeastNegotiator", new Vector3(53f, 0.5f, 1f), beastNegotiatorData,
                 PlaceholderAssetGenerator.BeastMinionPrefab, isPlayer: false);
+            AttachSceneMarker(beastNegotiatorGo, WorldMarkerType.MissionObjective, "[KEEP ALIVE] BeastNegotiator");
             var beastNegotiatorEntity = beastNegotiatorGo.GetComponent<CharacterEntity>();
 
+            var beastRaiderData = CharacterData.Create("beast_raider_01", "BeastRaider_01", SubFactionId.BeastIronClaw, CharacterRole.Minion);
+            beastRaiderData.CommandRank = 1;
+            beastRaiderData.RequiredCommanderLevel = 1;
+            beastRaiderData.TrustToPlayer = 60;
+            beastRaiderData.AllowDirectControl = true;
+            beastRaiderData.AllowTacticalCommand = true;
+            var beastRaiderGo = CreateCombatCharacter("BeastRaider_01", new Vector3(55f, 0.5f, 1f), beastRaiderData,
+                PlaceholderAssetGenerator.BeastMinionPrefab, isPlayer: false);
+            AttachSceneMarker(beastRaiderGo, WorldMarkerType.HostileUnit, "[LOW] BeastRaider");
+
             var cityLordData = CharacterData.Create("city_lord_gate_001", "CityLord", SubFactionId.MotorIronRiders, CharacterRole.CityLord);
-            CreateCombatCharacter("CityLord_HighRank", new Vector3(48f, 0.5f, -2f), cityLordData,
+            var cityLordGo = CreateCombatCharacter("CityLord_HighRank", new Vector3(48f, 0.5f, -2f), cityLordData,
                 PlaceholderAssetGenerator.CityLordPrefab, isPlayer: false);
+            AttachSceneMarker(cityLordGo, WorldMarkerType.FriendlyUnit, "[HIGH] CityLord");
 
             var warKingGateData = CharacterData.Create("war_king_gate_001", "WarKing", SubFactionId.BeastIronClaw, CharacterRole.WarKing);
-            CreateCombatCharacter("WarKing_HighRank", new Vector3(54f, 0.5f, -2f), warKingGateData,
+            var warKingGo = CreateCombatCharacter("WarKing_HighRank", new Vector3(54f, 0.5f, -2f), warKingGateData,
                 PlaceholderAssetGenerator.WarKingPrefab, isPlayer: false);
+            AttachSceneMarker(warKingGo, WorldMarkerType.HostileUnit, "[HIGH] WarKing");
 
             var cityGateConflictGo = new GameObject("CityGateDispute");
             var cityGateConflict = cityGateConflictGo.AddComponent<CityGateDisputeRuntime>();
@@ -371,6 +457,7 @@ namespace LuoLuoTrip.Editor
 
             var cityGateBeastSpawn = new GameObject("CityGateSpawnPoint_Beast");
             cityGateBeastSpawn.transform.position = new Vector3(55f, 0f, 3f);
+            cityGateBeastSpawn.AddComponent<WorldMarker>().Configure(WorldMarkerType.HostileUnit, cityGateBeastSpawn.transform, "BeastRaider Spawn");
             var cityGateBeastSpawnComp = cityGateBeastSpawn.AddComponent<EncounterSpawnPoint>();
             var cityGateBeastSpawnSo = new SerializedObject(cityGateBeastSpawnComp);
             cityGateBeastSpawnSo.FindProperty("_spawnPointId").stringValue = "citygate_beast_spawn";
@@ -466,6 +553,7 @@ namespace LuoLuoTrip.Editor
 
             var borderObjectiveMarker = CreateObjective("Border_ObjectiveMarker", new Vector3(25f, 0.2f, 0f),
                 PlaceholderAssetGenerator.ObjectiveMarkerPrefab);
+            AttachSceneMarker(borderObjectiveMarker, WorldMarkerType.MissionObjective, "Allied Defense Point");
 
             var borderConflictGo = new GameObject("BorderRetaliation");
             var borderConflict = borderConflictGo.AddComponent<BorderRetaliationRuntime>();
@@ -478,6 +566,7 @@ namespace LuoLuoTrip.Editor
 
             var borderBeastSpawn = new GameObject("BorderSpawnPoint_Beast");
             borderBeastSpawn.transform.position = new Vector3(28f, 0f, 3f);
+            AttachSceneMarker(borderBeastSpawn, WorldMarkerType.HostileUnit, "Raider Spawn");
             var borderBeastSpawnComp = borderBeastSpawn.AddComponent<EncounterSpawnPoint>();
             var borderBeastSpawnSo = new SerializedObject(borderBeastSpawnComp);
             borderBeastSpawnSo.FindProperty("_spawnPointId").stringValue = "border_beast_spawn";
@@ -529,7 +618,7 @@ namespace LuoLuoTrip.Editor
             EditorSceneManager.SaveScene(scene, CommanderScenePath);
             AssetDatabase.Refresh();
             Debug.Log($"[LuoLuoTrip] Commander Mission Prototype Scene 已创建: {CommanderScenePath}");
-            Debug.Log("Controls: WASD move | LClick attack | Space dodge | Q lock-on | Tab select target | E interact | R release control | 1/2/3 test missions | F7 CityGate test | F5 save | F9 load | F10 clear save");
+            Debug.Log("Controls: WASD move | LClick attack | Space dodge | Q lock-on | Tab select target | E interact/control | R release control | 1/2/3 test missions | F7 CityGate test | F8 CityGate teleport | F5 save | F9 load | F10 clear save");
             Debug.Log("Areas: Tutorial (0,0,0) | Convoy Mission (0,0,5) | Border Retaliation (25,0,0) | Advanced Units (22,0,-2) | City Gate Dispute (50,0,0)");
             Debug.Log("Mission 1: ConvoyEnergyConflict at (0,0,2) | Mission 2: BorderRetaliation at (25,0,0) | Mission 3: CityGateDispute at (50,0,0)");
             Debug.Log("Services: AudioFeedbackService + WorldMarkerService spawned (profiles in Resources/)");
@@ -815,6 +904,15 @@ namespace LuoLuoTrip.Editor
             return go;
         }
 
+        private static void AttachSceneMarker(GameObject go, WorldMarkerType type, string label)
+        {
+            if (go == null) return;
+            var marker = go.GetComponent<WorldMarker>();
+            if (marker == null)
+                marker = go.AddComponent<WorldMarker>();
+            marker.Configure(type, go.transform, label);
+        }
+
         private static GameObject CreateAreaLabel(string name, Vector3 position, string label, Color color)
         {
             var go = new GameObject(name);
@@ -945,6 +1043,39 @@ namespace LuoLuoTrip.Editor
                 cameraGo.AddComponent<AudioListener>();
 
             return cameraGo;
+        }
+
+        private static MissionDefinitionSO EnsureMissionChainDefinition(string assetPath, string missionId, string displayName,
+            string description, List<MissionObjective> objectives, List<MissionOutcomeConsequenceMapping> outcomes)
+        {
+            var mission = AssetDatabase.LoadAssetAtPath<MissionDefinitionSO>(assetPath);
+            if (mission == null)
+            {
+                mission = ScriptableObject.CreateInstance<MissionDefinitionSO>();
+                AssetDatabase.CreateAsset(mission, assetPath);
+            }
+
+            mission.MissionId = missionId;
+            mission.DisplayName = displayName;
+            mission.Description = description;
+            mission.RecommendedCommanderLevel = 1;
+            mission.DefaultObjectives = objectives ?? new List<MissionObjective>();
+            mission.OutcomeConsequences = outcomes ?? new List<MissionOutcomeConsequenceMapping>();
+            EditorUtility.SetDirty(mission);
+            return mission;
+        }
+
+        private static List<MissionOutcomeConsequenceMapping> BuildSharedMissionOutcomeMappings(
+            string mechaVictory, string beastVictory, string balanced, string partial, string failed)
+        {
+            return new List<MissionOutcomeConsequenceMapping>
+            {
+                new MissionOutcomeConsequenceMapping { Outcome = MissionOutcomeType.MechaVictory, CommanderExperienceDelta = 200, SummaryText = mechaVictory },
+                new MissionOutcomeConsequenceMapping { Outcome = MissionOutcomeType.BeastVictory, CommanderExperienceDelta = 200, SummaryText = beastVictory },
+                new MissionOutcomeConsequenceMapping { Outcome = MissionOutcomeType.BalancedResolution, CommanderExperienceDelta = 300, SummaryText = balanced },
+                new MissionOutcomeConsequenceMapping { Outcome = MissionOutcomeType.PartialSuccess, CommanderExperienceDelta = 80, SummaryText = partial },
+                new MissionOutcomeConsequenceMapping { Outcome = MissionOutcomeType.Failed, CommanderExperienceDelta = 30, SummaryText = failed }
+            };
         }
 
         private static void EnsureFolder(string path)

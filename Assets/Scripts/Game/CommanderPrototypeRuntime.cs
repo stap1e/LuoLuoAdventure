@@ -120,7 +120,8 @@ namespace LuoLuoTrip
                 var unlocked = _chainService?.State.UnlockedMissionIds.Count > 1
                     ? _chainService.State.UnlockedMissionIds[_chainService.State.UnlockedMissionIds.Count - 1]
                     : null;
-                var modifier = _chainService?.BuildMissionModifiers("border_retaliation");
+                var nextMissionId = GetNextMissionAfter(missionId);
+                var modifier = !string.IsNullOrEmpty(nextMissionId) ? _chainService?.BuildMissionModifiers(nextMissionId) : null;
                 _summaryPanel.ShowSummary(missionId, consequence, _profileBefore, context.CommanderProfile, unlocked, modifier);
             }
 
@@ -137,6 +138,16 @@ namespace LuoLuoTrip
 
             Debug.Log($"[Commander] Mission complete: {consequence.Outcome}, XP: +{consequence.CommanderExperienceDelta}, Level: {context?.CommanderProfile.CommanderLevel}");
             _profileBefore = null;
+        }
+
+        private static string GetNextMissionAfter(string missionId)
+        {
+            return missionId switch
+            {
+                DemoFlowManager.ConvoyMissionId => DemoFlowManager.BorderMissionId,
+                DemoFlowManager.BorderMissionId => DemoFlowManager.CityGateMissionId,
+                _ => null
+            };
         }
 
         private CommanderProfile CloneProfile()

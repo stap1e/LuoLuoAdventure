@@ -15,45 +15,42 @@ namespace LuoLuoTrip.Tests.EditMode
         }
 
         [Test]
-        public void ControlHint_DoesNotOverlapCommanderHud()
+        public void DefaultLayout_UsesFourReadableBlocks()
         {
-            var hint = DebugUILayout.ControlHint;
-            var hud = DebugUILayout.CommanderHud;
+            var demo = DebugUILayout.GetDemoFlowRect(1280, 720);
+            var objective = DebugUILayout.GetMissionObjectiveRect(1280, 720);
+            var hint = DebugUILayout.GetControlHintRect(1280, 720);
+            var commander = DebugUILayout.GetCommanderHudRect(1280, 720);
+            var result = DebugUILayout.GetMissionResultSummaryRect(1280, 720);
 
-            // ControlHint and CommanderHud are both anchored to the left edge.
-            // Verify they do not vertically overlap.
-            var hintBottom = hint.y + hint.height;
-            var hintTop = hint.y;
-            var hudBottom = hud.y + hud.height;
-            var hudTop = hud.y;
-
-            bool disjoint = hintBottom <= hudTop || hudBottom <= hintTop;
-            Assert.That(disjoint, Is.True,
-                $"ControlHint [{hintTop}-{hintBottom}] and CommanderHud [{hudTop}-{hudBottom}] must not vertically overlap");
+            Assert.That(demo.xMax, Is.LessThanOrEqualTo(hint.xMin), "DemoFlow should stay in the left guidance block.");
+            Assert.That(objective.xMax, Is.LessThanOrEqualTo(commander.xMin), "Objectives should stay left of commander panels.");
+            Assert.That(demo.yMax, Is.LessThanOrEqualTo(objective.yMin), "DemoFlow should sit above objectives.");
+            Assert.That(hint.yMax, Is.LessThanOrEqualTo(commander.yMin), "Commander hint should sit above commander debug HUD.");
+            Assert.That(DebugUILayout.OverlapsHeavily(commander, result), Is.False, "Commander and result blocks should not heavily overlap.");
         }
 
         [Test]
-        public void LeftColumn_PanelsDoNotOverlapVertically()
+        public void CompactLayout_IsSafeBelow1024()
         {
-            // All left-column panels should stack without vertical overlap.
-            var panels = new[]
+            Assert.That(DebugUILayout.IsCompact(800), Is.True);
+
+            var layouts = new[]
             {
-                ("MissionObjective", DebugUILayout.MissionObjective),
-                ("ControlHint", DebugUILayout.ControlHint),
-                ("CommanderHud", DebugUILayout.CommanderHud),
-                ("MissionChainSummary", DebugUILayout.MissionChainSummary),
+                DebugUILayout.GetDemoFlowRect(800, 600),
+                DebugUILayout.GetDemoShortcutHelpRect(800, 600),
+                DebugUILayout.GetMissionObjectiveRect(800, 600),
+                DebugUILayout.GetControlHintRect(800, 600),
+                DebugUILayout.GetCommanderHudRect(800, 600),
+                DebugUILayout.GetMissionResultSummaryRect(800, 600)
             };
 
-            for (int i = 0; i < panels.Length; i++)
+            foreach (var layout in layouts)
             {
-                for (int j = i + 1; j < panels.Length; j++)
-                {
-                    var a = panels[i].Item2;
-                    var b = panels[j].Item2;
-                    bool disjoint = (a.y + a.height) <= b.y || (b.y + b.height) <= a.y;
-                    Assert.That(disjoint, Is.True,
-                        $"{panels[i].Item1} [{a.y}-{a.y + a.height}] overlaps {panels[j].Item1} [{b.y}-{b.y + b.height}]");
-                }
+                Assert.That(layout.width, Is.GreaterThan(0f));
+                Assert.That(layout.height, Is.GreaterThan(0f));
+                Assert.That(layout.x, Is.GreaterThanOrEqualTo(0f));
+                Assert.That(layout.y, Is.GreaterThanOrEqualTo(0f));
             }
         }
 
@@ -62,6 +59,8 @@ namespace LuoLuoTrip.Tests.EditMode
         {
             var layouts = new[]
             {
+                DebugUILayout.DemoFlow,
+                DebugUILayout.DemoShortcutHelp,
                 DebugUILayout.CommanderHud,
                 DebugUILayout.ControlHint,
                 DebugUILayout.MissionObjective,
@@ -81,33 +80,13 @@ namespace LuoLuoTrip.Tests.EditMode
         }
 
         [Test]
-        public void LeftPanelLayouts_DoNotOverlapRightPanelLayouts()
+        public void ShortcutHelp_IncludesRequiredDemoDebugKeys()
         {
-            // Right panels are anchored to Screen.width. In batchmode with no
-            // display, Screen.width may be very small (e.g. 640), making the
-            // right panels and left panels physically overlap. The layout is
-            // designed for typical play widths (>= 1280). If Screen.width is
-            // too small, skip the assertion rather than fail.
-            const int MinSupportedWidth = 1024;
-            if (Screen.width < MinSupportedWidth)
-            {
-                Assert.Pass($"Screen.width={Screen.width} below {MinSupportedWidth} (likely batchmode); skipping anchor overlap check.");
-                return;
-            }
+            var text = string.Join("\n", DemoFlowHud.BuildShortcutHelpLines(false));
 
-            var leftLayouts = new[] { DebugUILayout.CommanderHud, DebugUILayout.ControlHint, DebugUILayout.MissionObjective, DebugUILayout.MissionChainSummary };
-            var rightLayouts = new[] { DebugUILayout.FactionStanding, DebugUILayout.FactionDeltaToast, DebugUILayout.MissionResultDebug };
-
-            foreach (var left in leftLayouts)
-            {
-                foreach (var right in rightLayouts)
-                {
-                    var leftEnd = left.x + left.width;
-                    var rightStart = right.x;
-                    Assert.That(leftEnd, Is.LessThanOrEqualTo(rightStart),
-                        $"Left panel ending at {leftEnd} should not overlap right panel starting at {rightStart}");
-                }
-            }
+            foreach (var key in new[] { "1", "2", "3", "F7", "F8", "F5", "F9", "F10", "Tab/Q", "E", "R", "Left Click", "Space" })
+                Assert.That(text, Does.Contain(key));
+            Assert.That(text, Does.Contain("DEMO / DEBUG"));
         }
 
         [Test]

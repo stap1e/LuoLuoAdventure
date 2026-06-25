@@ -61,6 +61,11 @@ namespace LuoLuoTrip.Combat
         public Transform FollowTarget { get; set; }
         public Vector3? HoldPosition { get; set; }
         public Combatant ForcedAttackTarget { get; set; }
+        public Transform DefendTarget { get; private set; }
+        public Vector3? DefendPosition { get; private set; }
+        public float DefendRadius { get; private set; }
+        public float DefendLeashRadius { get; private set; }
+        public string CommanderCommandStatus { get; private set; }
         public bool IsWindingUp => _isWindingUp;
         public AICombatNavigationController NavController => _navController;
         public float StopDistance => EffectiveStopDistance;
@@ -90,6 +95,47 @@ namespace LuoLuoTrip.Combat
             _chaseSpeed = config.aiChaseSpeed;
             _stopDistance = config.aiStopDistance;
             _self?.ApplyTuning(config);
+        }
+
+        public void SetDefendObjective(Transform target, float radius)
+        {
+            DefendTarget = target;
+            DefendPosition = target != null ? target.position : (Vector3?)null;
+            DefendRadius = Mathf.Max(1f, radius);
+            DefendLeashRadius = DefendRadius + Mathf.Max(EffectiveStopDistance, 2f);
+            FollowTarget = null;
+            HoldPosition = null;
+            CommanderCommandStatus = target != null ? $"Defending {target.name}" : "Defend objective missing";
+            Debug.Log($"[AICommand] Defending objective: {(target != null ? target.name : "None")}");
+        }
+
+        public void ClearDefendObjective()
+        {
+            DefendTarget = null;
+            DefendPosition = null;
+            DefendRadius = 0f;
+            DefendLeashRadius = 0f;
+            if (CommanderCommandStatus != null && CommanderCommandStatus.StartsWith("Defending"))
+                CommanderCommandStatus = null;
+        }
+
+        public void SetFocusFireTarget(Combatant target)
+        {
+            ForcedAttackTarget = target;
+            CommanderCommandStatus = target != null ? $"FocusFire target: {target.name}" : null;
+            if (target != null)
+                Debug.Log($"[AICommand] FocusFire target: {target.name}");
+        }
+
+        public void ClearCommanderCommands()
+        {
+            FollowTarget = null;
+            HoldPosition = null;
+            ForcedAttackTarget = null;
+            ClearDefendObjective();
+            CommanderCommandStatus = null;
+            if (_navController != null)
+                _navController.ClearNavigation();
         }
 
         private void Awake()
@@ -147,6 +193,12 @@ namespace LuoLuoTrip.Combat
             if (HoldPosition.HasValue)
             {
                 ExecuteHoldPosition();
+                return;
+            }
+
+            if (DefendTarget != null || DefendPosition.HasValue)
+            {
+                ExecuteDefendObjective();
                 return;
             }
 
@@ -209,6 +261,89 @@ namespace LuoLuoTrip.Combat
                 _navController.MoveToPosition(HoldPosition.Value);
             else
                 _navController.StopNavigation();
+        }
+
+        private void ExecuteDefendObjective()
+        {
+            if (DefendTarget != null)
+                DefendPosition = DefendTarget.position;
+
+            if (!DefendPosition.HasValue)
+            {
+                ClearDefendObjective();
+                return;
+            }
+
+            TickTimers();
+            if (_thinkTimer > 0f) return;
+            _thinkTimer = _thinkInterval;
+
+            var anchor = DefendPosition.Value;
+            var anchorOffset = anchor - transform.position;
+            anchorOffset.y = 0f;
+
+            if (ForcedAttackTarget != null && ForcedAttackTarget.IsAlive && IsInsideDefendLeash(ForcedAttackTarget.transform.position))
+                _target = ForcedAttackTarget;
+            else
+            {
+                ForcedAttackTarget = null;
+                _target = SelectBestHostileTargetNear(anchor, Mathf.Max(DefendRadius, _detectRange));
+            }
+
+            if (_target != null && _target.IsAlive)
+            {
+                if (!IsInsideDefendLeash(_target.transform.position))
+                {
+                    _target = null;
+                    _navController.MoveToPosition(anchor);
+                    CommanderCommandStatus = "Returning to defend objective";
+                    return;
+                }
+
+                var distance = Vector3.Distance(transform.position, _target.transform.position);
+                CommanderCommandStatus = "Engaging threat";
+                ExecuteIntent(ChooseIntent(distance), distance);
+                return;
+            }
+
+            if (anchorOffset.magnitude > Mathf.Max(1f, DefendRadius * 0.5f))
+            {
+                CommanderCommandStatus = "Moving to defend objective";
+                _navController.MoveToPosition(anchor);
+            }
+            else
+            {
+                CommanderCommandStatus = "Holding defend objective";
+                _navController.StopNavigation();
+            }
+        }
+
+        private bool IsInsideDefendLeash(Vector3 position)
+        {
+            if (!DefendPosition.HasValue) return false;
+            var offset = position - DefendPosition.Value;
+            offset.y = 0f;
+            return offset.magnitude <= Mathf.Max(DefendRadius, DefendLeashRadius);
+        }
+
+        private Combatant SelectBestHostileTargetNear(Vector3 anchor, float radius)
+        {
+            Combatant bestTarget = null;
+            var bestScore = float.MinValue;
+            foreach (var other in CombatantQuery())
+            {
+                if (!IsValidHostile(other)) continue;
+                var anchorOffset = other.transform.position - anchor;
+                anchorOffset.y = 0f;
+                if (anchorOffset.magnitude > radius) continue;
+                var score = ScoreTarget(other);
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    bestTarget = other;
+                }
+            }
+            return bestTarget;
         }
 
         private void TickTimers()

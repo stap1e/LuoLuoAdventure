@@ -2,7 +2,9 @@
 using LuoLuoTrip.Combat;
 using LuoLuoTrip.Combat.Animation;
 using LuoLuoTrip.Combat.Feedback;
+using LuoLuoTrip.Feedback;
 using LuoLuoTrip.Save;
+using LuoLuoTrip.UI;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -58,7 +60,14 @@ namespace LuoLuoTrip.Editor
             CheckEncounterReliability(report, ref errors, ref warnings);
             CheckEncounterPersistence(report, ref errors, ref warnings);
             CheckPlayerAttackUsability(report, ref errors, ref warnings);
-            CheckCityGateDispute(report, ref errors, ref warnings);
+            CheckCommanderControlUsability(report, ref errors, ref warnings);
+            CheckDemoFlow(report, ref errors, ref warnings);
+            CheckPlayableDemoReadability(report, ref errors, ref warnings);
+            CheckHudLayout(report, ref errors, ref warnings);
+            CheckMissionMarkerCoverage(report, ref errors, ref warnings);
+            CheckMissionAuthoring(report, ref errors, ref warnings);
+            CheckCommanderActionReadability(report, ref errors, ref warnings);
+            CheckCommanderActionExpansion(report, ref errors, ref warnings);
             CheckCityGateDispute(report, ref errors, ref warnings);
 
             report.Add("");
@@ -1760,6 +1769,380 @@ namespace LuoLuoTrip.Editor
             }
         }
 
+        private static void CheckDemoFlow(List<string> report, ref int errors, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- Demo Flow ---");
+
+            if (typeof(DemoFlowManager) != null) report.Add("  OK: DemoFlowManager type exists");
+            if (typeof(DemoFlowHud) != null) report.Add("  OK: DemoFlowHud type exists");
+
+            var go = new GameObject("ValidatorDemoFlow");
+            try
+            {
+                var manager = go.AddComponent<DemoFlowManager>();
+                manager.RefreshFromMissionChain((MissionChainState)null);
+                if (manager.GetNextMissionId() == DemoFlowManager.ConvoyMissionId)
+                    report.Add("  OK: DemoFlow returns Mission 1 for missing chain");
+                else
+                {
+                    report.Add("  ERROR: DemoFlow missing-chain fallback is not Mission 1");
+                    errors++;
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+
+            var debugType = typeof(PrototypeDebugController);
+            if (debugType.GetMethod("TeleportPlayerToCityGateDisputeArea") != null)
+                report.Add("  OK: F8 CityGate teleport hook exists");
+            else
+            {
+                report.Add("  ERROR: F8 CityGate teleport hook missing");
+                errors++;
+            }
+
+            if (File.Exists("Assets/Scenes/CommanderPrototype.unity"))
+            {
+                var scene = EditorSceneManager.OpenScene("Assets/Scenes/CommanderPrototype.unity", OpenSceneMode.Additive);
+                try
+                {
+                    var hasManager = false;
+                    var hasHud = false;
+                    foreach (var root in scene.GetRootGameObjects())
+                    {
+                        hasManager |= root.GetComponentsInChildren<DemoFlowManager>(true).Length > 0;
+                        hasHud |= root.GetComponentsInChildren<DemoFlowHud>(true).Length > 0;
+                    }
+
+                    if (hasManager) report.Add("  OK: CommanderPrototype contains DemoFlowManager");
+                    else { report.Add("  ERROR: CommanderPrototype missing DemoFlowManager"); errors++; }
+                    if (hasHud) report.Add("  OK: CommanderPrototype contains DemoFlowHud");
+                    else { report.Add("  ERROR: CommanderPrototype missing DemoFlowHud"); errors++; }
+                }
+                finally
+                {
+                    EditorSceneManager.CloseScene(scene, true);
+                }
+            }
+        }
+
+        private static void CheckPlayableDemoReadability(List<string> report, ref int errors, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- Playable Demo Readability ---");
+
+            var requiredHudTypes = new[]
+            {
+                typeof(DemoFlowHud), typeof(MissionObjectiveHud), typeof(MissionResultSummaryPanel),
+                typeof(CommanderControlHintPanel), typeof(CommanderDebugHud)
+            };
+            foreach (var type in requiredHudTypes)
+                report.Add($"  OK: {type.Name} type exists");
+
+            var shortcuts = DemoFlowHud.BuildShortcutHelpLines(false);
+            var shortcutText = string.Join(" ", shortcuts);
+            var expectedShortcuts = new[] { "1", "2", "3", "F7", "F8", "F5", "F9", "F10", "Tab/Q", "E", "R", "Left Click", "Space" };
+            foreach (var key in expectedShortcuts)
+            {
+                if (shortcutText.Contains(key)) report.Add($"  OK: shortcut help includes {key}");
+                else { report.Add($"  ERROR: shortcut help missing {key}"); errors++; }
+            }
+
+            if (typeof(CommanderPrototypeRuntime).GetMethod("OnMissionCompleted") != null)
+                report.Add("  OK: CommanderPrototypeRuntime mission completion hook exists");
+            else { report.Add("  ERROR: CommanderPrototypeRuntime mission completion hook missing"); errors++; }
+
+            if (typeof(PrototypeDebugController).GetMethod("TeleportPlayerToCityGateDisputeArea") != null)
+                report.Add("  OK: F8 teleport hook exists");
+            else { report.Add("  ERROR: F8 teleport hook missing"); errors++; }
+
+            var checklistPath = Path.Combine("Assets", "Docs", "MANUAL_DEMO_VALIDATION_CHECKLIST.md");
+            if (File.Exists(checklistPath)) report.Add("  OK: MANUAL_DEMO_VALIDATION_CHECKLIST.md exists");
+            else { report.Add("  ERROR: MANUAL_DEMO_VALIDATION_CHECKLIST.md missing"); errors++; }
+        }
+
+        private static void CheckHudLayout(List<string> report, ref int errors, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- HUD Layout ---");
+
+            var defaultPanels = new Dictionary<string, Rect>
+            {
+                { "DemoFlow", DebugUILayout.GetDemoFlowRect(1280, 720) },
+                { "MissionObjective", DebugUILayout.GetMissionObjectiveRect(1280, 720) },
+                { "ControlHint", DebugUILayout.GetControlHintRect(1280, 720) },
+                { "CommanderHud", DebugUILayout.GetCommanderHudRect(1280, 720) },
+                { "MissionResultSummary", DebugUILayout.GetMissionResultSummaryRect(1280, 720) }
+            };
+
+            foreach (var panel in defaultPanels)
+            {
+                if (panel.Value.width > 0f && panel.Value.height > 0f)
+                    report.Add($"  OK: {panel.Key} rect positive ({panel.Value})");
+                else { report.Add($"  ERROR: {panel.Key} rect has non-positive size ({panel.Value})"); errors++; }
+            }
+
+            if (defaultPanels["DemoFlow"].xMax <= defaultPanels["ControlHint"].xMin &&
+                defaultPanels["MissionObjective"].xMax <= defaultPanels["CommanderHud"].xMin)
+                report.Add("  OK: default layout separates left guidance from right commander panels");
+            else { report.Add("  ERROR: default HUD columns overlap heavily at 1280x720"); errors++; }
+
+            if (!DebugUILayout.OverlapsHeavily(defaultPanels["CommanderHud"], defaultPanels["MissionResultSummary"]))
+                report.Add("  OK: commander and result panels do not overlap heavily");
+            else { report.Add("  ERROR: commander and result panels overlap heavily"); errors++; }
+
+            if (DebugUILayout.IsCompact(800))
+                report.Add("  OK: compact layout enabled below 1024 width");
+            else { report.Add("  ERROR: compact layout not enabled below 1024 width"); errors++; }
+
+            var compactPanels = new[]
+            {
+                DebugUILayout.GetDemoFlowRect(800, 600),
+                DebugUILayout.GetMissionObjectiveRect(800, 600),
+                DebugUILayout.GetControlHintRect(800, 600),
+                DebugUILayout.GetMissionResultSummaryRect(800, 600)
+            };
+            foreach (var rect in compactPanels)
+            {
+                if (rect.width > 0f && rect.height > 0f && rect.x >= 0f && rect.y >= 0f)
+                    continue;
+                report.Add($"  ERROR: compact rect unsafe ({rect})");
+                errors++;
+            }
+        }
+
+        private static void CheckMissionMarkerCoverage(List<string> report, ref int errors, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- Mission Marker Coverage ---");
+
+            var required = new Dictionary<string, string[]>
+            {
+                { "Convoy marker", new[] { "Convoy", "Convoy_Objective" } },
+                { "EnergyNode marker", new[] { "Energy Node", "Energy_Node" } },
+                { "Border marker", new[] { "Border Retaliation", "Area_BorderRetaliation" } },
+                { "RaiderSpawn marker", new[] { "Raider Spawn", "BorderSpawnPoint_Beast" } },
+                { "CityGate marker", new[] { "City Gate Mission Area", "Area_CityGateDispute" } },
+                { "CityGateCore marker", new[] { "CityGateCore", "CityGateCore_Objective" } },
+                { "BeastNegotiator marker", new[] { "BeastNegotiator" } },
+                { "BeastRaiderSpawn marker", new[] { "BeastRaider Spawn", "CityGateSpawnPoint_Beast" } },
+                { "Low-rank controllable marker", new[] { "Low-Rank Ally", "Press E to Control", "MechaGateGuard" } },
+                { "High-rank denied marker", new[] { "High-Rank Unit", "Tactical Command Only", "MechaHardliner" } },
+                { "Allied defense marker", new[] { "Allied Defense Point", "Border_ObjectiveMarker" } }
+            };
+
+            if (!File.Exists("Assets/Scenes/CommanderPrototype.unity"))
+            {
+                report.Add("  ERROR: CommanderPrototype.unity missing; cannot inspect marker coverage");
+                errors++;
+                return;
+            }
+
+            var scene = EditorSceneManager.OpenScene("Assets/Scenes/CommanderPrototype.unity", OpenSceneMode.Additive);
+            try
+            {
+                var text = new List<string>();
+                foreach (var root in scene.GetRootGameObjects())
+                {
+                    foreach (var tr in root.GetComponentsInChildren<Transform>(true))
+                        text.Add(tr.name);
+                    foreach (var marker in root.GetComponentsInChildren<WorldMarker>(true))
+                    {
+                        if (!string.IsNullOrEmpty(marker.CustomLabel)) text.Add(marker.CustomLabel);
+                        var fallback = WorldMarker.BuildReadableLabel(marker.gameObject.name);
+                        if (!string.IsNullOrEmpty(fallback)) text.Add(fallback);
+                    }
+                }
+
+                foreach (var item in required)
+                {
+                    var found = item.Value.Any(token => text.Any(value => value.Contains(token)));
+                    if (found) report.Add($"  OK: {item.Key} exists");
+                    else { report.Add($"  ERROR: {item.Key} missing"); errors++; }
+                }
+            }
+            finally
+            {
+                EditorSceneManager.CloseScene(scene, true);
+            }
+        }
+
+        private static void CheckMissionAuthoring(List<string> report, ref int errors, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- Mission Authoring ---");
+
+            CheckMissionDefinitionAsset(report, ref errors, "Assets/Data/Missions/ConvoyEnergyConflict.asset", DemoFlowManager.ConvoyMissionId, "Convoy Energy Conflict");
+            CheckMissionDefinitionAsset(report, ref errors, "Assets/Data/Missions/BorderRetaliation.asset", DemoFlowManager.BorderMissionId, "Border Retaliation");
+            CheckMissionDefinitionAsset(report, ref errors, "Assets/Data/Missions/CityGateDispute.asset", DemoFlowManager.CityGateMissionId, "City Gate Dispute");
+        }
+
+        private static void CheckMissionDefinitionAsset(List<string> report, ref int errors, string path, string missionId, string displayName)
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<MissionDefinitionSO>(path);
+            if (asset == null)
+            {
+                report.Add($"  ERROR: {path} missing");
+                errors++;
+                return;
+            }
+
+            if (asset.MissionId == missionId) report.Add($"  OK: {displayName} missionId");
+            else { report.Add($"  ERROR: {path} missionId '{asset.MissionId}' expected '{missionId}'"); errors++; }
+            if (!string.IsNullOrEmpty(asset.DisplayName)) report.Add($"  OK: {displayName} displayName");
+            else { report.Add($"  ERROR: {path} missing displayName"); errors++; }
+            if (asset.DefaultObjectives != null && asset.DefaultObjectives.Count > 0) report.Add($"  OK: {displayName} objectives authored");
+            else { report.Add($"  ERROR: {path} has no objectives"); errors++; }
+            if (asset.OutcomeConsequences != null && asset.OutcomeConsequences.Count > 0) report.Add($"  OK: {displayName} outcomes authored");
+            else { report.Add($"  ERROR: {path} has no outcomes"); errors++; }
+        }
+
+        private static void CheckCommanderActionReadability(List<string> report, ref int errors, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- Commander Action Readability ---");
+
+            if (typeof(CommanderActionType).IsEnum) report.Add("  OK: CommanderActionType enum exists");
+            if (typeof(CommanderActionPresenter) != null) report.Add("  OK: CommanderActionPresenter type exists");
+
+            var state = new CommanderControlRuntimeState
+            {
+                LastSelectedTargetName = "Validator Low",
+                LastDirectControlAllowed = true,
+                LastTacticalCommandAllowed = true,
+                LastSyncAssistAllowed = true
+            };
+            var descriptors = CommanderActionPresenter.BuildDescriptors(state);
+            if (descriptors.Count == 3)
+                report.Add("  OK: DirectControl / TacticalCommand / SyncAssist descriptors available");
+            else
+            {
+                report.Add("  ERROR: CommanderActionPresenter did not build 3 descriptors");
+                errors++;
+            }
+
+            if (typeof(CommanderDebugHud) != null && typeof(CommanderControlHintPanel) != null)
+                report.Add("  OK: Commander HUD and hint panel can access action descriptions");
+
+            if (File.Exists("Assets/Scenes/CommanderPrototype.unity"))
+            {
+                var scene = EditorSceneManager.OpenScene("Assets/Scenes/CommanderPrototype.unity", OpenSceneMode.Additive);
+                try
+                {
+                    var hasLow = false;
+                    var hasHigh = false;
+                    foreach (var root in scene.GetRootGameObjects())
+                    foreach (var marker in root.GetComponentsInChildren<WorldMarker>(true))
+                    {
+                        var label = marker.CustomLabel ?? string.Empty;
+                        hasLow |= label.Contains("Low-Rank") || label.Contains("MechaGateGuard") || label.Contains("[LOW]");
+                        hasHigh |= label.Contains("High-Rank") || label.Contains("Tactical Command Only") || label.Contains("[HIGH]") || label.Contains("[DENIED]");
+                    }
+
+                    if (hasLow) report.Add("  OK: low-rank controllable marker exists");
+                    else { report.Add("  WARNING: low-rank controllable marker missing"); warnings++; }
+                    if (hasHigh) report.Add("  OK: high-rank denied marker exists");
+                    else { report.Add("  WARNING: high-rank denied marker missing"); warnings++; }
+                }
+                finally
+                {
+                    EditorSceneManager.CloseScene(scene, true);
+                }
+            }
+        }
+
+        private static void CheckCommanderActionExpansion(List<string> report, ref int errors, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- Commander Action Expansion ---");
+
+            if (System.Enum.IsDefined(typeof(CommanderActionType), "DefendObjective"))
+                report.Add("  OK: CommanderActionType.DefendObjective exists");
+            else { report.Add("  ERROR: CommanderActionType.DefendObjective missing"); errors++; }
+
+            if (System.Enum.IsDefined(typeof(CommanderActionType), "FocusFire"))
+                report.Add("  OK: CommanderActionType.FocusFire exists");
+            else { report.Add("  ERROR: CommanderActionType.FocusFire missing"); errors++; }
+
+            if (System.Enum.IsDefined(typeof(CommanderCommandType), "DefendObjective"))
+                report.Add("  OK: CommanderCommandType.DefendObjective exists");
+            else { report.Add("  ERROR: CommanderCommandType.DefendObjective missing"); errors++; }
+
+            if (System.Enum.IsDefined(typeof(CommanderCommandType), "FocusFire"))
+                report.Add("  OK: CommanderCommandType.FocusFire exists");
+            else { report.Add("  ERROR: CommanderCommandType.FocusFire missing"); errors++; }
+
+            var descriptors = CommanderActionPresenter.BuildDescriptors(new CommanderControlRuntimeState
+            {
+                LastSelectedTargetName = "Validator Target",
+                LastDefendObjectiveAllowed = true,
+                LastFocusFireAllowed = true,
+                LastObjectiveTargetName = "CityGateCore",
+                LastFocusTargetName = "BeastRaider_01"
+            });
+            if (descriptors.Any(d => d.ActionType == CommanderActionType.DefendObjective)
+                && descriptors.Any(d => d.ActionType == CommanderActionType.FocusFire))
+                report.Add("  OK: CommanderActionPresenter describes DefendObjective / FocusFire");
+            else { report.Add("  ERROR: CommanderActionPresenter missing expansion descriptors"); errors++; }
+
+            if (typeof(CommanderControlController).GetMethod("TryIssueDefendObjective", System.Type.EmptyTypes) != null)
+                report.Add("  OK: CommanderControlController.TryIssueDefendObjective exists");
+            else { report.Add("  ERROR: TryIssueDefendObjective missing"); errors++; }
+
+            if (typeof(CommanderControlController).GetMethod("TryIssueFocusFire", System.Type.EmptyTypes) != null)
+                report.Add("  OK: CommanderControlController.TryIssueFocusFire exists");
+            else { report.Add("  ERROR: TryIssueFocusFire missing"); errors++; }
+
+            if (typeof(TacticalCommandState).GetMethod("SetDefendObjective") != null
+                && typeof(TacticalCommandState).GetMethod("SetFocusFire") != null)
+                report.Add("  OK: TacticalCommandState supports defend/focus payloads");
+            else { report.Add("  ERROR: TacticalCommandState missing defend/focus methods"); errors++; }
+
+            var aiType = typeof(SimpleCombatAI);
+            if (aiType.GetMethod("SetDefendObjective") != null && aiType.GetMethod("SetFocusFireTarget") != null)
+                report.Add("  OK: SimpleCombatAI supports defend objective and focus fire");
+            else { report.Add("  ERROR: SimpleCombatAI missing command helpers"); errors++; }
+
+            var shortcutText = string.Join(" ", DemoFlowHud.BuildShortcutHelpLines(false));
+            foreach (var key in new[] { "G", "F", "1", "2", "3", "F7", "F8", "F5", "F9", "F10" })
+            {
+                if (shortcutText.Contains(key)) report.Add($"  OK: shortcut help includes {key}");
+                else { report.Add($"  ERROR: shortcut help missing {key}"); errors++; }
+            }
+
+            if (File.Exists("Assets/Scenes/CommanderPrototype.unity"))
+            {
+                var scene = EditorSceneManager.OpenScene("Assets/Scenes/CommanderPrototype.unity", OpenSceneMode.Additive);
+                try
+                {
+                    var text = new List<string>();
+                    foreach (var root in scene.GetRootGameObjects())
+                    foreach (var tr in root.GetComponentsInChildren<Transform>(true))
+                    {
+                        text.Add(tr.name);
+                        var marker = tr.GetComponent<WorldMarker>();
+                        if (marker != null && !string.IsNullOrEmpty(marker.CustomLabel)) text.Add(marker.CustomLabel);
+                        var fallback = WorldMarker.BuildReadableLabel(tr.gameObject.name);
+                        if (!string.IsNullOrEmpty(fallback)) text.Add(fallback);
+                    }
+
+                    if (text.Any(v => v.Contains("Low-Rank") || v.Contains("MechaGateGuard"))) report.Add("  OK: commandable low-rank ally exists");
+                    else { report.Add("  WARNING: commandable low-rank ally marker missing"); warnings++; }
+                    if (text.Any(v => v.Contains("Objective") || v.Contains("CityGateCore") || v.Contains("Convoy"))) report.Add("  OK: defend objective marker exists");
+                    else { report.Add("  WARNING: defend objective marker missing"); warnings++; }
+                    if (text.Any(v => v.Contains("BeastRaider") || v.Contains("Raider"))) report.Add("  OK: hostile focus target exists");
+                    else { report.Add("  WARNING: hostile focus target missing"); warnings++; }
+                }
+                finally
+                {
+                    EditorSceneManager.CloseScene(scene, true);
+                }
+            }
+        }
+
         private static void CheckCityGateDispute(List<string> report, ref int errors, ref int warnings)
         {
             report.Add("");
@@ -1772,7 +2155,7 @@ namespace LuoLuoTrip.Editor
             {
                 report.Add("  OK: CityGateDisputeRuntime type exists");
 
-                var requiredProps = new[] { "Phase", "Encounter", "CityGateCore", "BeastNegotiator", "BeastRaidersDefeated", "NegotiatorSurvived", "CoreSurvived", "MechaCasualties", "BeastCasualties" };
+                var requiredProps = new[] { "Phase", "Encounter", "CityGateCore", "BeastNegotiator", "BeastRaidersDefeated", "NegotiatorSurvived", "CoreSurvived", "MechaCasualties", "BeastCasualties", "IsInitialized" };
                 foreach (var p in requiredProps)
                 {
                     if (runtimeType.GetProperty(p) != null)
@@ -1782,6 +2165,15 @@ namespace LuoLuoTrip.Editor
                         report.Add($"  WARNING: CityGateDisputeRuntime.{p} missing");
                         warnings++;
                     }
+                }
+
+                var initializeMethod = runtimeType.GetMethod("Initialize", new[] { typeof(LuoLuoTripGameContext) });
+                if (initializeMethod != null)
+                    report.Add("  OK: CityGateDisputeRuntime.Initialize(context) exists");
+                else
+                {
+                    report.Add("  ERROR: CityGateDisputeRuntime.Initialize(context) missing");
+                    errors++;
                 }
 
                 var resolveMethod = runtimeType.GetMethod("ResolveOutcome", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
@@ -1833,6 +2225,69 @@ namespace LuoLuoTrip.Editor
                 }
             }
 
+            var missionAsset = AssetDatabase.LoadAssetAtPath<MissionDefinitionSO>("Assets/Data/Missions/CityGateDispute.asset");
+            if (missionAsset != null && missionAsset.MissionId == "city_gate_dispute")
+                report.Add("  OK: CityGateDispute MissionDefinitionSO exists");
+            else
+            {
+                report.Add("  ERROR: Assets/Data/Missions/CityGateDispute.asset missing or invalid");
+                errors++;
+            }
+
+            var debugType = typeof(PrototypeDebugController);
+            if (debugType.GetMethod("TeleportPlayerToCityGateDisputeArea") != null)
+                report.Add("  OK: PrototypeDebugController exposes F8 CityGate teleport method");
+            else
+            {
+                report.Add("  ERROR: PrototypeDebugController.TeleportPlayerToCityGateDisputeArea missing");
+                errors++;
+            }
+
+            if (File.Exists("Assets/Scenes/CommanderPrototype.unity"))
+            {
+                var scene = EditorSceneManager.OpenScene("Assets/Scenes/CommanderPrototype.unity", OpenSceneMode.Additive);
+                try
+                {
+                    bool hasCityGate = false;
+                    bool hasCore = false;
+                    bool hasNegotiator = false;
+                    bool hasSpawn = false;
+                    bool hasSummary = false;
+                    foreach (var root in scene.GetRootGameObjects())
+                    {
+                        if (root.name.Contains("CityGate")) hasCityGate = true;
+                        if (root.GetComponentsInChildren<MissionResultSummaryPanel>(true).Length > 0) hasSummary = true;
+                        foreach (var tr in root.GetComponentsInChildren<Transform>(true))
+                        {
+                            if (tr.name.Contains("CityGateCore")) hasCore = true;
+                            if (tr.name.Contains("BeastNegotiator")) hasNegotiator = true;
+                            if (tr.name.Contains("CityGateSpawnPoint_Beast") || tr.name.Contains("BeastRaider")) hasSpawn = true;
+                        }
+                        foreach (var marker in root.GetComponentsInChildren<WorldMarker>(true))
+                        {
+                            var label = marker.CustomLabel ?? string.Empty;
+                            if (label.Contains("CityGateCore")) hasCore = true;
+                            if (label.Contains("BeastNegotiator")) hasNegotiator = true;
+                            if (label.Contains("BeastRaiders")) hasSpawn = true;
+                        }
+                    }
+                    if (hasCityGate) report.Add("  OK: CommanderPrototype contains CityGate scene objects/marker");
+                    else { report.Add("  ERROR: CommanderPrototype missing CityGate marker/object"); errors++; }
+                    if (hasCore) report.Add("  OK: CityGateCore marker exists");
+                    else { report.Add("  ERROR: CityGateCore marker missing"); errors++; }
+                    if (hasNegotiator) report.Add("  OK: BeastNegotiator marker exists");
+                    else { report.Add("  ERROR: BeastNegotiator marker missing"); errors++; }
+                    if (hasSpawn) report.Add("  OK: BeastRaider spawn marker exists");
+                    else { report.Add("  WARNING: BeastRaider spawn marker missing"); warnings++; }
+                    if (hasSummary) report.Add("  OK: outcome summary display exists");
+                    else { report.Add("  ERROR: MissionResultSummaryPanel missing"); errors++; }
+                }
+                finally
+                {
+                    EditorSceneManager.CloseScene(scene, true);
+                }
+            }
+
             var designPath = System.IO.Path.Combine("Assets", "Docs", "CITY_GATE_DISPUTE_DESIGN.md");
             if (System.IO.File.Exists(designPath))
                 report.Add("  OK: CITY_GATE_DISPUTE_DESIGN.md exists");
@@ -1840,6 +2295,151 @@ namespace LuoLuoTrip.Editor
             {
                 report.Add("  WARNING: CITY_GATE_DISPUTE_DESIGN.md missing");
                 warnings++;
+            }
+        }
+
+        private static void CheckCommanderControlUsability(List<string> report, ref int errors, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- Commander Control Usability ---");
+
+            var controlType = typeof(CommanderControlController);
+            var selectorType = typeof(CommanderTargetSelector);
+            var stateType = typeof(CommanderControlRuntimeState);
+
+            report.Add(controlType != null ? "  OK: CommanderControlController type exists" : "  ERROR: CommanderControlController type missing");
+            report.Add(selectorType != null ? "  OK: CommanderTargetSelector type exists" : "  ERROR: CommanderTargetSelector type missing");
+
+            var diagnosticFields = new[]
+            {
+                "LastControlAttemptTime", "LastControlResult", "LastControlRejectReason",
+                "LastSelectedTargetName", "LastSelectedTargetRank", "LastSelectedTargetRequiredLevel",
+                "LastSelectedTargetTrust", "LastSelectedTargetIsLeader", "LastSelectedTargetAllowDirectControl",
+                "LastSelectedTargetAllowTacticalCommand", "LastCommanderLevel", "LastInputRoute", "LastSuggestion"
+            };
+            foreach (var field in diagnosticFields)
+            {
+                if (stateType.GetField(field) != null)
+                    report.Add($"  OK: CommanderControlRuntimeState.{field} exists");
+                else
+                {
+                    report.Add($"  ERROR: CommanderControlRuntimeState.{field} missing");
+                    errors++;
+                }
+            }
+
+            if (controlType.GetMethod("TryInteract") != null)
+                report.Add("  OK: CommanderControlController.TryInteract is callable");
+            else
+            {
+                report.Add("  ERROR: CommanderControlController.TryInteract missing/public-inaccessible");
+                errors++;
+            }
+
+            if (controlType.GetMethod("HasSelectedTarget") != null)
+                report.Add("  OK: CommanderControlController.HasSelectedTarget exists for E-priority checks");
+            else
+            {
+                report.Add("  WARNING: CommanderControlController.HasSelectedTarget missing");
+                warnings++;
+            }
+
+            if (selectorType.GetMethod("TrySelectTarget") != null && selectorType.GetMethod("GetCandidates") != null)
+                report.Add("  OK: CommanderTargetSelector exposes selection and candidate APIs");
+            else
+            {
+                report.Add("  ERROR: CommanderTargetSelector selection/candidate APIs missing");
+                errors++;
+            }
+
+            var service = new ControlPermissionService();
+            var commander = CommanderProfile.CreateDefault();
+            var lowRank = new ControlPermissionRequest
+            {
+                Commander = commander,
+                Target = CharacterControlInfo.FromCharacterData(CharacterData.Create("validator_low", "Validator Low", SubFactionId.MotorIronRiders, CharacterRole.Minion)),
+                CurrentControlledUnitCount = 0,
+                FactionTrust = 40
+            };
+            var lowResult = service.Evaluate(lowRank);
+            if (lowResult.Mode == ControlMode.DirectControl)
+                report.Add("  OK: ControlPermissionService allows low-rank direct control sample");
+            else
+            {
+                report.Add($"  ERROR: low-rank direct control sample denied ({lowResult.Reason})");
+                errors++;
+            }
+
+            var leaderData = CharacterData.Create("validator_leader", "Validator Leader", SubFactionId.MotorIronRiders, CharacterRole.CityLord);
+            var leader = new ControlPermissionRequest
+            {
+                Commander = commander,
+                Target = CharacterControlInfo.FromCharacterData(leaderData),
+                CurrentControlledUnitCount = 0,
+                FactionTrust = 80
+            };
+            var leaderResult = service.Evaluate(leader);
+            if (leaderResult.Mode == ControlMode.Denied)
+                report.Add("  OK: ControlPermissionService denies leader direct control sample");
+            else
+            {
+                report.Add($"  ERROR: leader sample unexpectedly allowed ({leaderResult.Mode})");
+                errors++;
+            }
+
+            if (typeof(CommanderDebugHud).GetMethod("SetRuntimeState") != null && typeof(CommanderControlHintPanel).GetMethod("SetRuntimeState") != null)
+                report.Add("  OK: Commander debug/hint feedback surfaces accept runtime diagnostics");
+            else
+            {
+                report.Add("  ERROR: commander denial feedback surfaces missing runtime-state setters");
+                errors++;
+            }
+
+            if (File.Exists("Assets/Scenes/CommanderPrototype.unity"))
+            {
+                var scene = EditorSceneManager.OpenScene("Assets/Scenes/CommanderPrototype.unity", OpenSceneMode.Additive);
+                try
+                {
+                    int controllers = 0;
+                    int selectors = 0;
+                    int lowRankControllable = 0;
+                    int highRankDenied = 0;
+                    int hintPanels = 0;
+                    int debugHuds = 0;
+
+                    foreach (var root in scene.GetRootGameObjects())
+                    {
+                        controllers += root.GetComponentsInChildren<CommanderControlController>(true).Length;
+                        selectors += root.GetComponentsInChildren<CommanderTargetSelector>(true).Length;
+                        hintPanels += root.GetComponentsInChildren<CommanderControlHintPanel>(true).Length;
+                        debugHuds += root.GetComponentsInChildren<CommanderDebugHud>(true).Length;
+
+                        foreach (var entity in root.GetComponentsInChildren<CharacterEntity>(true))
+                        {
+                            var data = entity.Data;
+                            if (data == null) continue;
+                            if (data.IsAlive && !data.IsHeroOrLeader && data.AllowDirectControl && data.RequiredCommanderLevel <= commander.CommanderLevel && data.CommandRank <= commander.MaxDirectControlRank)
+                                lowRankControllable++;
+                            if (data.IsHeroOrLeader || data.Role == CharacterRole.CityLord || data.Role == CharacterRole.WarKing || !data.AllowDirectControl || data.CommandRank > commander.MaxDirectControlRank)
+                                highRankDenied++;
+                        }
+                    }
+
+                    if (controllers > 0) report.Add($"  OK: CommanderPrototype has {controllers} CommanderControlController(s)");
+                    else { report.Add("  ERROR: CommanderPrototype missing CommanderControlController"); errors++; }
+                    if (selectors > 0) report.Add($"  OK: CommanderPrototype has {selectors} CommanderTargetSelector(s)");
+                    else { report.Add("  ERROR: CommanderPrototype missing CommanderTargetSelector"); errors++; }
+                    if (lowRankControllable > 0) report.Add($"  OK: CommanderPrototype has {lowRankControllable} low-rank controllable unit(s)");
+                    else { report.Add("  ERROR: CommanderPrototype missing low-rank controllable unit"); errors++; }
+                    if (highRankDenied > 0) report.Add($"  OK: CommanderPrototype has {highRankDenied} high-rank/denied unit example(s)");
+                    else { report.Add("  ERROR: CommanderPrototype missing high-rank denied unit example"); errors++; }
+                    if (hintPanels > 0 && debugHuds > 0) report.Add("  OK: CommanderPrototype has CommanderDebugHud and CommanderControlHintPanel");
+                    else { report.Add("  ERROR: CommanderPrototype missing commander feedback HUD/hint panel"); errors++; }
+                }
+                finally
+                {
+                    EditorSceneManager.CloseScene(scene, true);
+                }
             }
         }
 
