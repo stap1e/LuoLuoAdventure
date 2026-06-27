@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System.Collections.Generic;
+using LuoLuoTrip.AI;
 using LuoLuoTrip.Audio;
 using LuoLuoTrip.Combat;
 using LuoLuoTrip.Combat.Animation;
@@ -163,12 +164,23 @@ namespace LuoLuoTrip.Editor
                     new MissionObjective { ObjectiveId = "defeat_ambush", Description = "击退伏击", RequiredProgress = 3 }
                 };
                 AssetDatabase.CreateAsset(mission, "Assets/Data/Missions/ConvoyEscort.asset");
+                Debug.Log("[MissionDefinition] Created ConvoyEscort.asset");
+            }
+            else
+            {
+                PopulateMissionDefinitionIfMissing(mission, "convoy_escort_01", "护送机车族运输队",
+                    "保护机车族运输队安全通过猛兽族领地，击退袭击者。", 1,
+                    new List<MissionObjective>
+                    {
+                        new MissionObjective { ObjectiveId = "protect_convoy", Description = "保护运输队", RequiredProgress = 1 },
+                        new MissionObjective { ObjectiveId = "defeat_ambush", Description = "击退伏击", RequiredProgress = 3 }
+                    },
+                    new List<MissionOutcomeConsequenceMapping>());
             }
 
-            EditorUtility.SetDirty(mission);
             AssetDatabase.SaveAssets();
             Selection.activeObject = mission;
-            Debug.Log("[LuoLuoTrip] Commander Prototype Data 已创建");
+            Debug.Log("[MissionDefinition] Commander Prototype Data ensured");
         }
 
         [MenuItem("LuoLuoTrip/Setup/Create Mission Prototype Data")]
@@ -250,32 +262,35 @@ namespace LuoLuoTrip.Editor
             {
                 cityGate = ScriptableObject.CreateInstance<MissionDefinitionSO>();
                 AssetDatabase.CreateAsset(cityGate, "Assets/Data/Missions/CityGateDispute.asset");
+                Debug.Log("[MissionDefinition] Created CityGateDispute.asset");
             }
-            cityGate.MissionId = "city_gate_dispute";
-            cityGate.DisplayName = "City Gate Dispute";
-            cityGate.Description = "Mediate a city-gate standoff while protecting the core, preserving the Beast negotiator, and containing extremist raiders.";
-            cityGate.RecommendedCommanderLevel = 1;
-            cityGate.DefaultObjectives = new List<MissionObjective>
-            {
-                new MissionObjective { ObjectiveId = "protect_core", Description = "Protect CityGateCore", RequiredProgress = 1 },
-                new MissionObjective { ObjectiveId = "protect_negotiator", Description = "Keep BeastNegotiator alive", RequiredProgress = 1 },
-                new MissionObjective { ObjectiveId = "defeat_raiders", Description = "Defeat BeastRaiders", RequiredProgress = 1 },
-                new MissionObjective { ObjectiveId = "keep_casualties_low", Description = "Keep casualties low", RequiredProgress = 1 }
-            };
-            cityGate.OutcomeConsequences = new List<MissionOutcomeConsequenceMapping>
-            {
-                new MissionOutcomeConsequenceMapping { Outcome = MissionOutcomeType.BalancedMediation, CommanderExperienceDelta = 350, SummaryText = "Mainstream hostility reduced below 40; extremists remain contained." },
-                new MissionOutcomeConsequenceMapping { Outcome = MissionOutcomeType.MechaSuppression, CommanderExperienceDelta = 250, SummaryText = "Mecha order is restored, but Beast trust suffers." },
-                new MissionOutcomeConsequenceMapping { Outcome = MissionOutcomeType.BeastNegotiation, CommanderExperienceDelta = 250, SummaryText = "Beast hostility drops after negotiation, while Mecha support softens." },
-                new MissionOutcomeConsequenceMapping { Outcome = MissionOutcomeType.FailedEscalation, CommanderExperienceDelta = 30, SummaryText = "The city gate collapses into broader faction hostility." },
-                new MissionOutcomeConsequenceMapping { Outcome = MissionOutcomeType.PartialContainment, CommanderExperienceDelta = 100, SummaryText = "The dispute is contained, but casualties leave both sides wary." }
-            };
+            PopulateMissionDefinitionIfMissing(
+                cityGate,
+                "city_gate_dispute",
+                "City Gate Dispute",
+                "Mediate a city-gate standoff while protecting the core, preserving the Beast negotiator, and containing extremist raiders.",
+                1,
+                new List<MissionObjective>
+                {
+                    new MissionObjective { ObjectiveId = "protect_core", Description = "Protect CityGateCore", RequiredProgress = 1 },
+                    new MissionObjective { ObjectiveId = "protect_negotiator", Description = "Keep BeastNegotiator alive", RequiredProgress = 1 },
+                    new MissionObjective { ObjectiveId = "defeat_raiders", Description = "Defeat BeastRaiders", RequiredProgress = 1 },
+                    new MissionObjective { ObjectiveId = "keep_casualties_low", Description = "Keep casualties low", RequiredProgress = 1 }
+                },
+                new List<MissionOutcomeConsequenceMapping>
+                {
+                    new MissionOutcomeConsequenceMapping { Outcome = MissionOutcomeType.BalancedMediation, CommanderExperienceDelta = 350, SummaryText = "Mainstream hostility reduced below 40; extremists remain contained." },
+                    new MissionOutcomeConsequenceMapping { Outcome = MissionOutcomeType.MechaSuppression, CommanderExperienceDelta = 250, SummaryText = "Mecha order is restored, but Beast trust suffers." },
+                    new MissionOutcomeConsequenceMapping { Outcome = MissionOutcomeType.BeastNegotiation, CommanderExperienceDelta = 250, SummaryText = "Beast hostility drops after negotiation, while Mecha support softens." },
+                    new MissionOutcomeConsequenceMapping { Outcome = MissionOutcomeType.FailedEscalation, CommanderExperienceDelta = 30, SummaryText = "The city gate collapses into broader faction hostility." },
+                    new MissionOutcomeConsequenceMapping { Outcome = MissionOutcomeType.PartialContainment, CommanderExperienceDelta = 100, SummaryText = "The dispute is contained, but casualties leave both sides wary." }
+                });
 
             EditorUtility.SetDirty(raid);
             EditorUtility.SetDirty(balance);
             EditorUtility.SetDirty(cityGate);
             AssetDatabase.SaveAssets();
-            Debug.Log("[LuoLuoTrip] Mission Prototype Data 已创建");
+            Debug.Log("[MissionDefinition] Mission Prototype Data ensured");
         }
 
         [MenuItem("LuoLuoTrip/Setup/Create Commander Mission Prototype Scene")]
@@ -289,6 +304,7 @@ namespace LuoLuoTrip.Editor
             CreateCombatTuningConfig();
             CreateAudioFeedbackProfile();
             CreateWorldMarkerProfile();
+            CreateAIBehaviorProfiles();
             PlaceholderAssetGenerator.GenerateAll();
 
             EnsureFolder("Assets/Scenes");
@@ -303,6 +319,13 @@ namespace LuoLuoTrip.Editor
             ground.name = "Ground";
             ground.transform.localScale = new Vector3(5f, 1f, 5f);
             MarkNavMeshStatic(ground);
+
+            CreateAIBehaviorProfiles();
+            var aggressiveRaiderProfile = LoadAIProfile(AIBehaviorProfileType.AggressiveRaider);
+            var defensiveGuardProfile = LoadAIProfile(AIBehaviorProfileType.DefensiveGuard);
+            var negotiatorProfile = LoadAIProfile(AIBehaviorProfileType.Negotiator);
+            var hardlinerProfile = LoadAIProfile(AIBehaviorProfileType.Hardliner);
+            var commanderUnitProfile = LoadAIProfile(AIBehaviorProfileType.CommanderUnit);
 
             var playerData = CharacterData.Create("player_cmd_001", "见习机战王", SubFactionId.MotorIronRiders, CharacterRole.Common);
             playerData.CommandRank = 1;
@@ -403,7 +426,8 @@ namespace LuoLuoTrip.Editor
             mechaGuardData.TrustToPlayer = 20;
             var mechaGuardGo = CreateCombatCharacter("MechaGateGuard", new Vector3(47f, 0.5f, 1f), mechaGuardData,
                 PlaceholderAssetGenerator.MechaMinionPrefab, isPlayer: false);
-            AttachSceneMarker(mechaGuardGo, WorldMarkerType.FriendlyUnit, "Low-Rank Ally: Can Receive Commands");
+            AssignAIProfile(mechaGuardGo, defensiveGuardProfile, cityGateCoreObj.transform);
+            AttachSceneMarker(mechaGuardGo, WorldMarkerType.FriendlyUnit, "Guard: Defensive | Can Receive Commands");
 
             var mechaHardlinerData = CharacterData.Create("mecha_hardliner_001", "MechaHardliner", SubFactionId.MotorStormGang, CharacterRole.Minion);
             mechaHardlinerData.CommandRank = 2;
@@ -413,7 +437,8 @@ namespace LuoLuoTrip.Editor
             mechaHardlinerData.AllowTacticalCommand = true;
             var mechaHardlinerGo = CreateCombatCharacter("MechaHardliner", new Vector3(46f, 0.5f, 3f), mechaHardlinerData,
                 PlaceholderAssetGenerator.MechaMinionPrefab, isPlayer: false);
-            AttachSceneMarker(mechaHardlinerGo, WorldMarkerType.FriendlyUnit, "High-Rank Unit: Tactical Command Only");
+            AssignAIProfile(mechaHardlinerGo, hardlinerProfile, null);
+            AttachSceneMarker(mechaHardlinerGo, WorldMarkerType.FriendlyUnit, "Hardliner: Escalation risk | Tactical Command Only");
 
             var beastNegotiatorData = CharacterData.Create("beast_negotiator_001", "BeastNegotiator", SubFactionId.BeastShadowFang, CharacterRole.Minion);
             beastNegotiatorData.CommandRank = 1;
@@ -421,7 +446,9 @@ namespace LuoLuoTrip.Editor
             beastNegotiatorData.AllowDirectControl = true;
             var beastNegotiatorGo = CreateCombatCharacter("BeastNegotiator", new Vector3(53f, 0.5f, 1f), beastNegotiatorData,
                 PlaceholderAssetGenerator.BeastMinionPrefab, isPlayer: false);
-            AttachSceneMarker(beastNegotiatorGo, WorldMarkerType.MissionObjective, "[KEEP ALIVE] BeastNegotiator");
+            AssignAIProfile(beastNegotiatorGo, negotiatorProfile, cityGateCoreObj.transform);
+            AssignProtectedTarget(mechaHardlinerGo, beastNegotiatorGo.transform);
+            AttachSceneMarker(beastNegotiatorGo, WorldMarkerType.MissionObjective, "Negotiator: Non-combatant | Protect it");
             var beastNegotiatorEntity = beastNegotiatorGo.GetComponent<CharacterEntity>();
 
             var beastRaiderData = CharacterData.Create("beast_raider_01", "BeastRaider_01", SubFactionId.BeastIronClaw, CharacterRole.Minion);
@@ -432,17 +459,20 @@ namespace LuoLuoTrip.Editor
             beastRaiderData.AllowTacticalCommand = true;
             var beastRaiderGo = CreateCombatCharacter("BeastRaider_01", new Vector3(55f, 0.5f, 1f), beastRaiderData,
                 PlaceholderAssetGenerator.BeastMinionPrefab, isPlayer: false);
-            AttachSceneMarker(beastRaiderGo, WorldMarkerType.HostileUnit, "[LOW] BeastRaider");
+            AssignAIProfile(beastRaiderGo, aggressiveRaiderProfile, cityGateCoreObj.transform);
+            AttachSceneMarker(beastRaiderGo, WorldMarkerType.HostileUnit, "Raider: Aggressive | FocusFire target");
 
             var cityLordData = CharacterData.Create("city_lord_gate_001", "CityLord", SubFactionId.MotorIronRiders, CharacterRole.CityLord);
             var cityLordGo = CreateCombatCharacter("CityLord_HighRank", new Vector3(48f, 0.5f, -2f), cityLordData,
                 PlaceholderAssetGenerator.CityLordPrefab, isPlayer: false);
-            AttachSceneMarker(cityLordGo, WorldMarkerType.FriendlyUnit, "[HIGH] CityLord");
+            AssignAIProfile(cityLordGo, commanderUnitProfile, cityGateCoreObj.transform);
+            AttachSceneMarker(cityLordGo, WorldMarkerType.FriendlyUnit, "CommanderUnit: Tactical only | CityLord");
 
             var warKingGateData = CharacterData.Create("war_king_gate_001", "WarKing", SubFactionId.BeastIronClaw, CharacterRole.WarKing);
             var warKingGo = CreateCombatCharacter("WarKing_HighRank", new Vector3(54f, 0.5f, -2f), warKingGateData,
                 PlaceholderAssetGenerator.WarKingPrefab, isPlayer: false);
-            AttachSceneMarker(warKingGo, WorldMarkerType.HostileUnit, "[HIGH] WarKing");
+            AssignAIProfile(warKingGo, commanderUnitProfile, cityGateCoreObj.transform);
+            AttachSceneMarker(warKingGo, WorldMarkerType.HostileUnit, "CommanderUnit: Tactical only | WarKing");
 
             var cityGateConflictGo = new GameObject("CityGateDispute");
             var cityGateConflict = cityGateConflictGo.AddComponent<CityGateDisputeRuntime>();
@@ -478,8 +508,8 @@ namespace LuoLuoTrip.Editor
                 cityGateEncounter.AddSpawnPoint(cityGateMechaSpawnComp);
                 cityGateEncounter.SetWaves(new List<EncounterWave>
                 {
-                    new EncounterWave { waveId = "citygate_beast_raid_1", faction = SubFactionId.BeastIronClaw, role = CharacterRole.Minion, unitCount = 2, delaySeconds = 12f },
-                    new EncounterWave { waveId = "citygate_beast_raid_2", faction = SubFactionId.BeastIronClaw, role = CharacterRole.Minion, unitCount = 3, delaySeconds = 30f },
+                    new EncounterWave { waveId = "citygate_beast_raid_1", faction = SubFactionId.BeastIronClaw, role = CharacterRole.Minion, unitCount = 2, delaySeconds = 12f, behaviorProfile = aggressiveRaiderProfile },
+                    new EncounterWave { waveId = "citygate_beast_raid_2", faction = SubFactionId.BeastIronClaw, role = CharacterRole.Minion, unitCount = 3, delaySeconds = 30f, behaviorProfile = aggressiveRaiderProfile },
                 });
             }
 
@@ -593,8 +623,9 @@ namespace LuoLuoTrip.Editor
             rank2MechaData.TrustToPlayer = 30;
             rank2MechaData.AllowDirectControl = false;
             rank2MechaData.AllowTacticalCommand = true;
-            CreateCombatCharacter("MechaCaptain_Rank2", new Vector3(20f, 0.5f, -3f), rank2MechaData,
+            var rank2MechaGo = CreateCombatCharacter("MechaCaptain_Rank2", new Vector3(20f, 0.5f, -3f), rank2MechaData,
                 PlaceholderAssetGenerator.MechaMinionPrefab, isPlayer: false);
+            AssignAIProfile(rank2MechaGo, commanderUnitProfile, null);
 
             var rank2BeastData = CharacterData.Create("elite_001", "BeastElite", SubFactionId.BeastIronClaw, CharacterRole.Minion);
             rank2BeastData.CommandRank = 2;
@@ -602,8 +633,9 @@ namespace LuoLuoTrip.Editor
             rank2BeastData.TrustToPlayer = -10;
             rank2BeastData.AllowDirectControl = false;
             rank2BeastData.AllowTacticalCommand = true;
-            CreateCombatCharacter("BeastElite_Rank2", new Vector3(28f, 0.5f, 2f), rank2BeastData,
+            var rank2BeastGo = CreateCombatCharacter("BeastElite_Rank2", new Vector3(28f, 0.5f, 2f), rank2BeastData,
                 PlaceholderAssetGenerator.BeastMinionPrefab, isPlayer: false);
+            AssignAIProfile(rank2BeastGo, commanderUnitProfile, null);
 
             var rank3DeputyData = CharacterData.Create("deputy_001", "DeputyCommander", SubFactionId.MotorIronRiders, CharacterRole.CityLord);
             rank3DeputyData.CommandRank = 3;
@@ -689,21 +721,29 @@ namespace LuoLuoTrip.Editor
             {
                 config = ScriptableObject.CreateInstance<CombatTuningConfigSO>();
                 AssetDatabase.CreateAsset(config, path);
+                Debug.Log($"[CombatTuning] Created authoring asset: {path}");
+            }
+            else
+            {
+                Debug.Log($"[CombatTuning] Preserved existing authoring asset: {path}");
             }
 
             var resourcesPath = "Assets/Resources/CombatTuningConfig.asset";
             var resourcesConfig = AssetDatabase.LoadAssetAtPath<CombatTuningConfigSO>(resourcesPath);
             if (resourcesConfig == null)
-                AssetDatabase.CopyAsset(path, resourcesPath);
+            {
+                resourcesConfig = ScriptableObject.CreateInstance<CombatTuningConfigSO>();
+                AssetDatabase.CreateAsset(resourcesConfig, resourcesPath);
+                Debug.Log($"[CombatTuning] Created runtime Resources asset: {resourcesPath}");
+            }
             else
             {
-                EditorUtility.CopySerialized(config, resourcesConfig);
-                EditorUtility.SetDirty(resourcesConfig);
+                Debug.Log($"[CombatTuning] Preserved existing runtime Resources asset: {resourcesPath}");
             }
 
             AssetDatabase.SaveAssets();
             Selection.activeObject = config;
-            Debug.Log($"[LuoLuoTrip] CombatTuningConfig 已创建: {path}");
+            Debug.Log($"[Authoring] CombatTuningConfig assets ensured: {path}");
         }
 
         [MenuItem("LuoLuoTrip/Setup/Create Audio Feedback Profile")]
@@ -904,6 +944,95 @@ namespace LuoLuoTrip.Editor
             return go;
         }
 
+        [MenuItem("LuoLuoTrip/Setup/Create AI Behavior Profiles")]
+        public static void CreateAIBehaviorProfiles()
+        {
+            EnsureFolder("Assets/Data");
+            EnsureFolder("Assets/Data/AIProfiles");
+            EnsureFolder("Assets/Resources");
+            EnsureFolder("Assets/Resources/AIProfiles");
+
+            foreach (AIBehaviorProfileType type in System.Enum.GetValues(typeof(AIBehaviorProfileType)))
+            {
+                CreateOrUpdateAIProfile(type, $"Assets/Data/AIProfiles/{type}.asset");
+                CreateOrUpdateAIProfile(type, $"Assets/Resources/AIProfiles/{type}.asset");
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log("[AIProfile] AI behavior profiles ensured without overwriting authored tuning.");
+        }
+
+        private static AIBehaviorProfileSO CreateOrUpdateAIProfile(AIBehaviorProfileType type, string path)
+        {
+            var profile = AssetDatabase.LoadAssetAtPath<AIBehaviorProfileSO>(path);
+            if (profile == null)
+            {
+                profile = ScriptableObject.CreateInstance<AIBehaviorProfileSO>();
+                AIBehaviorProfileSO.ConfigureDefaults(profile, type);
+                AssetDatabase.CreateAsset(profile, path);
+                Debug.Log($"[AIProfile] Created {type} profile: {path}");
+                return profile;
+            }
+
+            var changed = false;
+            if (profile.profileType != type)
+            {
+                profile.profileType = type;
+                changed = true;
+            }
+            if (string.IsNullOrWhiteSpace(profile.profileId))
+            {
+                profile.profileId = AIBehaviorProfileSO.ToProfileId(type);
+                changed = true;
+            }
+            if (string.IsNullOrWhiteSpace(profile.displayName))
+            {
+                profile.displayName = AIBehaviorProfileSO.ToDisplayName(type);
+                changed = true;
+            }
+            if (string.IsNullOrWhiteSpace(profile.debugDescription))
+            {
+                var defaults = ScriptableObject.CreateInstance<AIBehaviorProfileSO>();
+                AIBehaviorProfileSO.ConfigureDefaults(defaults, type);
+                profile.debugDescription = defaults.debugDescription;
+                Object.DestroyImmediate(defaults);
+                changed = true;
+            }
+
+            if (changed)
+                EditorUtility.SetDirty(profile);
+            Debug.Log($"[AIProfile] Preserved existing {type} profile: {path}");
+            return profile;
+        }
+
+        private static AIBehaviorProfileSO LoadAIProfile(AIBehaviorProfileType type)
+        {
+            var profile = AssetDatabase.LoadAssetAtPath<AIBehaviorProfileSO>($"Assets/Data/AIProfiles/{type}.asset");
+            if (profile == null)
+                profile = CreateOrUpdateAIProfile(type, $"Assets/Data/AIProfiles/{type}.asset");
+            return profile;
+        }
+
+        private static void AssignAIProfile(GameObject go, AIBehaviorProfileSO profile, Transform protectedTarget)
+        {
+            if (go == null) return;
+            var ai = go.GetComponent<SimpleCombatAI>();
+            if (ai == null) return;
+            ai.BehaviorProfile = profile;
+            ai.ProtectedTarget = protectedTarget;
+            EditorUtility.SetDirty(ai);
+        }
+
+        private static void AssignProtectedTarget(GameObject go, Transform protectedTarget)
+        {
+            if (go == null) return;
+            var ai = go.GetComponent<SimpleCombatAI>();
+            if (ai == null) return;
+            ai.ProtectedTarget = protectedTarget;
+            EditorUtility.SetDirty(ai);
+        }
+
         private static void AttachSceneMarker(GameObject go, WorldMarkerType type, string label)
         {
             if (go == null) return;
@@ -1053,16 +1182,53 @@ namespace LuoLuoTrip.Editor
             {
                 mission = ScriptableObject.CreateInstance<MissionDefinitionSO>();
                 AssetDatabase.CreateAsset(mission, assetPath);
+                Debug.Log($"[MissionDefinition] Created mission asset: {assetPath}");
             }
 
-            mission.MissionId = missionId;
-            mission.DisplayName = displayName;
-            mission.Description = description;
-            mission.RecommendedCommanderLevel = 1;
-            mission.DefaultObjectives = objectives ?? new List<MissionObjective>();
-            mission.OutcomeConsequences = outcomes ?? new List<MissionOutcomeConsequenceMapping>();
-            EditorUtility.SetDirty(mission);
+            PopulateMissionDefinitionIfMissing(mission, missionId, displayName, description, 1, objectives, outcomes);
             return mission;
+        }
+
+        private static void PopulateMissionDefinitionIfMissing(MissionDefinitionSO mission, string missionId, string displayName,
+            string description, int recommendedLevel, List<MissionObjective> objectives, List<MissionOutcomeConsequenceMapping> outcomes)
+        {
+            if (mission == null) return;
+            var changed = false;
+
+            if (string.IsNullOrWhiteSpace(mission.MissionId))
+            {
+                mission.MissionId = missionId;
+                changed = true;
+            }
+            if (string.IsNullOrWhiteSpace(mission.DisplayName))
+            {
+                mission.DisplayName = displayName;
+                changed = true;
+            }
+            if (string.IsNullOrWhiteSpace(mission.Description))
+            {
+                mission.Description = description;
+                changed = true;
+            }
+            if (mission.RecommendedCommanderLevel <= 0)
+            {
+                mission.RecommendedCommanderLevel = recommendedLevel;
+                changed = true;
+            }
+            if (mission.DefaultObjectives == null || mission.DefaultObjectives.Count == 0)
+            {
+                mission.DefaultObjectives = objectives ?? new List<MissionObjective>();
+                changed = true;
+            }
+            if (mission.OutcomeConsequences == null || mission.OutcomeConsequences.Count == 0)
+            {
+                mission.OutcomeConsequences = outcomes ?? new List<MissionOutcomeConsequenceMapping>();
+                changed = true;
+            }
+
+            if (changed)
+                EditorUtility.SetDirty(mission);
+            Debug.Log($"[MissionDefinition] Preserved existing mission asset: {missionId}");
         }
 
         private static List<MissionOutcomeConsequenceMapping> BuildSharedMissionOutcomeMappings(

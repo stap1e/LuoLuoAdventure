@@ -52,6 +52,20 @@ NotStarted → Tension → Skirmish(Active) → MediationWindow → Resolved/Fai
 - **FailedEscalation**: Both sides radicalized. Future wave pressure increases.
 - **PartialContainment**: Status quo with minor trust erosion. Future encounters at medium intensity.
 
+## AI Behavior Profiles
+
+CityGateDispute uses `AIBehaviorProfileSO` to make the existing units behave differently without changing outcome logic:
+
+| Unit | Profile | Behavior meaning |
+|---|---|---|
+| BeastRaider / BeastRaider waves | AggressiveRaider | Pressures CityGateCore / protected targets and chases farther. |
+| MechaGateGuard | DefensiveGuard | Holds near protected objectives and avoids chasing too far. |
+| BeastNegotiator | Negotiator | Non-combatant; does not initiate attacks and should be protected. |
+| MechaHardliner | Hardliner | Escalation risk; can target protected/neutral negotiation targets. |
+| CityLord / WarKing / MechaCaptain / BeastElite | CommanderUnit | Tactical-command capable high-rank units; DirectControl denial remains unchanged. |
+
+Profiles only affect AI target choice, chase/defend tendencies, and HUD/debug readability. CityGate outcomes still depend on CityGateCore, BeastNegotiator, raider defeat, casualties, and timer conditions.
+
 ## Commander Control Restrictions
 
 | Unit Type | Rank | DirectControl | TacticalCommand | SyncAssist | DefendObjective / FocusFire |

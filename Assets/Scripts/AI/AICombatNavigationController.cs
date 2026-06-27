@@ -18,10 +18,16 @@ namespace LuoLuoTrip.AI
 
         private void Awake()
         {
-            _bridge = GetComponent<NavigationAgentBridge>();
+            EnsureBridge();
+            _self = GetComponent<Combatant>();
+        }
+
+        private void EnsureBridge()
+        {
+            if (_bridge == null)
+                _bridge = GetComponent<NavigationAgentBridge>();
             if (_bridge == null)
                 _bridge = gameObject.AddComponent<NavigationAgentBridge>();
-            _self = GetComponent<Combatant>();
         }
 
         public void ChaseTarget(Transform target)
@@ -32,27 +38,32 @@ namespace LuoLuoTrip.AI
         public void ChaseTarget(Transform target, float stopDistance)
         {
             if (target == null) return;
+            EnsureBridge();
             _bridge.SetDestination(NavigationMoveRequest.Follow(target, _chaseSpeed, stopDistance));
         }
 
         public void FollowTarget(Transform target)
         {
             if (target == null) return;
+            EnsureBridge();
             _bridge.SetDestination(NavigationMoveRequest.Follow(target, _chaseSpeed * 0.8f, _followStopDistance));
         }
 
         public void MoveToPosition(Vector3 position)
         {
+            EnsureBridge();
             _bridge.SetDestination(NavigationMoveRequest.To(position, _chaseSpeed * 0.5f, 1f));
         }
 
         public void StopNavigation()
         {
+            EnsureBridge();
             _bridge.Stop();
         }
 
         public void ClearNavigation()
         {
+            EnsureBridge();
             _bridge.ClearRequest();
         }
 
@@ -67,6 +78,7 @@ namespace LuoLuoTrip.AI
 
         public void Tick(float deltaTime)
         {
+            EnsureBridge();
             _bridge.TickFallback(deltaTime);
             _bridge.UpdateNavMeshState();
         }

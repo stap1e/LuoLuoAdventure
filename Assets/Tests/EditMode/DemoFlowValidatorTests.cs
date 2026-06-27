@@ -26,7 +26,7 @@ namespace LuoLuoTrip.Tests.EditMode
         {
             Assert.That(typeof(CommanderActionType).IsEnum, Is.True);
             Assert.That(typeof(CommanderActionPresenter), Is.Not.Null);
-            Assert.That(CommanderActionPresenter.BuildDescriptors(new CommanderControlRuntimeState()), Has.Count.EqualTo(3));
+            Assert.That(CommanderActionPresenter.BuildDescriptors(new CommanderControlRuntimeState()), Has.Count.EqualTo(5));
         }
     }
 }

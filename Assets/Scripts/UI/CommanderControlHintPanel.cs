@@ -62,6 +62,11 @@ namespace LuoLuoTrip.UI
             else if (_runtimeState.SelectedTarget != null)
             {
                 hints.Add($"Target: {_runtimeState.LastSelectedTargetName} Rank {_runtimeState.LastSelectedTargetRank} Trust {_runtimeState.LastSelectedTargetTrust}");
+                var ai = _runtimeState.SelectedTarget.GetComponent<Combat.SimpleCombatAI>();
+                if (ai != null)
+                    hints.Add($"AI: {ai.CurrentBehaviorLabel} | {ai.LastProfileDecision}");
+                else
+                    hints.Add("AI: Default AI");
                 var descriptors = CommanderActionPresenter.BuildDescriptors(_runtimeState, _lastResult);
                 hints.Add(string.Join(" | ", descriptors.ConvertAll(CommanderActionPresenter.BuildStatusLine)));
                 hints.Add("[G] DefendObjective | [F] FocusFire");

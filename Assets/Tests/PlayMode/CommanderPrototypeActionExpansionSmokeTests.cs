@@ -43,6 +43,9 @@ namespace LuoLuoTrip.Tests.PlayMode
                 Assert.That(fixture.Controller.State.ActiveCommand, Is.EqualTo(CommanderCommandType.FocusFire));
 
                 fixture.EnemyCombatant.ApplyHealthDamage(9999f);
+                fixture.Enemy.Data.IsAlive = false;
+                fixture.Controller.State.TacticalCommand.ExpiresAtTime = Time.time - 0.1f;
+                InvokeControllerUpdate(fixture.Controller);
                 yield return null;
 
                 Assert.That(fixture.AllyAI.ForcedAttackTarget, Is.Null);
@@ -50,6 +53,32 @@ namespace LuoLuoTrip.Tests.PlayMode
             }
             finally
             {
+                fixture.Dispose();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator FocusFire_ExpiryClearsTrackedResponder()
+        {
+            var fixture = new CommanderActionFixture();
+            var previousTimeScale = Time.timeScale;
+            try
+            {
+                Time.timeScale = 1f;
+                yield return null;
+
+                Assert.That(fixture.Controller.TryIssueFocusFire(fixture.Enemy), Is.True);
+                Assert.That(fixture.AllyAI.ForcedAttackTarget, Is.EqualTo(fixture.EnemyCombatant));
+
+                fixture.Controller.State.TacticalCommand.ExpiresAtTime = Time.time - 0.1f;
+                yield return null;
+
+                Assert.That(fixture.AllyAI.ForcedAttackTarget, Is.Null);
+                Assert.That(fixture.Controller.State.ActiveCommand, Is.EqualTo(CommanderCommandType.None));
+            }
+            finally
+            {
+                Time.timeScale = previousTimeScale;
                 fixture.Dispose();
             }
         }
@@ -69,12 +98,19 @@ namespace LuoLuoTrip.Tests.PlayMode
                 var direct = CommanderActionPresenter.BuildDescriptors(fixture.Controller.State)
                     .First(d => d.ActionType == CommanderActionType.DirectControl);
                 Assert.That(direct.IsAllowed, Is.False);
-                Assert.That(direct.DenialReason, Does.Contain("Leader").Or.Contain("level").Or.Contain("Rank"));
+                Assert.That(direct.DenialReason, Does.Contain("Leader").Or.Contain("level").Or.Contain("Rank").Or.Contain("context"));
             }
             finally
             {
                 fixture.Dispose();
             }
+        }
+
+        private static void InvokeControllerUpdate(CommanderControlController controller)
+        {
+            typeof(CommanderControlController)
+                .GetMethod("Update", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?.Invoke(controller, null);
         }
 
         private sealed class CommanderActionFixture

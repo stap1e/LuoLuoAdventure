@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using LuoLuoTrip.AI;
 using LuoLuoTrip.Audio;
 using LuoLuoTrip.Combat;
@@ -28,11 +29,22 @@ namespace LuoLuoTrip
         private CameraFollowController _cameraFollow;
         private CharacterEntity _lastSelectedTarget;
         private CharacterEntity _lastControlledMarkerEntity;
+        private readonly List<SimpleCombatAI> _activeFocusFireResponders = new List<SimpleCombatAI>();
 
         public CommanderControlRuntimeState State => _state;
         public CommanderTargetSelector TargetSelector => _targetSelector;
 
         public void SetHintPanel(CommanderControlHintPanel panel) => _hintPanel = panel;
+
+        private void EnsureRuntimeState()
+        {
+            if (_state != null) return;
+            _state = new CommanderControlRuntimeState
+            {
+                OriginalPlayerEntity = GetComponent<CharacterEntity>()
+            };
+            _state.DirectControlledEntity = _state.OriginalPlayerEntity;
+        }
 
         private void Awake()
         {
@@ -242,22 +254,29 @@ namespace LuoLuoTrip
                 return false;
             }
 
+            if (_state.HasActiveCommand && _state.ActiveCommand == CommanderCommandType.FocusFire)
+                ClearFocusFireResponders();
+
             for (int i = 0; i < responders.Count; i++)
             {
                 var ai = responders[i].GetComponent<SimpleCombatAI>();
                 if (ai != null)
+                {
                     ai.SetFocusFireTarget(combatTarget);
+                    if (!_activeFocusFireResponders.Contains(ai))
+                        _activeFocusFireResponders.Add(ai);
+                }
             }
 
             _state.SetCommand(CommanderCommandType.FocusFire, focusTarget);
-            _state.TacticalCommand.SetFocusFire(focusTarget, combatTarget, _focusFireDuration, responders.Count, Time.time);
+            _state.TacticalCommand.SetFocusFire(focusTarget, combatTarget, _focusFireDuration, _activeFocusFireResponders.Count, Time.time);
             _state.LastFocusFireAllowed = true;
             _state.LastFocusFireReason = string.Empty;
             _state.LastFocusTargetName = focusTarget.Data != null ? focusTarget.Data.DisplayName : focusTarget.name;
-            _state.LastResponderCount = responders.Count;
+            _state.LastResponderCount = _activeFocusFireResponders.Count;
             _state.LastInputRoute = "FocusFire";
             _state.LastSuggestion = $"FocusFire: {_state.LastFocusTargetName}";
-            Debug.Log($"[CommanderAction] FocusFire issued: {_state.LastFocusTargetName}, responders={responders.Count}");
+            Debug.Log($"[CommanderAction] FocusFire issued: {_state.LastFocusTargetName}, responders={_activeFocusFireResponders.Count}");
             AudioFeedbackService.PlayUI(AudioEventId.TacticalCommandIssued);
             return true;
         }
@@ -309,6 +328,13 @@ namespace LuoLuoTrip
                 suggestion = "Select an ally that can receive TacticalCommand.";
                 return false;
             }
+            var allyAI = ally.GetComponent<SimpleCombatAI>();
+            if (allyAI != null && !allyAI.RespondsToDefendObjective)
+            {
+                reason = "Profile ignores DefendObjective";
+                suggestion = "Select a defensive guard or commander unit to defend objectives.";
+                return false;
+            }
             if (context != null && !WouldAllowTacticalCommand(BuildRequest(context, ally)))
             {
                 reason = "Commander level or trust too low";
@@ -358,8 +384,25 @@ namespace LuoLuoTrip
             if (entity == null) return false;
             var name = entity.name;
             var display = entity.Data != null ? entity.Data.DisplayName : string.Empty;
-            return name.Contains("Convoy") || name.Contains("Energy") || name.Contains("Objective") || name.Contains("CityGateCore") || name.Contains("BeastNegotiator")
-                || display.Contains("Convoy") || display.Contains("Energy") || display.Contains("CityGateCore") || display.Contains("BeastNegotiator");
+            var marker = entity.GetComponent<WorldMarker>();
+            var label = marker != null ? marker.CustomLabel : string.Empty;
+            return ContainsObjectiveKeyword(name) || ContainsObjectiveKeyword(display) || ContainsObjectiveKeyword(label)
+                || entity.GetComponent<ConvoyObjective>() != null
+                || entity.GetComponent<EnergyNodeObjective>() != null;
+        }
+
+        private bool ContainsObjectiveKeyword(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return false;
+            return value.Contains("Convoy")
+                || value.Contains("Energy")
+                || value.Contains("Objective")
+                || value.Contains("CityGateCore")
+                || value.Contains("BeastNegotiator")
+                || value.Contains("Allied Defense Point")
+                || value.Contains("Defense Point")
+                || value.Contains("DefensePoint")
+                || value.Contains("Core");
         }
 
         private bool IsThreatTarget(LuoLuoTripGameContext context, CharacterEntity entity)
@@ -409,6 +452,7 @@ namespace LuoLuoTrip
                 if (Vector3.Distance(origin, entity.transform.position) > _focusFireRadius) continue;
                 var ai = entity.GetComponent<SimpleCombatAI>();
                 if (ai == null) continue;
+                if (!ai.RespondsToFocusFire || !ai.CanInitiateCombat) continue;
                 if (context != null && !WouldAllowTacticalCommand(BuildRequest(context, entity))) continue;
                 responders.Add(entity);
             }
@@ -756,7 +800,7 @@ namespace LuoLuoTrip
             }
 
             var ai = target.GetComponent<SimpleCombatAI>();
-            if (ai == null) return;
+            if (ai == null && _state.ActiveCommand != CommanderCommandType.FocusFire) return;
 
             switch (_state.ActiveCommand)
             {
@@ -790,7 +834,9 @@ namespace LuoLuoTrip
                         _state.ClearCommand();
                         return;
                     }
-                    ai.SetDefendObjective(_state.TacticalCommand.DefendTarget.transform, _state.TacticalCommand.DefendRadius > 0f ? _state.TacticalCommand.DefendRadius : _defendRadius);
+                    var defendRadius = _state.TacticalCommand.DefendRadius > 0f ? _state.TacticalCommand.DefendRadius : _defendRadius;
+                    if (ai.DefendTarget != _state.TacticalCommand.DefendTarget.transform || !Mathf.Approximately(ai.DefendRadius, defendRadius))
+                        ai.SetDefendObjective(_state.TacticalCommand.DefendTarget.transform, defendRadius);
                     break;
                 case CommanderCommandType.FocusFire:
                     if (_state.TacticalCommand.IsExpired(Time.time) || _state.TacticalCommand.FocusTarget == null || !_state.TacticalCommand.FocusTarget.IsAlive)
@@ -814,11 +860,24 @@ namespace LuoLuoTrip
 
         private void ClearFocusFireResponders()
         {
-            foreach (var ai in FindObjectsOfType<SimpleCombatAI>())
+            var focusTarget = _state != null ? _state.TacticalCommand.FocusTarget : null;
+            if (_activeFocusFireResponders.Count == 0 && focusTarget != null)
             {
-                if (ai.ForcedAttackTarget == _state.TacticalCommand.FocusTarget)
+                foreach (var ai in FindObjectsOfType<SimpleCombatAI>())
+                {
+                    if (ai != null && ai.ForcedAttackTarget == focusTarget)
+                        ai.SetFocusFireTarget(null);
+                }
+                return;
+            }
+
+            for (int i = _activeFocusFireResponders.Count - 1; i >= 0; i--)
+            {
+                var ai = _activeFocusFireResponders[i];
+                if (ai != null && (focusTarget == null || ai.ForcedAttackTarget == focusTarget))
                     ai.SetFocusFireTarget(null);
             }
+            _activeFocusFireResponders.Clear();
         }
 
         private void UpdateCameraTarget()

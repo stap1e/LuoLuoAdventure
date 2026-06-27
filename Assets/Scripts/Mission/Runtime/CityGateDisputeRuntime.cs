@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using LuoLuoTrip.AI;
 using LuoLuoTrip.Audio;
 using LuoLuoTrip.Combat;
 using LuoLuoTrip.Feedback;
@@ -269,6 +270,7 @@ namespace LuoLuoTrip
             var waves = new List<EncounterWave>();
             var beastMult = _encounter?.GetFactionMultiplier(SubFactionId.BeastIronClaw) ?? 1f;
             var beastCount = Mathf.RoundToInt(2 * beastMult);
+            var raiderProfile = AIBehaviorProfileSO.LoadDefault(AIBehaviorProfileType.AggressiveRaider);
 
             waves.Add(new EncounterWave
             {
@@ -278,7 +280,8 @@ namespace LuoLuoTrip
                 unitCount = beastCount,
                 delaySeconds = 12f,
                 initialBehavior = SpawnBehavior.Chase,
-                isHostile = true
+                isHostile = true,
+                behaviorProfile = raiderProfile
             });
             waves.Add(new EncounterWave
             {
@@ -288,7 +291,8 @@ namespace LuoLuoTrip
                 unitCount = beastCount + 1,
                 delaySeconds = 30f,
                 initialBehavior = SpawnBehavior.Chase,
-                isHostile = true
+                isHostile = true,
+                behaviorProfile = raiderProfile
             });
 
             if (_encounter != null)

@@ -238,7 +238,7 @@ namespace LuoLuoTrip
 
                 GameObject unitGo = null;
                 if (spawnPoint != null)
-                    unitGo = spawnPoint.SpawnUnit(data, null, wave.spawnRadius, wave.initialBehavior);
+                    unitGo = spawnPoint.SpawnUnit(data, null, wave.spawnRadius, wave.initialBehavior, wave.behaviorProfile);
 
                 if (unitGo != null)
                 {

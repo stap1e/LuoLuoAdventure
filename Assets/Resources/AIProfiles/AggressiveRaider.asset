@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33842a917453aa948b947adf721d5517, type: 3}
+  m_Name: AggressiveRaider
+  m_EditorClassIdentifier: 
+  profileId: aggressive_raider
+  displayName: 'Raider: Aggressive'
+  profileType: 0
+  chaseRadius: 16
+  attackRadiusMultiplier: 1
+  defendRadius: 3
+  maxChaseDistanceFromHome: 18
+  prefersObjectiveTargets: 1
+  prefersEnemyUnits: 1
+  prefersProtectedTargets: 1
+  canInitiateCombat: 1
+  canAttackNeutral: 0
+  canRetreat: 0
+  retreatHealthRatio: 0.25
+  respondsToTacticalCommand: 1
+  respondsToDefendObjective: 0
+  respondsToFocusFire: 0
+  respectsMissionBoundaries: 1
+  threatPriorityBias: 1.35
+  holdPositionWhenNoTarget: 0
+  debugDescription: Aggressive raider that pressures objectives and protected targets.

@@ -45,7 +45,7 @@ Each asset carries:
 - default objective checklist
 - possible outcome summaries
 
-The assets support HUD, validation, and authoring readability. Runtime mission code still works programmatically and keeps existing fallback behavior.
+The assets support HUD, validation, and authoring readability. Runtime mission code still works programmatically and keeps existing fallback behavior. These `.asset` and `.meta` files are required authored data and should be versioned; setup menu generation is a safe/idempotent recovery path, not the sole source of truth. See `Assets/Docs/AUTHORING_ASSET_PERSISTENCE.md` for the persistence policy.
 
 Legacy prototype authoring assets such as `ConvoyEscort.asset`, `EnergyRaid.asset`, and `BalanceAllocation.asset` are preserved for compatibility.
 
@@ -109,9 +109,9 @@ CommanderPrototype scene setup and validation expect readable markers for:
 
 - Mission 1: `Convoy Mission Area`, `Convoy`, `Energy Node`.
 - Mission 2: `Border Retaliation Area`, `Raider Spawn`, `Allied Defense Point`.
-- Mission 3: `City Gate Mission Area`, `CityGateCore`, `BeastNegotiator`, `BeastRaider Spawn`, `Low-Rank Ally: Press E to Control`, `High-Rank Unit: Tactical Command Only`.
+- Mission 3: `City Gate Mission Area`, `CityGateCore`, `BeastNegotiator`, `BeastRaider Spawn`, `Guard: Defensive`, `Raider: Aggressive`, `Negotiator: Non-combatant`, `Hardliner: Escalation risk`, `CommanderUnit: Tactical only`.
 
-`WorldMarker` keeps labels serialized for scene validation and supplies readable fallbacks for generated setup object names.
+`WorldMarker` keeps labels serialized for scene validation and supplies readable fallbacks for generated setup object names. AI profile labels are debug/readability hints only; they do not change mission-chain ordering or outcome ownership.
 
 ## CommanderAction display and expansion layer
 

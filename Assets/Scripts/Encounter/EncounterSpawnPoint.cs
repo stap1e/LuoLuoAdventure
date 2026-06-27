@@ -35,6 +35,11 @@ namespace LuoLuoTrip
 
         public GameObject SpawnUnit(CharacterData data, GameObject prefab = null, float radius = -1f, SpawnBehavior behavior = SpawnBehavior.Chase)
         {
+            return SpawnUnit(data, prefab, radius, behavior, null);
+        }
+
+        public GameObject SpawnUnit(CharacterData data, GameObject prefab, float radius, SpawnBehavior behavior, AIBehaviorProfileSO behaviorProfile)
+        {
             var position = GetRandomSpawnPosition(radius);
             GameObject unitGo;
 
@@ -70,8 +75,10 @@ namespace LuoLuoTrip
             if (unitGo.GetComponent<Combatant>() == null)
                 unitGo.AddComponent<Combatant>();
 
-            if (unitGo.GetComponent<SimpleCombatAI>() == null)
-                unitGo.AddComponent<SimpleCombatAI>();
+            var ai = unitGo.GetComponent<SimpleCombatAI>();
+            if (ai == null)
+                ai = unitGo.AddComponent<SimpleCombatAI>();
+            ai.BehaviorProfile = behaviorProfile;
 
             if (unitGo.GetComponent<NavigationAgentBridge>() == null)
                 unitGo.AddComponent<NavigationAgentBridge>();

@@ -43,6 +43,11 @@ namespace LuoLuoTrip.Combat
         [SerializeField] private float _attackWindupDelay = 0.4f;
         [SerializeField] private bool _showAttackIndicator = true;
 
+        [Header("Behavior Profile")]
+        [SerializeField] private AIBehaviorProfileSO behaviorProfile;
+        [SerializeField] private Transform homePositionSource;
+        [SerializeField] private Transform protectedTarget;
+
         private Combatant _self;
         private CharacterEntity _entity;
         private CharacterMovementMotor _motor;
@@ -55,17 +60,52 @@ namespace LuoLuoTrip.Combat
         private bool _isWindingUp;
         private bool _showWindupMarker;
         private AICombatNavigationController _navController;
+        private Vector3 _homePosition;
+        private bool _profileDecisionLogged;
 
         public Func<Combatant[]> CombatantQuery { get; set; }
         public Combatant CurrentTarget => _target;
         public Transform FollowTarget { get; set; }
         public Vector3? HoldPosition { get; set; }
-        public Combatant ForcedAttackTarget { get; set; }
+        private Combatant _forcedAttackTarget;
+        public Combatant ForcedAttackTarget
+        {
+            get
+            {
+                if (_forcedAttackTarget == null) return null;
+                if (!_forcedAttackTarget.IsAlive || _forcedAttackTarget.CharacterEntity?.Data?.IsAlive == false)
+                {
+                    _forcedAttackTarget = null;
+                    return null;
+                }
+                return _forcedAttackTarget;
+            }
+            set => _forcedAttackTarget = value;
+        }
         public Transform DefendTarget { get; private set; }
         public Vector3? DefendPosition { get; private set; }
         public float DefendRadius { get; private set; }
         public float DefendLeashRadius { get; private set; }
         public string CommanderCommandStatus { get; private set; }
+        public AIBehaviorProfileSO BehaviorProfile
+        {
+            get => behaviorProfile;
+            set
+            {
+                behaviorProfile = value;
+                RefreshBehaviorDiagnostics("Profile assigned");
+            }
+        }
+        public Transform HomePositionSource { get => homePositionSource; set => homePositionSource = value; }
+        public Transform ProtectedTarget { get => protectedTarget; set => protectedTarget = value; }
+        public string CurrentBehaviorLabel { get; private set; } = "Default AI";
+        public string LastProfileDecision { get; private set; } = "Default AI behavior";
+        public float EffectiveDefendRadius => behaviorProfile != null ? behaviorProfile.EffectiveDefendRadius(DefendRadius > 0f ? DefendRadius : 5f) : DefendRadius;
+        public float EffectiveMaxChaseDistance => behaviorProfile != null ? behaviorProfile.EffectiveMaxChaseDistance : 0f;
+        public bool RespondsToTacticalCommand => behaviorProfile == null || behaviorProfile.respondsToTacticalCommand;
+        public bool RespondsToDefendObjective => behaviorProfile == null || behaviorProfile.respondsToDefendObjective;
+        public bool RespondsToFocusFire => behaviorProfile == null || behaviorProfile.respondsToFocusFire;
+        public bool CanInitiateCombat => behaviorProfile == null || behaviorProfile.canInitiateCombat;
         public bool IsWindingUp => _isWindingUp;
         public AICombatNavigationController NavController => _navController;
         public float StopDistance => EffectiveStopDistance;
@@ -99,9 +139,17 @@ namespace LuoLuoTrip.Combat
 
         public void SetDefendObjective(Transform target, float radius)
         {
+            if (behaviorProfile != null && !behaviorProfile.respondsToDefendObjective)
+            {
+                CommanderCommandStatus = $"{behaviorProfile.DisplayLabel} ignores DefendObjective";
+                SetProfileDecision(CommanderCommandStatus);
+                Debug.Log($"[AICommand] {name} ignored DefendObjective (profile={behaviorProfile.DisplayLabel})");
+                return;
+            }
+
             DefendTarget = target;
             DefendPosition = target != null ? target.position : (Vector3?)null;
-            DefendRadius = Mathf.Max(1f, radius);
+            DefendRadius = Mathf.Max(1f, behaviorProfile != null ? behaviorProfile.EffectiveDefendRadius(radius) : radius);
             DefendLeashRadius = DefendRadius + Mathf.Max(EffectiveStopDistance, 2f);
             FollowTarget = null;
             HoldPosition = null;
@@ -121,6 +169,14 @@ namespace LuoLuoTrip.Combat
 
         public void SetFocusFireTarget(Combatant target)
         {
+            if (target != null && behaviorProfile != null && (!behaviorProfile.respondsToFocusFire || !behaviorProfile.canInitiateCombat))
+            {
+                CommanderCommandStatus = $"{behaviorProfile.DisplayLabel} ignores FocusFire";
+                SetProfileDecision(CommanderCommandStatus);
+                Debug.Log($"[AICommand] {name} ignored FocusFire (profile={behaviorProfile.DisplayLabel})");
+                return;
+            }
+
             ForcedAttackTarget = target;
             CommanderCommandStatus = target != null ? $"FocusFire target: {target.name}" : null;
             if (target != null)
@@ -142,6 +198,8 @@ namespace LuoLuoTrip.Combat
         {
             EnsureReferences();
             _spawnPoint = transform.position;
+            _homePosition = homePositionSource != null ? homePositionSource.position : transform.position;
+            RefreshBehaviorDiagnostics("Initialized");
             _attackIntervalOffset = UnityEngine.Random.Range(-_attackIntervalVariance, _attackIntervalVariance);
             CombatantQuery = CombatantQuery ?? (() => FindObjectsOfType<Combatant>());
 
@@ -206,19 +264,30 @@ namespace LuoLuoTrip.Combat
             if (_thinkTimer > 0f) return;
             _thinkTimer = _thinkInterval;
 
-            if (ForcedAttackTarget != null && ForcedAttackTarget.IsAlive)
+            if (ForcedAttackTarget != null && ForcedAttackTarget.IsAlive && CanInitiateCombat)
             {
                 _target = ForcedAttackTarget;
+                SetProfileDecision("Focus fire target");
             }
             else
             {
                 ForcedAttackTarget = null;
+                if (!CanInitiateCombat)
+                    ExecuteNonCombatantBehavior();
                 RefreshTargetIfNeeded();
             }
 
             if (_target == null)
             {
                 IdlePatrol();
+                return;
+            }
+
+            if (IsBeyondProfileChaseLimit(_target.transform.position))
+            {
+                SetProfileDecision("Returning home: chase limit reached");
+                _target = null;
+                _navController.MoveToPosition(_homePosition);
                 return;
             }
 
@@ -287,12 +356,12 @@ namespace LuoLuoTrip.Combat
             else
             {
                 ForcedAttackTarget = null;
-                _target = SelectBestHostileTargetNear(anchor, Mathf.Max(DefendRadius, _detectRange));
+                _target = SelectBestHostileTargetNear(anchor, Mathf.Max(EffectiveDefendRadius, _detectRange), true);
             }
 
             if (_target != null && _target.IsAlive)
             {
-                if (!IsInsideDefendLeash(_target.transform.position))
+                if (IsBeyondProfileChaseLimit(_target.transform.position) || !IsInsideDefendLeash(_target.transform.position))
                 {
                     _target = null;
                     _navController.MoveToPosition(anchor);
@@ -306,7 +375,7 @@ namespace LuoLuoTrip.Combat
                 return;
             }
 
-            if (anchorOffset.magnitude > Mathf.Max(1f, DefendRadius * 0.5f))
+            if (anchorOffset.magnitude > Mathf.Max(1f, EffectiveDefendRadius * 0.5f))
             {
                 CommanderCommandStatus = "Moving to defend objective";
                 _navController.MoveToPosition(anchor);
@@ -323,16 +392,21 @@ namespace LuoLuoTrip.Combat
             if (!DefendPosition.HasValue) return false;
             var offset = position - DefendPosition.Value;
             offset.y = 0f;
-            return offset.magnitude <= Mathf.Max(DefendRadius, DefendLeashRadius);
+            return offset.magnitude <= Mathf.Max(EffectiveDefendRadius, DefendLeashRadius);
         }
 
-        private Combatant SelectBestHostileTargetNear(Vector3 anchor, float radius)
+        private Combatant SelectBestHostileTargetNear(Vector3 anchor, float radius, bool defendAnchor = false)
         {
             Combatant bestTarget = null;
             var bestScore = float.MinValue;
             foreach (var other in CombatantQuery())
             {
-                if (!IsValidHostile(other)) continue;
+                if (defendAnchor)
+                {
+                    if (!IsValidHostileForDefend(other, anchor, radius)) continue;
+                }
+                else if (!IsValidHostile(other)) continue;
+
                 var anchorOffset = other.transform.position - anchor;
                 anchorOffset.y = 0f;
                 if (anchorOffset.magnitude > radius) continue;
@@ -458,7 +532,7 @@ namespace LuoLuoTrip.Combat
 
         private void TryAttack()
         {
-            if (_target == null || _attackTimer > 0f) return;
+            if (_target == null || _attackTimer > 0f || !CanInitiateCombat) return;
 
             if (_isWindingUp)
             {
@@ -517,10 +591,23 @@ namespace LuoLuoTrip.Combat
         {
             if (other == null || other == _self || !other.IsAlive) return false;
             if (_entity == null || other.CharacterEntity == null) return false;
-            if (!_entity.IsHostileTo(other.CharacterEntity)) return false;
+            var hostile = _entity.IsHostileTo(other.CharacterEntity);
+            if (!hostile && !(behaviorProfile != null && behaviorProfile.canAttackNeutral && IsProfilePreferredTarget(other))) return false;
 
             var distance = Vector3.Distance(transform.position, other.transform.position);
-            return distance <= _detectRange;
+            return distance <= EffectiveDetectRange && !IsBeyondProfileChaseLimit(other.transform.position);
+        }
+
+        private bool IsValidHostileForDefend(Combatant other, Vector3 anchor, float anchorRadius)
+        {
+            if (other == null || other == _self || !other.IsAlive) return false;
+            if (_entity == null || other.CharacterEntity == null) return false;
+            var hostile = _entity.IsHostileTo(other.CharacterEntity);
+            if (!hostile && !(behaviorProfile != null && behaviorProfile.canAttackNeutral && IsProfilePreferredTarget(other))) return false;
+
+            var anchorOffset = other.transform.position - anchor;
+            anchorOffset.y = 0f;
+            return anchorOffset.magnitude <= Mathf.Max(anchorRadius, DefendLeashRadius);
         }
 
         private float ScoreTarget(Combatant other)
@@ -532,7 +619,96 @@ namespace LuoLuoTrip.Combat
             var attackingScore = other.State == CombatState.Attacking || other.State == CombatState.AttackWindup ? _focusAttackingWeight : 0f;
             var rangeScore = Mathf.Clamp01((_self.Stats.attackRange - distance + 1f) / Mathf.Max(1f, _self.Stats.attackRange + 1f)) * _focusRangeWeight;
 
-            return distanceScore + healthScore + staggeredScore + attackingScore + rangeScore;
+            var baseScore = distanceScore + healthScore + staggeredScore + attackingScore + rangeScore;
+
+            if (behaviorProfile == null)
+                return baseScore;
+
+            var score = AITargetSelectionUtility.ScoreTarget(
+                _self,
+                other,
+                behaviorProfile,
+                null,
+                protectedTarget,
+                transform.position,
+                EffectiveDetectRange,
+                _entity != null && other.CharacterEntity != null && _entity.IsHostileTo(other.CharacterEntity),
+                AITargetSelectionUtility.IsObjectiveLike(other),
+                IsProtectedTarget(other),
+                IsNeutralTarget(other));
+
+            if (score.IsValid)
+            {
+                SetProfileDecision(score.Reason);
+                return baseScore + score.Score;
+            }
+
+            return float.MinValue;
+        }
+
+        private float EffectiveDetectRange => behaviorProfile != null ? behaviorProfile.EffectiveChaseRadius(_detectRange) : _detectRange;
+
+        private bool IsProtectedTarget(Combatant other)
+        {
+            if (other == null) return false;
+            return protectedTarget != null && other.transform == protectedTarget
+                || AITargetSelectionUtility.IsObjectiveLike(other);
+        }
+
+        private bool IsNeutralTarget(Combatant other)
+        {
+            if (other == null || _entity == null || other.CharacterEntity == null) return false;
+            return !_entity.IsHostileTo(other.CharacterEntity) && _entity.Data != null && other.CharacterEntity.Data != null
+                && _entity.Data.Faction != other.CharacterEntity.Data.Faction;
+        }
+
+        private bool IsProfilePreferredTarget(Combatant other)
+        {
+            return IsProtectedTarget(other) || AITargetSelectionUtility.IsNegotiatorLike(other);
+        }
+
+        private bool IsBeyondProfileChaseLimit(Vector3 targetPosition)
+        {
+            if (behaviorProfile == null || behaviorProfile.EffectiveMaxChaseDistance <= 0f) return false;
+            var origin = homePositionSource != null ? homePositionSource.position : _homePosition;
+            var offset = targetPosition - origin;
+            offset.y = 0f;
+            return offset.magnitude > behaviorProfile.EffectiveMaxChaseDistance;
+        }
+
+        private void ExecuteNonCombatantBehavior()
+        {
+            if (behaviorProfile == null) return;
+
+            if (behaviorProfile.canRetreat && _self != null && _self.CurrentHealth <= _self.Stats.maxHealth * behaviorProfile.retreatHealthRatio)
+            {
+                var retreatDirection = transform.position - (protectedTarget != null ? protectedTarget.position : _homePosition);
+                retreatDirection.y = 0f;
+                if (retreatDirection.sqrMagnitude <= 0.01f) retreatDirection = -transform.forward;
+                _navController.MoveToPosition(transform.position + retreatDirection.normalized * Mathf.Max(2f, EffectiveStopDistance));
+                SetProfileDecision("Retreating");
+            }
+            else if (behaviorProfile.holdPositionWhenNoTarget)
+            {
+                _navController.StopNavigation();
+                SetProfileDecision("Holding");
+            }
+        }
+
+        private void RefreshBehaviorDiagnostics(string decision)
+        {
+            CurrentBehaviorLabel = behaviorProfile != null ? behaviorProfile.DisplayLabel : "Default AI";
+            SetProfileDecision(decision);
+        }
+
+        private void SetProfileDecision(string decision)
+        {
+            LastProfileDecision = string.IsNullOrEmpty(decision) ? (behaviorProfile != null ? behaviorProfile.DisplayLabel : "Default AI behavior") : decision;
+            if (behaviorProfile != null && !_profileDecisionLogged)
+            {
+                Debug.Log($"[AIProfile] {name}: {behaviorProfile.DisplayLabel}");
+                _profileDecisionLogged = true;
+            }
         }
 
         private void OnDrawGizmos()

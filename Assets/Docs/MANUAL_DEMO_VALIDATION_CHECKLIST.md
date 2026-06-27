@@ -7,6 +7,7 @@ Scene: `Assets/Scenes/CommanderPrototype.unity`
 ## 1. Scene preparation
 
 - Run `LuoLuoTrip/Setup/Create Commander Mission Prototype Scene` if the scene needs to be regenerated.
+- Confirm required authored assets are present and not git-ignored (`Assets/Data/Missions`, `Assets/Data/AIProfiles`, `Assets/Data/Combat/CombatTuningConfig.asset`, and runtime-loaded Resources copies). See `Assets/Docs/AUTHORING_ASSET_PERSISTENCE.md`.
 - Open `Assets/Scenes/CommanderPrototype.unity`.
 - Press Play.
 - Confirm there are no compile errors or missing-script errors in the Console.
@@ -130,8 +131,12 @@ Expected pass criteria:
   - `CityGateCore`,
   - `BeastNegotiator`,
   - `BeastRaider Spawn`,
-  - `Low-Rank Ally: Press E to Control`,
-  - `High-Rank Unit: Tactical Command Only`.
+  - `Guard: Defensive`,
+  - `Raider: Aggressive`,
+  - `Negotiator: Non-combatant`,
+  - `Hardliner: Escalation risk`,
+  - `CommanderUnit: Tactical only`.
+- Confirm selected-target HUD can show `Default AI` or a profile label plus command responsiveness.
 - Enter the CityGate trigger.
 - Confirm objective checklist includes:
   - protect `CityGateCore`,

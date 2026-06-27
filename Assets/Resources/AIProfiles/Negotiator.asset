@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33842a917453aa948b947adf721d5517, type: 3}
+  m_Name: Negotiator
+  m_EditorClassIdentifier: 
+  profileId: negotiator
+  displayName: 'Negotiator: Non-combatant'
+  profileType: 2
+  chaseRadius: 8
+  attackRadiusMultiplier: 1
+  defendRadius: 4
+  maxChaseDistanceFromHome: 4
+  prefersObjectiveTargets: 0
+  prefersEnemyUnits: 0
+  prefersProtectedTargets: 0
+  canInitiateCombat: 0
+  canAttackNeutral: 0
+  canRetreat: 1
+  retreatHealthRatio: 0.75
+  respondsToTacticalCommand: 0
+  respondsToDefendObjective: 0
+  respondsToFocusFire: 0
+  respectsMissionBoundaries: 1
+  threatPriorityBias: 1
+  holdPositionWhenNoTarget: 1
+  debugDescription: Non-combatant negotiator that should be protected and retreats
+    under threat.

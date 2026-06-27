@@ -1,4 +1,5 @@
 using System;
+using LuoLuoTrip.AI;
 using UnityEngine;
 
 namespace LuoLuoTrip
@@ -26,6 +27,8 @@ namespace LuoLuoTrip
         public SpawnBehavior initialBehavior = SpawnBehavior.Chase;
         [Tooltip("If true, spawned units are hostile to player faction.")]
         public bool isHostile = true;
+        [Tooltip("Optional behavior profile applied to spawned SimpleCombatAI units.")]
+        public AIBehaviorProfileSO behaviorProfile;
 
         public bool IsReady => !spawned;
     }

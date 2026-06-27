@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using LuoLuoTrip.AI;
+using LuoLuoTrip.Combat;
 
 namespace LuoLuoTrip
 {
@@ -12,13 +14,14 @@ namespace LuoLuoTrip
         public static List<CommanderActionDescriptor> BuildDescriptors(CommanderControlRuntimeState state, ControlPermissionResult lastResult)
         {
             var targetName = GetTargetName(state);
+            var profileSuggestion = BuildProfileSuggestion(state);
             var noTarget = state == null || string.IsNullOrEmpty(targetName) || targetName == "None";
             var stateReason = state != null ? state.LastControlRejectReason : string.Empty;
             var stateSuggestion = state != null ? state.LastSuggestion : string.Empty;
             var reason = noTarget ? "No target selected" : FirstNonEmpty(stateReason, lastResult.Reason, "Not available");
             var suggestion = noTarget
                 ? "Press Tab/Q to select target or move closer to a low-rank unit."
-                : FirstNonEmpty(stateSuggestion, BuildFallbackSuggestion(state));
+                : FirstNonEmpty(profileSuggestion, stateSuggestion, BuildFallbackSuggestion(state));
             var directAllowed = state != null && state.LastDirectControlAllowed;
             var tacticalAllowed = state != null && state.LastTacticalCommandAllowed;
             var syncAllowed = state != null && state.LastSyncAssistAllowed;
@@ -83,6 +86,30 @@ namespace LuoLuoTrip
             return "None";
         }
 
+        private static string BuildProfileSuggestion(CommanderControlRuntimeState state)
+        {
+            var ai = state?.SelectedTarget != null ? state.SelectedTarget.GetComponent<SimpleCombatAI>() : null;
+            var profile = ai != null ? ai.BehaviorProfile : null;
+            if (profile == null) return string.Empty;
+
+            switch (profile.profileType)
+            {
+                case AIBehaviorProfileType.DefensiveGuard:
+                    return "This unit is defensive. Use DefendObjective.";
+                case AIBehaviorProfileType.Negotiator:
+                case AIBehaviorProfileType.NeutralCivilian:
+                    return "This unit is non-combatant. Protect it.";
+                case AIBehaviorProfileType.CommanderUnit:
+                    return "This unit is high-rank. TacticalCommand only.";
+                case AIBehaviorProfileType.Hardliner:
+                    return "Escalation risk. Consider FocusFire or protect non-combatants.";
+                case AIBehaviorProfileType.AggressiveRaider:
+                    return "Aggressive raider. Use FocusFire if allies can respond.";
+                default:
+                    return string.Empty;
+            }
+        }
+
         private static string BuildFallbackSuggestion(CommanderControlRuntimeState state)
         {
             if (state == null)
@@ -117,6 +144,8 @@ namespace LuoLuoTrip
         {
             if (noTarget)
                 return "Press Tab/Q to select target or move closer to a low-rank unit.";
+            if (!string.IsNullOrEmpty(sharedSuggestion) && sharedSuggestion.StartsWith("This unit"))
+                return sharedSuggestion;
             if (actionType == CommanderActionType.DirectControl && !directAllowed && focusAllowed)
                 return "Press F to order nearby allies to focus fire.";
             if (actionType == CommanderActionType.DirectControl && !directAllowed && defendAllowed)

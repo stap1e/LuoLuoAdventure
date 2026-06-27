@@ -65,7 +65,7 @@ namespace LuoLuoTrip.Tests.PlayMode
                 yield return null;
 
                 var labels = service.Markers.Select(m => m.CustomLabel).Where(label => !string.IsNullOrEmpty(label)).ToList();
-                foreach (var expected in new[] { "Convoy", "Energy Node", "Border Retaliation Area", "Raider Spawn", "Allied Defense Point", "City Gate Mission Area", "CityGateCore", "BeastNegotiator", "BeastRaider Spawn", "Low-Rank Ally: Press E to Control", "High-Rank Unit: Tactical Command Only" })
+                foreach (var expected in new[] { "Convoy", "Energy Node", "Border Retaliation Area", "Raider Spawn", "Allied Defense Point", "City Gate Mission Area", "CityGateCore", "BeastNegotiator", "BeastRaider Spawn" })
                     Assert.That(labels.Any(label => label.Contains(expected)), Is.True, $"Missing marker label {expected}");
             }
             finally

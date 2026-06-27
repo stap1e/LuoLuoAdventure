@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33842a917453aa948b947adf721d5517, type: 3}
+  m_Name: NeutralCivilian
+  m_EditorClassIdentifier: 
+  profileId: neutral_civilian
+  displayName: 'Civilian: Neutral'
+  profileType: 5
+  chaseRadius: 6
+  attackRadiusMultiplier: 1
+  defendRadius: 3
+  maxChaseDistanceFromHome: 3
+  prefersObjectiveTargets: 0
+  prefersEnemyUnits: 0
+  prefersProtectedTargets: 0
+  canInitiateCombat: 0
+  canAttackNeutral: 0
+  canRetreat: 1
+  retreatHealthRatio: 0.9
+  respondsToTacticalCommand: 0
+  respondsToDefendObjective: 0
+  respondsToFocusFire: 0
+  respectsMissionBoundaries: 1
+  threatPriorityBias: 1
+  holdPositionWhenNoTarget: 1
+  debugDescription: Neutral civilian fallback for later non-combatant units.

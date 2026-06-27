@@ -44,6 +44,45 @@ readpaper-skill/
 [Aa]ssets/Resources/
 [Aa]ssets/Art/Placeholders/
 
+# Unity authored gameplay data should be versioned.
+# Keep the broad generated-data ignores above, then allowlist required
+# ScriptableObject assets and their metadata for stable fresh clones.
+![Aa]ssets/Data/
+[Aa]ssets/Data/*
+![Aa]ssets/Data/Missions/
+![Aa]ssets/Data/Missions.meta
+[Aa]ssets/Data/Missions/*
+![Aa]ssets/Data/Missions/*.asset
+![Aa]ssets/Data/Missions/*.asset.meta
+![Aa]ssets/Data/AIProfiles/
+![Aa]ssets/Data/AIProfiles.meta
+[Aa]ssets/Data/AIProfiles/*
+![Aa]ssets/Data/AIProfiles/*.asset
+![Aa]ssets/Data/AIProfiles/*.asset.meta
+![Aa]ssets/Data/Combat/
+![Aa]ssets/Data/Combat.meta
+[Aa]ssets/Data/Combat/*
+![Aa]ssets/Data/Combat/CombatTuningConfig.asset
+![Aa]ssets/Data/Combat/CombatTuningConfig.asset.meta
+
+# Runtime-loadable authored resources should be versioned when code uses
+# Resources.Load for them.
+![Aa]ssets/Resources/
+[Aa]ssets/Resources/*
+![Aa]ssets/Resources/AIProfiles/
+![Aa]ssets/Resources/AIProfiles.meta
+[Aa]ssets/Resources/AIProfiles/*
+![Aa]ssets/Resources/AIProfiles/*.asset
+![Aa]ssets/Resources/AIProfiles/*.asset.meta
+![Aa]ssets/Resources/CombatTuningConfig.asset
+![Aa]ssets/Resources/CombatTuningConfig.asset.meta
+![Aa]ssets/Resources/AudioFeedbackProfile.asset
+![Aa]ssets/Resources/AudioFeedbackProfile.asset.meta
+![Aa]ssets/Resources/WorldMarkerProfile.asset
+![Aa]ssets/Resources/WorldMarkerProfile.asset.meta
+![Aa]ssets/Resources/SubFactionDatabase.asset
+![Aa]ssets/Resources/SubFactionDatabase.asset.meta
+
 # IDE / OS
 .idea/
 .vscode/

@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82da09cfb8ec08e428ba97c70ba3262c, type: 3}
+  m_Name: ConvoyEnergyConflict
+  m_EditorClassIdentifier:
+  MissionId: convoy_energy_conflict
+  DisplayName: Convoy Energy Conflict
+  Description: Protect the convoy, share energy with the contested node, and keep casualties low.
+  RecommendedCommanderLevel: 1
+  DefaultObjectives:
+  - ObjectiveId: protect_convoy
+    Description: Protect convoy
+    IsCompleted: 0
+    IsFailed: 0
+    Progress: 0
+    RequiredProgress: 1
+  - ObjectiveId: share_energy
+    Description: Share energy
+    IsCompleted: 0
+    IsFailed: 0
+    Progress: 0
+    RequiredProgress: 1
+  - ObjectiveId: avoid_excessive_casualties
+    Description: Avoid excessive casualties
+    IsCompleted: 0
+    IsFailed: 0
+    Progress: 0
+    RequiredProgress: 1
+  OutcomeConsequences:
+  - Outcome: 0
+    CommanderExperienceDelta: 200
+    FactionDeltas: []
+    SummaryText: Mecha convoy secured; Beast hostility rises around the energy route.
+  - Outcome: 1
+    CommanderExperienceDelta: 200
+    FactionDeltas: []
+    SummaryText: Beast forces seize leverage; Mecha trust drops.
+  - Outcome: 2
+    CommanderExperienceDelta: 300
+    FactionDeltas: []
+    SummaryText: Energy shared; mainstream hostility drops while extremists remain.
+  - Outcome: 4
+    CommanderExperienceDelta: 80
+    FactionDeltas: []
+    SummaryText: Convoy survives with unresolved tension and limited trust gain.
+  - Outcome: 3
+    CommanderExperienceDelta: 30
+    FactionDeltas: []
+    SummaryText: Convoy route destabilized; both sides lose confidence.

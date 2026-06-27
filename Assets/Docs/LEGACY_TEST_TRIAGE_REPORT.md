@@ -3,6 +3,21 @@
 Date: 2026-06-17
 Unity: 2022.3.62f3 LTS
 
+## Asset Persistence & Authoring Hygiene Pass — verified
+
+- Required authored Unity assets under `Assets/Data` and runtime-loaded copies under `Assets/Resources` are versionable with `.meta` files, not treated as disposable generated output.
+- Scope includes MissionDefinitionSO assets, AIBehaviorProfileSO assets, CombatTuningConfigSO assets, runtime-loaded SubFactionDatabase / AudioFeedbackProfile / WorldMarkerProfile Resources assets, setup menu idempotency, `CheckAuthoringAssets` validator coverage, and `Assets/Docs/AUTHORING_ASSET_PERSISTENCE.md`.
+- Verified full-suite status: EditMode **553/553 passed, 0 failed**; PlayMode **141/141 passed, 0 failed**.
+- `ProjectSettings/TimeManager.asset` was restored after PlayMode verification.
+
+## AIBehaviorProfileSO + Unit Behavior Differentiation Pass — verified
+
+- Adds `AIBehaviorProfileSO` / `AIBehaviorProfileType` for AggressiveRaider, DefensiveGuard, Negotiator, Hardliner, CommanderUnit, and NeutralCivilian.
+- Keeps the existing three-mission vertical slice; no Mission 4, boss, model replacement, combat rewrite, or Canvas UI.
+- CityGateDispute units gain profile-driven behavior/readability while mission outcomes remain owned by objective/casualty/timer state.
+- Verified full-suite status: EditMode **540/540 passed, 0 failed**; PlayMode **139/139 passed, 0 failed**.
+- `ProjectSettings/TimeManager.asset` was restored after PlayMode verification.
+
 ## CommanderAction Expansion Pass — pending verification
 
 - Adds `DefendObjective` (`G`) and `FocusFire` (`F`) as Commander tactical commands without adding Mission 4, boss content, model replacement, Canvas UI, or a combat-system rewrite.

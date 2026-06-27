@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5758a2b88e336dc44b8962f1f940b240, type: 3}
+  m_Name: CombatTuningConfig
+  m_EditorClassIdentifier: 
+  playerAttackWindup: 0.25
+  playerAttackActive: 0.2
+  playerAttackRecovery: 0.3
+  enemyAttackWindup: 0.35
+  enemyAttackActiveDuration: 0.2
+  enemyAttackRecovery: 0.4
+  playerMaxHp: 0
+  enemyMaxHp: 0
+  playerAttackDamage: 0
+  enemyAttackDamage: 0
+  playerAttackRange: 0
+  enemyAttackRange: 0
+  dodgeDuration: 0.35
+  dodgeDistance: 4
+  dodgeInvulnerableDuration: 0.3
+  staggerDuration: 1.2
+  staggerDamageThreshold: 0
+  poiseBreakThreshold: 0
+  aiAttackWindupDelay: 0.4
+  aiChaseSpeed: 4
+  aiAttackCooldown: 1.2
+  aiStopDistance: 1.5
+  hitFlashDuration: 0.12
+  damageNumberDuration: 1
+  syncAssistDuration: 3
+  syncAssistAttackBonus: 0.25
+  syncAssistDefenseBonus: 0.15

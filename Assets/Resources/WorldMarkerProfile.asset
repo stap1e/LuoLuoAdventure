@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2eaa8f365f63bc408880a74a7e34e15, type: 3}
+  m_Name: WorldMarkerProfile
+  m_EditorClassIdentifier: 
+  _entries:
+  - type: 1
+    label: '[TARGET]'
+    color: {r: 1, g: 0.85, b: 0.2, a: 1}
+    worldOffsetY: 2.5
+    showLabel: 1
+  - type: 2
+    label: '[LOCK]'
+    color: {r: 1, g: 0.4, b: 0.4, a: 1}
+    worldOffsetY: 2.5
+    showLabel: 1
+  - type: 3
+    label: '[OBJ]'
+    color: {r: 0.3, g: 1, b: 0.5, a: 1}
+    worldOffsetY: 2.8
+    showLabel: 1
+  - type: 4
+    label: '[E]'
+    color: {r: 0.5, g: 1, b: 0.9, a: 1}
+    worldOffsetY: 2.4
+    showLabel: 1
+  - type: 5
+    label: '[!]'
+    color: {r: 1, g: 0.2, b: 0.2, a: 1}
+    worldOffsetY: 2.6
+    showLabel: 1
+  - type: 6
+    label: '[HOSTILE]'
+    color: {r: 1, g: 0.3, b: 0.3, a: 1}
+    worldOffsetY: 2.2
+    showLabel: 0
+  - type: 7
+    label: '[FRIEND]'
+    color: {r: 0.4, g: 0.8, b: 1, a: 1}
+    worldOffsetY: 2.2
+    showLabel: 0
+  - type: 8
+    label: '[YOU]'
+    color: {r: 0.2, g: 0.7, b: 1, a: 1}
+    worldOffsetY: 2.5
+    showLabel: 1
+  - type: 9
+    label: '[SYNC]'
+    color: {r: 0.8, g: 1, b: 0.2, a: 1}
+    worldOffsetY: 2.6
+    showLabel: 1

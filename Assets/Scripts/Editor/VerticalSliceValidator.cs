@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using LuoLuoTrip.Combat;
+using LuoLuoTrip.AI;
 using LuoLuoTrip.Combat.Animation;
 using LuoLuoTrip.Combat.Feedback;
 using LuoLuoTrip.Feedback;
@@ -38,6 +39,7 @@ namespace LuoLuoTrip.Editor
             CheckCombatPrototypeScene(report, ref errors, ref warnings);
             CheckMissionBranchDefinitionAssets(report, ref warnings);
             CheckCombatTuningConfig(report, ref warnings);
+            CheckAuthoringAssets(report, ref errors, ref warnings);
             CheckSaveLoadManager(report, ref warnings);
             CheckDebugTriggerType(report, ref warnings);
             CheckAudioFeedbackProfile(report, ref warnings);
@@ -68,6 +70,7 @@ namespace LuoLuoTrip.Editor
             CheckMissionAuthoring(report, ref errors, ref warnings);
             CheckCommanderActionReadability(report, ref errors, ref warnings);
             CheckCommanderActionExpansion(report, ref errors, ref warnings);
+            CheckAIBehaviorProfiles(report, ref errors, ref warnings);
             CheckCityGateDispute(report, ref errors, ref warnings);
 
             report.Add("");
@@ -390,14 +393,44 @@ namespace LuoLuoTrip.Editor
             report.Add("");
             report.Add("--- CombatTuningConfig Asset ---");
             var path = "Assets/Data/Combat/CombatTuningConfig.asset";
+            var resourcesPath = "Assets/Resources/CombatTuningConfig.asset";
             if (!File.Exists(path))
             {
-                report.Add("  WARNING: CombatTuningConfig.asset missing (expected at Assets/Data/Combat/)");
+                report.Add("  WARNING: CombatTuningConfig.asset missing (run LuoLuoTrip/Setup/Create Combat Tuning Config)");
                 warnings++;
             }
             else
             {
-                report.Add("  OK: CombatTuningConfig.asset exists");
+                report.Add("  OK: CombatTuningConfig authoring asset exists");
+            }
+
+            if (!File.Exists(resourcesPath))
+            {
+                report.Add("  WARNING: Resources/CombatTuningConfig.asset missing; runtime will use defaults");
+                warnings++;
+            }
+            else
+            {
+                report.Add("  OK: CombatTuningConfig Resources copy exists");
+            }
+        }
+
+        private static void CheckAuthoringAssets(List<string> report, ref int errors, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- Authoring Asset Persistence ---");
+            var audit = AuthoringAssetAudit.AuditRequiredAssets(checkGit: true);
+            if (audit.Issues.Count == 0)
+            {
+                report.Add("  OK: Required MissionDefinitionSO, AIBehaviorProfileSO, and CombatTuningConfigSO assets exist, validate, have .meta files, and are not git-ignored");
+                return;
+            }
+
+            foreach (var issue in audit.Issues)
+            {
+                report.Add($"  {(issue.IsError ? "ERROR" : "WARNING")}: {issue.Path}: {issue.Message}");
+                if (issue.IsError) errors++;
+                else warnings++;
             }
         }
 
@@ -2013,14 +2046,26 @@ namespace LuoLuoTrip.Editor
                 LastSelectedTargetName = "Validator Low",
                 LastDirectControlAllowed = true,
                 LastTacticalCommandAllowed = true,
-                LastSyncAssistAllowed = true
+                LastSyncAssistAllowed = true,
+                LastDefendObjectiveAllowed = true,
+                LastFocusFireAllowed = true,
+                LastObjectiveTargetName = "CityGateCore",
+                LastFocusTargetName = "BeastRaider_01"
             };
             var descriptors = CommanderActionPresenter.BuildDescriptors(state);
-            if (descriptors.Count == 3)
-                report.Add("  OK: DirectControl / TacticalCommand / SyncAssist descriptors available");
+            var expectedActions = new[]
+            {
+                CommanderActionType.DirectControl,
+                CommanderActionType.TacticalCommand,
+                CommanderActionType.SyncAssist,
+                CommanderActionType.DefendObjective,
+                CommanderActionType.FocusFire
+            };
+            if (descriptors.Count == expectedActions.Length && expectedActions.All(action => descriptors.Any(d => d.ActionType == action)))
+                report.Add("  OK: DirectControl / TacticalCommand / SyncAssist / DefendObjective / FocusFire descriptors available");
             else
             {
-                report.Add("  ERROR: CommanderActionPresenter did not build 3 descriptors");
+                report.Add("  ERROR: CommanderActionPresenter did not build 5 expected descriptors");
                 errors++;
             }
 
@@ -2141,6 +2186,70 @@ namespace LuoLuoTrip.Editor
                     EditorSceneManager.CloseScene(scene, true);
                 }
             }
+        }
+
+        private static void CheckAIBehaviorProfiles(List<string> report, ref int errors, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- AI Behavior Profiles ---");
+
+            if (typeof(AIBehaviorProfileSO) != null && typeof(AIBehaviorProfileType).IsEnum)
+                report.Add("  OK: AIBehaviorProfileSO / AIBehaviorProfileType runtime types exist");
+
+            var required = new[]
+            {
+                AIBehaviorProfileType.AggressiveRaider,
+                AIBehaviorProfileType.DefensiveGuard,
+                AIBehaviorProfileType.Negotiator,
+                AIBehaviorProfileType.Hardliner,
+                AIBehaviorProfileType.CommanderUnit,
+                AIBehaviorProfileType.NeutralCivilian
+            };
+
+            foreach (var type in required)
+            {
+                var path = $"Assets/Data/AIProfiles/{type}.asset";
+                var profile = AssetDatabase.LoadAssetAtPath<AIBehaviorProfileSO>(path);
+                if (profile == null)
+                {
+                    report.Add($"  ERROR: Missing AI behavior profile asset: {path}");
+                    errors++;
+                    continue;
+                }
+
+                if (profile.Validate(out var error))
+                    report.Add($"  OK: {type} profile validates ({profile.DisplayLabel})");
+                else
+                {
+                    report.Add($"  ERROR: {type} profile invalid: {error}");
+                    errors++;
+                }
+            }
+
+            var simpleAiProfile = typeof(SimpleCombatAI).GetProperty("BehaviorProfile");
+            if (simpleAiProfile != null)
+                report.Add("  OK: SimpleCombatAI exposes BehaviorProfile");
+            else
+            {
+                report.Add("  ERROR: SimpleCombatAI.BehaviorProfile missing");
+                errors++;
+            }
+
+            var negotiator = AssetDatabase.LoadAssetAtPath<AIBehaviorProfileSO>("Assets/Data/AIProfiles/Negotiator.asset");
+            var guard = AssetDatabase.LoadAssetAtPath<AIBehaviorProfileSO>("Assets/Data/AIProfiles/DefensiveGuard.asset");
+            var raider = AssetDatabase.LoadAssetAtPath<AIBehaviorProfileSO>("Assets/Data/AIProfiles/AggressiveRaider.asset");
+            var hardliner = AssetDatabase.LoadAssetAtPath<AIBehaviorProfileSO>("Assets/Data/AIProfiles/Hardliner.asset");
+            var commander = AssetDatabase.LoadAssetAtPath<AIBehaviorProfileSO>("Assets/Data/AIProfiles/CommanderUnit.asset");
+
+            if (negotiator != null && !negotiator.canInitiateCombat) report.Add("  OK: Negotiator cannot initiate combat"); else { report.Add("  ERROR: Negotiator can initiate combat"); errors++; }
+            if (guard != null && guard.respondsToDefendObjective && guard.maxChaseDistanceFromHome > 0f) report.Add("  OK: DefensiveGuard can defend objective and has chase limit"); else { report.Add("  ERROR: DefensiveGuard missing defend/chase semantics"); errors++; }
+            if (raider != null && raider.canInitiateCombat && raider.prefersObjectiveTargets) report.Add("  OK: AggressiveRaider can attack objective"); else { report.Add("  ERROR: AggressiveRaider missing objective aggression"); errors++; }
+            if (hardliner != null && hardliner.prefersProtectedTargets && hardliner.canAttackNeutral) report.Add("  OK: Hardliner can target protected/neutral unit"); else { report.Add("  ERROR: Hardliner missing escalation semantics"); errors++; }
+            if (commander != null && commander.respondsToTacticalCommand && commander.respondsToDefendObjective && commander.respondsToFocusFire) report.Add("  OK: CommanderUnit responds to tactical commands"); else { report.Add("  ERROR: CommanderUnit missing command response semantics"); errors++; }
+
+            var presenterMethod = typeof(CommanderActionPresenter).GetMethod("BuildDescriptors");
+            if (presenterMethod != null)
+                report.Add("  OK: HUD/presenter can display profile-aware action suggestions");
         }
 
         private static void CheckCityGateDispute(List<string> report, ref int errors, ref int warnings)

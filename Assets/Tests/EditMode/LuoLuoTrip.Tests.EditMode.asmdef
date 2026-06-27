@@ -2,7 +2,8 @@
     "name": "LuoLuoTrip.Tests.EditMode",
     "rootNamespace": "LuoLuoTrip.Tests.EditMode",
     "references": [
-        "LuoLuoTrip"
+        "LuoLuoTrip",
+        "LuoLuoTrip.Editor"
     ],
     "includePlatforms": [
         "Editor"

@@ -59,6 +59,19 @@ namespace LuoLuoTrip.UI
                     y += 18;
                     GUI.Label(new Rect(x, y, width, 18), $"  Trust: {_runtimeState.LastSelectedTargetTrust} Leader: {_runtimeState.LastSelectedTargetIsLeader}");
                     y += 18;
+                    var ai = _runtimeState.SelectedTarget.GetComponent<Combat.SimpleCombatAI>();
+                    if (ai != null)
+                    {
+                        GUI.Label(new Rect(x, y, width + 120, 18), $"  AI: {ai.CurrentBehaviorLabel} | {ai.LastProfileDecision}");
+                        y += 18;
+                        GUI.Label(new Rect(x, y, width + 120, 18), $"  Responds: Tactical {AllowedText(ai.RespondsToTacticalCommand)} | Defend {AllowedText(ai.RespondsToDefendObjective)} | Focus {AllowedText(ai.RespondsToFocusFire)}");
+                        y += 18;
+                    }
+                    else
+                    {
+                        GUI.Label(new Rect(x, y, width, 18), "  AI: Default AI");
+                        y += 18;
+                    }
                     var descriptors = CommanderActionPresenter.BuildDescriptors(_runtimeState, _lastResult);
                     GUI.Label(new Rect(x, y, width + 160, 18), $"  {string.Join(" | ", descriptors.ConvertAll(CommanderActionPresenter.BuildStatusLine))}");
                     y += 18;
