@@ -1,0 +1,98 @@
+using UnityEngine;
+
+namespace LuoLuoTrip.Combat.Feedback
+{
+    /// <summary>
+    /// 全局 Hit Stop（卡肉）服务，使用 unscaledTime 计时。宿主: GameBootstrap (共享对象)。
+    /// 重复服务只销毁组件本身，不能销毁 GameBootstrap 宿主。
+    /// </summary>
+    public class HitStopService : MonoBehaviour
+    {
+        private static HitStopService _instance;
+        public static HitStopService Instance
+        {
+            get
+            {
+                if (_instance == null)
+                    _instance = FindObjectOfType<HitStopService>();
+                return _instance;
+            }
+            private set => _instance = value;
+        }
+
+        private float _remaining;
+        private float _activeTimeScale = 1f;
+        private float _defaultFixedDelta = 0.02f;
+        private bool _isActive;
+
+        public bool IsActive => _isActive;
+
+        private void Awake()
+        {
+            if (Instance != null && Instance != this)
+            {
+                Destroy(this);
+                return;
+            }
+            Instance = this;
+            _defaultFixedDelta = Time.fixedDeltaTime;
+        }
+
+        private void OnDestroy()
+        {
+            // If this service was actively controlling Time.timeScale, restore it.
+            // Uses _isActive (instance field) rather than _instance (static) because
+            // the static may be unreliable during DestroyImmediate in EditMode tests.
+            if (_isActive)
+                RestoreTime();
+            if (System.Object.ReferenceEquals(_instance, this))
+                _instance = null;
+        }
+
+        private void OnDisable()
+        {
+            if (_isActive)
+                RestoreTime();
+        }
+
+        /// <summary>Resets static state and Time.timeScale for test isolation.</summary>
+        public static void ResetForTests()
+        {
+            if (_instance != null && _instance._isActive)
+                _instance.RestoreTime();
+            _instance = null;
+            Time.timeScale = 1f;
+        }
+
+        private void Update()
+        {
+            if (!_isActive) return;
+
+            _remaining -= Time.unscaledDeltaTime;
+            if (_remaining <= 0f)
+                RestoreTime();
+        }
+
+        /// <summary>触发卡肉。较长 duration 会覆盖较短 duration。</summary>
+        public void Play(float duration, float timeScale)
+        {
+            if (duration <= 0f) return;
+            if (_isActive && duration <= _remaining) return;
+
+            _remaining = duration;
+            _activeTimeScale = Mathf.Clamp(timeScale, 0f, 1f);
+            _isActive = true;
+
+            Time.timeScale = _activeTimeScale;
+            Time.fixedDeltaTime = _defaultFixedDelta * _activeTimeScale;
+        }
+
+        public void RestoreTime()
+        {
+            _isActive = false;
+            _remaining = 0f;
+            Time.timeScale = 1f;
+            Time.fixedDeltaTime = _defaultFixedDelta;
+        }
+    }
+}

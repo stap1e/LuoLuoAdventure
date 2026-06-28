@@ -1,0 +1,93 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a7cba6415c383c43ad37480ddf04329, type: 3}
+  m_Name: AudioFeedbackProfile
+  m_EditorClassIdentifier: 
+  _entries:
+  - eventId: 1
+    clips: []
+    volume: 1
+    pitchMin: 1
+    pitchMax: 1
+    spatial: 1
+  - eventId: 2
+    clips: []
+    volume: 1
+    pitchMin: 1
+    pitchMax: 1
+    spatial: 1
+  - eventId: 3
+    clips: []
+    volume: 1
+    pitchMin: 1
+    pitchMax: 1
+    spatial: 1
+  - eventId: 4
+    clips: []
+    volume: 1
+    pitchMin: 1
+    pitchMax: 1
+    spatial: 1
+  - eventId: 5
+    clips: []
+    volume: 1
+    pitchMin: 1
+    pitchMax: 1
+    spatial: 1
+  - eventId: 6
+    clips: []
+    volume: 1
+    pitchMin: 1
+    pitchMax: 1
+    spatial: 1
+  - eventId: 7
+    clips: []
+    volume: 1
+    pitchMin: 1
+    pitchMax: 1
+    spatial: 1
+  - eventId: 8
+    clips: []
+    volume: 1
+    pitchMin: 1
+    pitchMax: 1
+    spatial: 1
+  - eventId: 9
+    clips: []
+    volume: 1
+    pitchMin: 1
+    pitchMax: 1
+    spatial: 1
+  - eventId: 10
+    clips: []
+    volume: 1
+    pitchMin: 1
+    pitchMax: 1
+    spatial: 1
+  - eventId: 11
+    clips: []
+    volume: 1
+    pitchMin: 1
+    pitchMax: 1
+    spatial: 1
+  - eventId: 12
+    clips: []
+    volume: 1
+    pitchMin: 1
+    pitchMax: 1
+    spatial: 1
+  - eventId: 13
+    clips: []
+    volume: 1
+    pitchMin: 1
+    pitchMax: 1
+    spatial: 1

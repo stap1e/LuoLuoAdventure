@@ -1,0 +1,24 @@
+{
+    "name": "LuoLuoTrip.Tests.EditMode",
+    "rootNamespace": "LuoLuoTrip.Tests.EditMode",
+    "references": [
+        "LuoLuoTrip",
+        "LuoLuoTrip.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false,
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ]
+}

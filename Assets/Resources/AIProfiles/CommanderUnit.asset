@@ -32,5 +32,18 @@ MonoBehaviour:
   respectsMissionBoundaries: 1
   threatPriorityBias: 1.2
   holdPositionWhenNoTarget: 0
+  objectivePressureWeight: 8
+  protectedTargetPressureWeight: 10
+  neutralTargetPressureWeight: 4
+  hostileUnitWeight: 4
+  homeDistancePenalty: 0.2
+  retreatDistance: 4
+  retreatTriggerRadius: 5
+  guardLeashRadius: 9
+  guardReturnSpeedMultiplier: 1.25
+  hardlinerEscalationBias: 0
+  negotiatorThreatAvoidanceBias: 0
+  maxEngageDuration: 14
+  decisionRefreshInterval: 0.55
   debugDescription: High-rank commander unit that can receive tactical commands but
     keeps DirectControl rules.

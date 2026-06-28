@@ -2242,10 +2242,31 @@ namespace LuoLuoTrip.Editor
             var commander = AssetDatabase.LoadAssetAtPath<AIBehaviorProfileSO>("Assets/Data/AIProfiles/CommanderUnit.asset");
 
             if (negotiator != null && !negotiator.canInitiateCombat) report.Add("  OK: Negotiator cannot initiate combat"); else { report.Add("  ERROR: Negotiator can initiate combat"); errors++; }
-            if (guard != null && guard.respondsToDefendObjective && guard.maxChaseDistanceFromHome > 0f) report.Add("  OK: DefensiveGuard can defend objective and has chase limit"); else { report.Add("  ERROR: DefensiveGuard missing defend/chase semantics"); errors++; }
-            if (raider != null && raider.canInitiateCombat && raider.prefersObjectiveTargets) report.Add("  OK: AggressiveRaider can attack objective"); else { report.Add("  ERROR: AggressiveRaider missing objective aggression"); errors++; }
-            if (hardliner != null && hardliner.prefersProtectedTargets && hardliner.canAttackNeutral) report.Add("  OK: Hardliner can target protected/neutral unit"); else { report.Add("  ERROR: Hardliner missing escalation semantics"); errors++; }
+            if (negotiator != null && !negotiator.respondsToFocusFire) report.Add("  OK: Negotiator ignores FocusFire responder role"); else { report.Add("  ERROR: Negotiator responds to FocusFire"); errors++; }
+            if (guard != null && guard.respondsToDefendObjective && guard.maxChaseDistanceFromHome > 0f && guard.guardLeashRadius > 0f) report.Add("  OK: DefensiveGuard can defend objective and has guard leash/chase limit"); else { report.Add("  ERROR: DefensiveGuard missing defend/leash/chase semantics"); errors++; }
+            if (raider != null && raider.canInitiateCombat && raider.prefersObjectiveTargets && raider.objectivePressureWeight > raider.hostileUnitWeight) report.Add("  OK: AggressiveRaider can pressure objectives over generic hostiles"); else { report.Add("  ERROR: AggressiveRaider missing objective pressure tuning"); errors++; }
+            if (guard != null && raider != null && guard.maxChaseDistanceFromHome < raider.maxChaseDistanceFromHome) report.Add("  OK: DefensiveGuard chase limit is more conservative than Raider"); else { report.Add("  ERROR: DefensiveGuard chase limit is not more conservative than Raider"); errors++; }
+            if (hardliner != null && hardliner.prefersProtectedTargets && hardliner.canAttackNeutral && hardliner.hardlinerEscalationBias > 0f) report.Add("  OK: Hardliner can target protected/neutral unit with escalation bias"); else { report.Add("  ERROR: Hardliner missing escalation semantics"); errors++; }
             if (commander != null && commander.respondsToTacticalCommand && commander.respondsToDefendObjective && commander.respondsToFocusFire) report.Add("  OK: CommanderUnit responds to tactical commands"); else { report.Add("  ERROR: CommanderUnit missing command response semantics"); errors++; }
+
+            var monitorType = typeof(AIBehaviorScenarioMonitor);
+            if (monitorType != null && monitorType.GetMethod("BuildScenarioSummary") != null)
+                report.Add("  OK: AIBehaviorScenarioMonitor exposes behavior summaries for validation/tests");
+            else
+            {
+                report.Add("  ERROR: AIBehaviorScenarioMonitor missing summary API");
+                errors++;
+            }
+
+            if (typeof(CommanderActionPresenter).GetMethod("BuildProfileSummary") != null
+                && typeof(CommanderActionPresenter).GetMethod("BuildBehaviorSummary") != null
+                && typeof(CommanderActionPresenter).GetMethod("BuildProfileSuggestion", new[] { typeof(SimpleCombatAI) }) != null)
+                report.Add("  OK: HUD/presenter can display profile label, behavior, and suggestion");
+            else
+            {
+                report.Add("  ERROR: HUD/presenter missing profile behavior text helpers");
+                errors++;
+            }
 
             var presenterMethod = typeof(CommanderActionPresenter).GetMethod("BuildDescriptors");
             if (presenterMethod != null)
@@ -2362,10 +2383,19 @@ namespace LuoLuoTrip.Editor
                     bool hasNegotiator = false;
                     bool hasSpawn = false;
                     bool hasSummary = false;
+                    bool hasMonitor = false;
+                    bool hasProfileLabels = false;
                     foreach (var root in scene.GetRootGameObjects())
                     {
                         if (root.name.Contains("CityGate")) hasCityGate = true;
                         if (root.GetComponentsInChildren<MissionResultSummaryPanel>(true).Length > 0) hasSummary = true;
+                        if (root.GetComponentsInChildren<AIBehaviorScenarioMonitor>(true).Length > 0) hasMonitor = true;
+                        foreach (var ai in root.GetComponentsInChildren<SimpleCombatAI>(true))
+                        {
+                            var label = ai.BehaviorProfile != null ? ai.BehaviorProfile.DisplayLabel : string.Empty;
+                            if (label.Contains("Raider: Aggressive") || label.Contains("Guard: Defensive") || label.Contains("Negotiator: Non-combatant") || label.Contains("Hardliner: Escalation risk") || label.Contains("CommanderUnit: Tactical only"))
+                                hasProfileLabels = true;
+                        }
                         foreach (var tr in root.GetComponentsInChildren<Transform>(true))
                         {
                             if (tr.name.Contains("CityGateCore")) hasCore = true;
@@ -2390,6 +2420,10 @@ namespace LuoLuoTrip.Editor
                     else { report.Add("  WARNING: BeastRaider spawn marker missing"); warnings++; }
                     if (hasSummary) report.Add("  OK: outcome summary display exists");
                     else { report.Add("  ERROR: MissionResultSummaryPanel missing"); errors++; }
+                    if (hasMonitor) report.Add("  OK: CityGateDispute has AIBehaviorScenarioMonitor");
+                    else { report.Add("  ERROR: CityGateDispute missing AIBehaviorScenarioMonitor"); errors++; }
+                    if (hasProfileLabels) report.Add("  OK: CityGate key units expose readable AI profile labels");
+                    else { report.Add("  ERROR: CityGate key unit profile labels missing"); errors++; }
                 }
                 finally
                 {
@@ -2404,6 +2438,15 @@ namespace LuoLuoTrip.Editor
             {
                 report.Add("  WARNING: CITY_GATE_DISPUTE_DESIGN.md missing");
                 warnings++;
+            }
+
+            var checklistPath = System.IO.Path.Combine("Assets", "Docs", "MANUAL_DEMO_VALIDATION_CHECKLIST.md");
+            if (System.IO.File.Exists(checklistPath) && System.IO.File.ReadAllText(checklistPath).Contains("AI behavior tuning validation"))
+                report.Add("  OK: manual checklist includes AI behavior tuning validation");
+            else
+            {
+                report.Add("  ERROR: manual checklist missing AI behavior tuning validation section");
+                errors++;
             }
         }
 

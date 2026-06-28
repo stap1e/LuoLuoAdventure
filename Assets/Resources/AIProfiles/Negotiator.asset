@@ -32,5 +32,18 @@ MonoBehaviour:
   respectsMissionBoundaries: 1
   threatPriorityBias: 1
   holdPositionWhenNoTarget: 1
+  objectivePressureWeight: 8
+  protectedTargetPressureWeight: 10
+  neutralTargetPressureWeight: 4
+  hostileUnitWeight: 2
+  homeDistancePenalty: 0
+  retreatDistance: 6
+  retreatTriggerRadius: 7
+  guardLeashRadius: 0
+  guardReturnSpeedMultiplier: 1.25
+  hardlinerEscalationBias: 0
+  negotiatorThreatAvoidanceBias: 1.5
+  maxEngageDuration: 0
+  decisionRefreshInterval: 0.4
   debugDescription: Non-combatant negotiator that should be protected and retreats
     under threat.

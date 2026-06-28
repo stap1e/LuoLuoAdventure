@@ -478,6 +478,13 @@ namespace LuoLuoTrip.Editor
             var cityGateConflict = cityGateConflictGo.AddComponent<CityGateDisputeRuntime>();
             cityGateConflictGo.AddComponent<EncounterRuntime>();
             cityGateConflictGo.AddComponent<MissionAreaRuntime>();
+            var cityGateMonitor = cityGateConflictGo.AddComponent<AIBehaviorScenarioMonitor>();
+            cityGateMonitor.Register(mechaGuardGo.GetComponent<SimpleCombatAI>());
+            cityGateMonitor.Register(mechaHardlinerGo.GetComponent<SimpleCombatAI>());
+            cityGateMonitor.Register(beastNegotiatorGo.GetComponent<SimpleCombatAI>());
+            cityGateMonitor.Register(beastRaiderGo.GetComponent<SimpleCombatAI>());
+            cityGateMonitor.Register(cityLordGo.GetComponent<SimpleCombatAI>());
+            cityGateMonitor.Register(warKingGo.GetComponent<SimpleCombatAI>());
             var cityGateConflictSo = new SerializedObject(cityGateConflict);
             cityGateConflictSo.FindProperty("_triggerZone").objectReferenceValue = cityGateTrigger;
             cityGateConflictSo.FindProperty("_objectiveHud").objectReferenceValue = objectiveHud;

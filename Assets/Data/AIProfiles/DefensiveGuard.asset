@@ -32,4 +32,17 @@ MonoBehaviour:
   respectsMissionBoundaries: 1
   threatPriorityBias: 1.15
   holdPositionWhenNoTarget: 1
+  objectivePressureWeight: 8
+  protectedTargetPressureWeight: 10
+  neutralTargetPressureWeight: 4
+  hostileUnitWeight: 5
+  homeDistancePenalty: 0.35
+  retreatDistance: 4
+  retreatTriggerRadius: 5
+  guardLeashRadius: 8
+  guardReturnSpeedMultiplier: 1.4
+  hardlinerEscalationBias: 0
+  negotiatorThreatAvoidanceBias: 0
+  maxEngageDuration: 0
+  decisionRefreshInterval: 0.6
   debugDescription: Defensive guard that holds near protected points and avoids over-chasing.

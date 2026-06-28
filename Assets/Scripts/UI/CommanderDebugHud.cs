@@ -62,14 +62,18 @@ namespace LuoLuoTrip.UI
                     var ai = _runtimeState.SelectedTarget.GetComponent<Combat.SimpleCombatAI>();
                     if (ai != null)
                     {
-                        GUI.Label(new Rect(x, y, width + 120, 18), $"  AI: {ai.CurrentBehaviorLabel} | {ai.LastProfileDecision}");
+                        GUI.Label(new Rect(x, y, width + 120, 18), $"  {CommanderActionPresenter.BuildProfileSummary(ai)}");
                         y += 18;
-                        GUI.Label(new Rect(x, y, width + 120, 18), $"  Responds: Tactical {AllowedText(ai.RespondsToTacticalCommand)} | Defend {AllowedText(ai.RespondsToDefendObjective)} | Focus {AllowedText(ai.RespondsToFocusFire)}");
+                        GUI.Label(new Rect(x, y, width + 120, 18), $"  {CommanderActionPresenter.BuildBehaviorSummary(ai)}");
+                        y += 18;
+                        GUI.Label(new Rect(x, y, width + 120, 18), $"  {CommanderActionPresenter.BuildResponseSummary(ai)}");
+                        y += 18;
+                        GUI.Label(new Rect(x, y, width + 160, 18), $"  Suggestion: {CommanderActionPresenter.BuildProfileSuggestion(ai)}");
                         y += 18;
                     }
                     else
                     {
-                        GUI.Label(new Rect(x, y, width, 18), "  AI: Default AI");
+                        GUI.Label(new Rect(x, y, width, 18), "  AI Profile: Default AI");
                         y += 18;
                     }
                     var descriptors = CommanderActionPresenter.BuildDescriptors(_runtimeState, _lastResult);

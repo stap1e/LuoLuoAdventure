@@ -3,6 +3,14 @@
 Date: 2026-06-17
 Unity: 2022.3.62f3 LTS
 
+## AI Behavior Tuning & Scenario Validation Pass — verified
+
+- Builds on `AIBehaviorProfileSO` and the six authored profile assets with additional tuning fields for objective/protected pressure, guard leash, retreat triggers, escalation bias, max engage duration, and decision refresh cadence.
+- Adds `AIBehaviorScenarioMonitor` for CityGate manual validation and PlayMode-readable behavior summaries.
+- Extends HUD/validator/test coverage for Raider pressure, Guard defend/leash, Negotiator non-combat/retreat, Hardliner escalation risk, CommanderUnit tactical-only readability, and DefendObjective/FocusFire profile compatibility.
+- Verified full-suite status: EditMode **573/573 passed, 0 failed**; PlayMode **146/146 passed, 0 failed**.
+- `ProjectSettings/TimeManager.asset` was restored after PlayMode verification.
+
 ## Asset Persistence & Authoring Hygiene Pass — verified
 
 - Required authored Unity assets under `Assets/Data` and runtime-loaded copies under `Assets/Resources` are versionable with `.meta` files, not treated as disposable generated output.

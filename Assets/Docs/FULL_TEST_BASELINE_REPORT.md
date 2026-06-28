@@ -60,6 +60,29 @@ python scripts\parse_unity_test_results.py TestResults\playmode-results.xml
 
 `ProjectSettings/TimeManager.asset` was restored after PlayMode verification.
 
+## AI Behavior Tuning & Scenario Validation Pass
+
+Verified on 2026-06-28 with Unity 2022.3.62f3 LTS:
+
+| Suite | Total | Passed | Failed | Errors | Skipped |
+|---|---|---|---|---|---|
+| EditMode | 573 | 573 | 0 | 0 | 0 |
+| PlayMode | 146 | 146 | 0 | 0 | 0 |
+| **Combined** | **719** | **719** | **0** | **0** | **0** |
+
+This pass builds on the Asset Persistence baseline and adds profile tuning fields, `AIBehaviorScenarioMonitor`, CityGate behavior/HUD readability, validator checks, profile asset backfill, and targeted AI behavior tests.
+
+Verification commands run:
+
+```powershell
+.\scripts\run_unity_editmode_tests.ps1
+python scripts\parse_unity_test_results.py TestResults\editmode-results.xml
+.\scripts\run_unity_playmode_tests.ps1
+python scripts\parse_unity_test_results.py TestResults\playmode-results.xml
+```
+
+`ProjectSettings/TimeManager.asset` was restored after PlayMode verification.
+
 ## Pending verification — CommanderAction Expansion Pass
 
 This in-progress pass adds `DefendObjective` and `FocusFire` as additive Commander tactical actions. The target baseline remains **EditMode 0 failed** and **PlayMode 0 failed** on Unity 2022.3.62f3 LTS. This section must be refreshed after the full verification commands complete.

@@ -32,4 +32,17 @@ MonoBehaviour:
   respectsMissionBoundaries: 1
   threatPriorityBias: 1.35
   holdPositionWhenNoTarget: 0
+  objectivePressureWeight: 14
+  protectedTargetPressureWeight: 13
+  neutralTargetPressureWeight: 4
+  hostileUnitWeight: 2
+  homeDistancePenalty: 0.15
+  retreatDistance: 4
+  retreatTriggerRadius: 5
+  guardLeashRadius: 0
+  guardReturnSpeedMultiplier: 1.25
+  hardlinerEscalationBias: 0
+  negotiatorThreatAvoidanceBias: 0
+  maxEngageDuration: 12
+  decisionRefreshInterval: 0.45
   debugDescription: Aggressive raider that pressures objectives and protected targets.

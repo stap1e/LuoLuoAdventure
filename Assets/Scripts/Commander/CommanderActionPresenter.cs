@@ -75,6 +75,55 @@ namespace LuoLuoTrip
             return $"{descriptor.DisplayName}: {descriptor.StatusText}";
         }
 
+        public static string BuildProfileSummary(SimpleCombatAI ai)
+        {
+            if (ai == null)
+                return "AI Profile: Default AI";
+            return $"AI Profile: {ai.CurrentBehaviorLabel}";
+        }
+
+        public static string BuildBehaviorSummary(SimpleCombatAI ai)
+        {
+            if (ai == null)
+                return "Behavior: Default AI";
+
+            var behavior = !string.IsNullOrEmpty(ai.LastProfileDecision) ? ai.LastProfileDecision : ai.CurrentBehaviorLabel;
+            return $"Behavior: {behavior}";
+        }
+
+        public static string BuildResponseSummary(SimpleCombatAI ai)
+        {
+            if (ai == null)
+                return "Responds: Tactical Yes | Defend Yes | Focus Yes";
+
+            return $"Responds: Tactical {YesNo(ai.RespondsToTacticalCommand)} | Defend {YesNo(ai.RespondsToDefendObjective)} | Focus {YesNo(ai.RespondsToFocusFire)}";
+        }
+
+        public static string BuildProfileSuggestion(SimpleCombatAI ai)
+        {
+            var profile = ai != null ? ai.BehaviorProfile : null;
+            if (profile == null) return "Default AI behavior. Select a valid target for commands.";
+
+            switch (profile.profileType)
+            {
+                case AIBehaviorProfileType.DefensiveGuard:
+                    return "Use G to defend objective.";
+                case AIBehaviorProfileType.Negotiator:
+                case AIBehaviorProfileType.NeutralCivilian:
+                    return "Protect this non-combatant.";
+                case AIBehaviorProfileType.CommanderUnit:
+                    return "High-rank unit: Tactical only.";
+                case AIBehaviorProfileType.Hardliner:
+                    return "Escalation risk. Use F to suppress if hostile.";
+                case AIBehaviorProfileType.AggressiveRaider:
+                    return "Use F to focus fire raider.";
+                default:
+                    return "Use profile-compatible tactical commands.";
+            }
+        }
+
+        private static string YesNo(bool value) => value ? "Yes" : "No";
+
         private static string GetTargetName(CommanderControlRuntimeState state)
         {
             if (state == null)

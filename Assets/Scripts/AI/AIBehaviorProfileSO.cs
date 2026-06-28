@@ -38,6 +38,21 @@ namespace LuoLuoTrip.AI
         public float threatPriorityBias = 1f;
         public bool holdPositionWhenNoTarget;
 
+        [Header("Behavior Tuning")]
+        public float objectivePressureWeight = 8f;
+        public float protectedTargetPressureWeight = 10f;
+        public float neutralTargetPressureWeight = 4f;
+        public float hostileUnitWeight = 2f;
+        public float homeDistancePenalty = 0f;
+        public float retreatDistance = 4f;
+        public float retreatTriggerRadius = 5f;
+        public float guardLeashRadius = 0f;
+        public float guardReturnSpeedMultiplier = 1.25f;
+        public float hardlinerEscalationBias = 0f;
+        public float negotiatorThreatAvoidanceBias = 0f;
+        public float maxEngageDuration = 0f;
+        public float decisionRefreshInterval = 0f;
+
         [TextArea(2, 5)] public string debugDescription;
 
         public string DisplayLabel => string.IsNullOrEmpty(displayName) ? profileType.ToString() : displayName;
@@ -47,6 +62,9 @@ namespace LuoLuoTrip.AI
         public float EffectiveDefendRadius(float fallback) => defendRadius > 0f ? defendRadius : fallback;
         public float EffectiveAttackRange(float fallback) => Mathf.Max(0.1f, fallback * Mathf.Max(0.1f, attackRadiusMultiplier));
         public float EffectiveMaxChaseDistance => Mathf.Max(0f, maxChaseDistanceFromHome);
+        public float EffectiveDecisionRefreshInterval(float fallback) => decisionRefreshInterval > 0f ? decisionRefreshInterval : fallback;
+        public float EffectiveGuardLeashRadius(float fallback) => guardLeashRadius > 0f ? guardLeashRadius : fallback;
+        public float EffectiveRetreatDistance(float fallback) => retreatDistance > 0f ? retreatDistance : fallback;
 
         public bool Validate(out string error)
         {
@@ -83,6 +101,32 @@ namespace LuoLuoTrip.AI
             if (retreatHealthRatio < 0f || retreatHealthRatio > 1f)
             {
                 error = "retreatHealthRatio must be between 0 and 1";
+                return false;
+            }
+
+            if (objectivePressureWeight < 0f || protectedTargetPressureWeight < 0f ||
+                neutralTargetPressureWeight < 0f || hostileUnitWeight < 0f)
+            {
+                error = "target pressure weights must be >= 0";
+                return false;
+            }
+
+            if (homeDistancePenalty < 0f || retreatDistance < 0f || retreatTriggerRadius < 0f || guardLeashRadius < 0f)
+            {
+                error = "distance tuning fields must be >= 0";
+                return false;
+            }
+
+            if (guardReturnSpeedMultiplier <= 0f)
+            {
+                error = "guardReturnSpeedMultiplier must be > 0";
+                return false;
+            }
+
+            if (hardlinerEscalationBias < 0f || negotiatorThreatAvoidanceBias < 0f ||
+                maxEngageDuration < 0f || decisionRefreshInterval < 0f)
+            {
+                error = "bias and timing fields must be >= 0";
                 return false;
             }
 
@@ -125,6 +169,19 @@ namespace LuoLuoTrip.AI
             profile.respectsMissionBoundaries = true;
             profile.threatPriorityBias = 1f;
             profile.holdPositionWhenNoTarget = false;
+            profile.objectivePressureWeight = 8f;
+            profile.protectedTargetPressureWeight = 10f;
+            profile.neutralTargetPressureWeight = 4f;
+            profile.hostileUnitWeight = 2f;
+            profile.homeDistancePenalty = 0f;
+            profile.retreatDistance = 4f;
+            profile.retreatTriggerRadius = 5f;
+            profile.guardLeashRadius = 0f;
+            profile.guardReturnSpeedMultiplier = 1.25f;
+            profile.hardlinerEscalationBias = 0f;
+            profile.negotiatorThreatAvoidanceBias = 0f;
+            profile.maxEngageDuration = 0f;
+            profile.decisionRefreshInterval = 0f;
 
             switch (type)
             {
@@ -137,6 +194,12 @@ namespace LuoLuoTrip.AI
                     profile.respondsToDefendObjective = false;
                     profile.respondsToFocusFire = false;
                     profile.threatPriorityBias = 1.35f;
+                    profile.objectivePressureWeight = 14f;
+                    profile.protectedTargetPressureWeight = 13f;
+                    profile.hostileUnitWeight = 2f;
+                    profile.homeDistancePenalty = 0.15f;
+                    profile.maxEngageDuration = 12f;
+                    profile.decisionRefreshInterval = 0.45f;
                     profile.debugDescription = "Aggressive raider that pressures objectives and protected targets.";
                     break;
                 case AIBehaviorProfileType.DefensiveGuard:
@@ -146,6 +209,11 @@ namespace LuoLuoTrip.AI
                     profile.holdPositionWhenNoTarget = true;
                     profile.respondsToDefendObjective = true;
                     profile.threatPriorityBias = 1.15f;
+                    profile.hostileUnitWeight = 5f;
+                    profile.homeDistancePenalty = 0.35f;
+                    profile.guardLeashRadius = 8f;
+                    profile.guardReturnSpeedMultiplier = 1.4f;
+                    profile.decisionRefreshInterval = 0.6f;
                     profile.debugDescription = "Defensive guard that holds near protected points and avoids over-chasing.";
                     break;
                 case AIBehaviorProfileType.Negotiator:
@@ -160,6 +228,10 @@ namespace LuoLuoTrip.AI
                     profile.respondsToDefendObjective = false;
                     profile.respondsToFocusFire = false;
                     profile.holdPositionWhenNoTarget = true;
+                    profile.retreatDistance = 6f;
+                    profile.retreatTriggerRadius = 7f;
+                    profile.negotiatorThreatAvoidanceBias = 1.5f;
+                    profile.decisionRefreshInterval = 0.4f;
                     profile.debugDescription = "Non-combatant negotiator that should be protected and retreats under threat.";
                     break;
                 case AIBehaviorProfileType.Hardliner:
@@ -170,6 +242,12 @@ namespace LuoLuoTrip.AI
                     profile.canAttackNeutral = true;
                     profile.respondsToDefendObjective = false;
                     profile.threatPriorityBias = 1.25f;
+                    profile.protectedTargetPressureWeight = 12f;
+                    profile.neutralTargetPressureWeight = 8f;
+                    profile.hardlinerEscalationBias = 4f;
+                    profile.homeDistancePenalty = 0.2f;
+                    profile.maxEngageDuration = 10f;
+                    profile.decisionRefreshInterval = 0.55f;
                     profile.debugDescription = "Escalation-risk hardliner that can pressure protected or neutral targets.";
                     break;
                 case AIBehaviorProfileType.CommanderUnit:
@@ -180,6 +258,11 @@ namespace LuoLuoTrip.AI
                     profile.respondsToDefendObjective = true;
                     profile.respondsToFocusFire = true;
                     profile.threatPriorityBias = 1.2f;
+                    profile.hostileUnitWeight = 4f;
+                    profile.homeDistancePenalty = 0.2f;
+                    profile.guardLeashRadius = 9f;
+                    profile.maxEngageDuration = 14f;
+                    profile.decisionRefreshInterval = 0.55f;
                     profile.debugDescription = "High-rank commander unit that can receive tactical commands but keeps DirectControl rules.";
                     break;
                 case AIBehaviorProfileType.NeutralCivilian:
@@ -195,6 +278,9 @@ namespace LuoLuoTrip.AI
                     profile.respondsToDefendObjective = false;
                     profile.respondsToFocusFire = false;
                     profile.holdPositionWhenNoTarget = true;
+                    profile.retreatDistance = 5f;
+                    profile.retreatTriggerRadius = 6f;
+                    profile.negotiatorThreatAvoidanceBias = 1f;
                     profile.debugDescription = "Neutral civilian fallback for later non-combatant units.";
                     break;
             }

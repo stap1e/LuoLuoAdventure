@@ -1,0 +1,108 @@
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+[Rr]ecordings/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+sysinfo.txt
+*.apk
+*.aab
+*.unitypackage
+*.app
+crashlytics-build.properties
+/[Aa]ssets/AssetStoreTools*
+/[Aa]ssets/Plugins/Editor/JetBrains*
+.vs/
+
+# Non-project files (skills, submodules, tools)
+.gitmodules
+ppt-image-first/
+readpaper-skill/
+
+# Generated Unity assets (use LuoLuoTrip/Setup menu to regenerate)
+[Aa]ssets/Data/
+[Aa]ssets/Resources/
+[Aa]ssets/Art/Placeholders/
+
+# Unity authored gameplay data should be versioned.
+# Keep the broad generated-data ignores above, then allowlist required
+# ScriptableObject assets and their metadata for stable fresh clones.
+![Aa]ssets/Data/
+[Aa]ssets/Data/*
+![Aa]ssets/Data/Missions/
+![Aa]ssets/Data/Missions.meta
+[Aa]ssets/Data/Missions/*
+![Aa]ssets/Data/Missions/*.asset
+![Aa]ssets/Data/Missions/*.asset.meta
+![Aa]ssets/Data/AIProfiles/
+![Aa]ssets/Data/AIProfiles.meta
+[Aa]ssets/Data/AIProfiles/*
+![Aa]ssets/Data/AIProfiles/*.asset
+![Aa]ssets/Data/AIProfiles/*.asset.meta
+![Aa]ssets/Data/Combat/
+![Aa]ssets/Data/Combat.meta
+[Aa]ssets/Data/Combat/*
+![Aa]ssets/Data/Combat/CombatTuningConfig.asset
+![Aa]ssets/Data/Combat/CombatTuningConfig.asset.meta
+
+# Runtime-loadable authored resources should be versioned when code uses
+# Resources.Load for them.
+![Aa]ssets/Resources/
+[Aa]ssets/Resources/*
+![Aa]ssets/Resources/AIProfiles/
+![Aa]ssets/Resources/AIProfiles.meta
+[Aa]ssets/Resources/AIProfiles/*
+![Aa]ssets/Resources/AIProfiles/*.asset
+![Aa]ssets/Resources/AIProfiles/*.asset.meta
+![Aa]ssets/Resources/CombatTuningConfig.asset
+![Aa]ssets/Resources/CombatTuningConfig.asset.meta
+![Aa]ssets/Resources/AudioFeedbackProfile.asset
+![Aa]ssets/Resources/AudioFeedbackProfile.asset.meta
+![Aa]ssets/Resources/WorldMarkerProfile.asset
+![Aa]ssets/Resources/WorldMarkerProfile.asset.meta
+![Aa]ssets/Resources/SubFactionDatabase.asset
+![Aa]ssets/Resources/SubFactionDatabase.asset.meta
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Project documentation (generated/updated by tooling)
+IMPLEMENTATION_SUMMARY.md
+UNITY_VERSION_COMPATIBILITY_REPORT.md
+CompatibilityCheck_Report.txt
+TestResults_*.xml
+
+# Test runner output (batchmode XML + Editor logs)
+TestResults/
+
+# Packages (auto-resolved)
+[Pp]ackages/*/
+![Pp]ackages/manifest.json
+![Pp]ackages/packages-lock.json

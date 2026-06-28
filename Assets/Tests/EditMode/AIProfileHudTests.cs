@@ -67,6 +67,35 @@ namespace LuoLuoTrip.Tests.EditMode
             }
         }
 
+        [Test]
+        public void ProfileBehaviorAndSuggestionText_AreReadable()
+        {
+            foreach (AIBehaviorProfileType type in System.Enum.GetValues(typeof(AIBehaviorProfileType)))
+            {
+                var go = new GameObject(type.ToString());
+                var profile = ScriptableObject.CreateInstance<AIBehaviorProfileSO>();
+                try
+                {
+                    AIBehaviorProfileSO.ConfigureDefaults(profile, type);
+                    var entity = go.AddComponent<CharacterEntity>();
+                    entity.Bind(CharacterData.Create(type.ToString(), type.ToString(), SubFactionId.MotorIronRiders, CharacterRole.Minion));
+                    var ai = go.AddComponent<SimpleCombatAI>();
+                    ai.BehaviorProfile = profile;
+                    InvokeAwake(ai);
+
+                    Assert.That(CommanderActionPresenter.BuildProfileSummary(ai), Does.Contain(profile.DisplayLabel));
+                    Assert.That(CommanderActionPresenter.BuildBehaviorSummary(ai), Does.Contain("Behavior"));
+                    Assert.That(CommanderActionPresenter.BuildResponseSummary(ai), Does.Contain("Responds"));
+                    Assert.That(CommanderActionPresenter.BuildProfileSuggestion(ai), Is.Not.Empty);
+                }
+                finally
+                {
+                    Object.DestroyImmediate(profile);
+                    Object.DestroyImmediate(go);
+                }
+            }
+        }
+
         private static void InvokeAwake(MonoBehaviour behaviour)
         {
             behaviour.GetType().GetMethod("Awake", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)?.Invoke(behaviour, null);

@@ -32,5 +32,18 @@ MonoBehaviour:
   respectsMissionBoundaries: 1
   threatPriorityBias: 1.25
   holdPositionWhenNoTarget: 0
+  objectivePressureWeight: 8
+  protectedTargetPressureWeight: 12
+  neutralTargetPressureWeight: 8
+  hostileUnitWeight: 2
+  homeDistancePenalty: 0.2
+  retreatDistance: 4
+  retreatTriggerRadius: 5
+  guardLeashRadius: 0
+  guardReturnSpeedMultiplier: 1.25
+  hardlinerEscalationBias: 4
+  negotiatorThreatAvoidanceBias: 0
+  maxEngageDuration: 10
+  decisionRefreshInterval: 0.55
   debugDescription: Escalation-risk hardliner that can pressure protected or neutral
     targets.

@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3318a5b914b2a0945a1e15727d6bbc16, type: 3}
+  m_Name: SubFactionDatabase
+  m_EditorClassIdentifier: 
+  _configs:
+  - {fileID: 11400000, guid: 51acd1d32ecd06e4eadd03a51979d27f, type: 2}
+  - {fileID: 11400000, guid: 085ee6f072175734cba9ac3570aca925, type: 2}
+  - {fileID: 11400000, guid: ec5b047d7e484134c8d3ca17c0b3e116, type: 2}
+  - {fileID: 11400000, guid: e7888c3ee753a5844bdde52704ea0123, type: 2}
+  - {fileID: 11400000, guid: ed240df4a8af58b4ca9d0b1c90fa111f, type: 2}
+  - {fileID: 11400000, guid: f56255dc22890684782f4eb7d3d86ae5, type: 2}
+  - {fileID: 11400000, guid: 5b6ef1ee863a7354ba135e5542f0cbda, type: 2}
+  - {fileID: 11400000, guid: 1d6cbefcfa27b5e4ebe0c1bd007cd14a, type: 2}
+  - {fileID: 11400000, guid: c33b8ea8f7632f7419ba1126f42ecadd, type: 2}

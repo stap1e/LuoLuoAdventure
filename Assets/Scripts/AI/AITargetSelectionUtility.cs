@@ -49,43 +49,49 @@ namespace LuoLuoTrip.AI
             var score = distanceScore + healthScore;
             var reason = "Hostile target";
 
-            if (isHostile && (profile == null || profile.prefersEnemyUnits))
-                score += 2f;
-
-            if (profile != null)
+            if (profile == null)
             {
-                score *= Mathf.Max(0.1f, profile.threatPriorityBias);
-
-                if (profile.prefersObjectiveTargets && isObjectiveTarget)
-                {
-                    score += 8f;
-                    reason = "Objective target";
-                }
-
-                if (profile.prefersProtectedTargets && (isProtectedTarget || protectedTarget != null && candidate.transform == protectedTarget))
-                {
-                    score += 10f;
-                    reason = "Protected target";
-                }
-
-                if (profile.profileType == AIBehaviorProfileType.Hardliner && IsNegotiatorLike(candidate))
-                {
-                    score += 7f;
-                    reason = "Negotiator target";
-                }
-
-                if (profile.canAttackNeutral && isNeutralTarget)
-                {
-                    score += 4f;
-                    reason = "Escalation target";
-                }
-
-                if (profile.profileType == AIBehaviorProfileType.DefensiveGuard && isHostile)
-                {
-                    score += 3f;
-                    reason = "Defensive threat";
-                }
+                if (isHostile) score += 2f;
+                return AITargetScore.Valid(candidate, score, reason);
             }
+
+            score *= Mathf.Max(0.1f, profile.threatPriorityBias);
+
+            if (isHostile && profile.prefersEnemyUnits)
+                score += profile.hostileUnitWeight;
+
+            if (profile.prefersObjectiveTargets && isObjectiveTarget)
+            {
+                score += profile.objectivePressureWeight;
+                reason = "Pressuring Objective";
+            }
+
+            if (profile.prefersProtectedTargets && (isProtectedTarget || protectedTarget != null && candidate.transform == protectedTarget))
+            {
+                score += profile.protectedTargetPressureWeight;
+                reason = "Protected target pressure";
+            }
+
+            if (profile.profileType == AIBehaviorProfileType.Hardliner && IsNegotiatorLike(candidate))
+            {
+                score += 7f + profile.hardlinerEscalationBias;
+                reason = "Escalation Risk";
+            }
+
+            if (profile.canAttackNeutral && isNeutralTarget)
+            {
+                score += profile.neutralTargetPressureWeight + profile.hardlinerEscalationBias;
+                reason = "Escalation target";
+            }
+
+            if (profile.profileType == AIBehaviorProfileType.DefensiveGuard && isHostile)
+            {
+                score += profile.hostileUnitWeight;
+                reason = "Defending";
+            }
+
+            if (profile.homeDistancePenalty > 0f)
+                score -= distance * profile.homeDistancePenalty;
 
             return AITargetScore.Valid(candidate, score, reason);
         }

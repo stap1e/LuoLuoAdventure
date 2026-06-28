@@ -66,6 +66,16 @@ CityGateDispute uses `AIBehaviorProfileSO` to make the existing units behave dif
 
 Profiles only affect AI target choice, chase/defend tendencies, and HUD/debug readability. CityGate outcomes still depend on CityGateCore, BeastNegotiator, raider defeat, casualties, and timer conditions.
 
+The AI behavior tuning pass makes these roles validator-readable through `AIBehaviorScenarioMonitor` and HUD profile summaries. Expected demo reads are:
+
+- Raider: `Pressuring Objective` / protected-target pressure.
+- Guard: `Holding` or `Defending` near CityGateCore with a guard leash.
+- Negotiator: `Non-combatant` / `Retreating` when threatened.
+- Hardliner: `Escalation Risk` around protected/negotiator-like targets.
+- CommanderUnit: `Tactical only`, with DirectControl still denied by permission/rank rules.
+
+See `Assets/Docs/AI_BEHAVIOR_TUNING_GUIDE.md` for field-level tuning guidance.
+
 ## Commander Control Restrictions
 
 | Unit Type | Rank | DirectControl | TacticalCommand | SyncAssist | DefendObjective / FocusFire |

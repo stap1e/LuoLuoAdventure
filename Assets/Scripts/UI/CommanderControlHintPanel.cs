@@ -64,9 +64,16 @@ namespace LuoLuoTrip.UI
                 hints.Add($"Target: {_runtimeState.LastSelectedTargetName} Rank {_runtimeState.LastSelectedTargetRank} Trust {_runtimeState.LastSelectedTargetTrust}");
                 var ai = _runtimeState.SelectedTarget.GetComponent<Combat.SimpleCombatAI>();
                 if (ai != null)
-                    hints.Add($"AI: {ai.CurrentBehaviorLabel} | {ai.LastProfileDecision}");
+                {
+                    hints.Add(CommanderActionPresenter.BuildProfileSummary(ai));
+                    hints.Add(CommanderActionPresenter.BuildBehaviorSummary(ai));
+                    hints.Add(CommanderActionPresenter.BuildResponseSummary(ai));
+                }
                 else
-                    hints.Add("AI: Default AI");
+                {
+                    hints.Add("AI Profile: Default AI");
+                    hints.Add("Behavior: Default AI");
+                }
                 var descriptors = CommanderActionPresenter.BuildDescriptors(_runtimeState, _lastResult);
                 hints.Add(string.Join(" | ", descriptors.ConvertAll(CommanderActionPresenter.BuildStatusLine)));
                 hints.Add("[G] DefendObjective | [F] FocusFire");
@@ -87,6 +94,8 @@ namespace LuoLuoTrip.UI
                 }
                 if (!string.IsNullOrEmpty(_runtimeState.LastSuggestion))
                     hints.Add($"Suggestion: {_runtimeState.LastSuggestion}");
+                else if (ai != null)
+                    hints.Add($"Suggestion: {CommanderActionPresenter.BuildProfileSuggestion(ai)}");
                 if (!string.IsNullOrEmpty(_runtimeState.LastInputRoute))
                     hints.Add($"LastInputRoute: {_runtimeState.LastInputRoute}");
                 hints.Add("[Tab] Switch target");

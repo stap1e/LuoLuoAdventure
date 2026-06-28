@@ -147,6 +147,18 @@ Expected pass criteria:
   - `CityGateCore` remains readable as protected target alive/dead,
   - `BeastNegotiator` remains readable as protected target alive/dead,
   - raider defeat progress is readable.
+
+### AI behavior tuning validation
+
+- Observe `BeastRaider` and confirm it pressures `CityGateCore` or a protected/non-combatant target instead of wandering aimlessly.
+- Observe `MechaGateGuard` and confirm it holds near `CityGateCore`; after `G DefendObjective`, it should defend the objective and avoid chasing beyond its leash.
+- Observe `BeastNegotiator` and confirm it does not initiate combat; when a hostile approaches, it should show retreat/non-combatant behavior.
+- Observe `MechaHardliner` and confirm it moves toward or threatens `BeastNegotiator` / protected targets as an escalation risk without instantly killing the negotiator.
+- Select Raider / Guard / Negotiator / Hardliner / CommanderUnit examples and confirm HUD text includes profile label, behavior, command response flags, and a short suggestion.
+- Press `F` on a Raider and confirm eligible allied responders focus fire while Negotiator does not become a responder.
+- Press `G` on `CityGateCore` and confirm eligible guard/ally behavior changes to defend/hold near the objective.
+- Press `F5`, then `F9`, and confirm profile assignments remain readable and CityGate waves are not duplicated.
+
 - Press `F7` to trigger the CityGate BalancedMediation debug outcome.
 - Expected:
   - readable result summary appears,

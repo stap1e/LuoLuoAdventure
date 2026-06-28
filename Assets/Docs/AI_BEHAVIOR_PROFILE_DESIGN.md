@@ -24,6 +24,18 @@ The profile is additive:
 | `CommanderUnit` | CityLord / WarKing / MechaCaptain / BeastElite | Responds to TacticalCommand / DefendObjective / FocusFire, but DirectControl denial remains governed by commander permission rules. |
 | `NeutralCivilian` | Future non-combatants | Cannot initiate combat or attack neutral units; can retreat. |
 
+## Behavior tuning fields
+
+The tuning pass adds low-risk numeric fields to make profile differences more visible while keeping null-profile/default AI behavior safe:
+
+- `objectivePressureWeight`, `protectedTargetPressureWeight`, `neutralTargetPressureWeight`, and `hostileUnitWeight` tune target scoring in `AITargetSelectionUtility`.
+- `homeDistancePenalty`, `guardLeashRadius`, `guardReturnSpeedMultiplier`, and `maxEngageDuration` keep guards/raiders from chasing indefinitely.
+- `retreatDistance` and `retreatTriggerRadius` let Negotiator/Civilian profiles avoid nearby hostile threats without becoming combatants.
+- `hardlinerEscalationBias` and `negotiatorThreatAvoidanceBias` expose scenario-specific risk/avoidance tuning without adding a behavior tree.
+- `decisionRefreshInterval` lets profile decisions update at different readable cadences.
+
+`Validate(out error)` covers these ranges, and setup menu generation remains conservative: existing numeric/boolean tuning is not reset by `Create AI Behavior Profiles`.
+
 ## CityGateDispute assignment
 
 - `BeastRaider_01` and CityGate BeastRaider waves use `AggressiveRaider`.

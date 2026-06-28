@@ -62,6 +62,8 @@ namespace LuoLuoTrip.Combat
         private AICombatNavigationController _navController;
         private Vector3 _homePosition;
         private bool _profileDecisionLogged;
+        private Combatant _lastEngageTarget;
+        private float _engageTimer;
 
         public Func<Combatant[]> CombatantQuery { get; set; }
         public Combatant CurrentTarget => _target;
@@ -107,6 +109,19 @@ namespace LuoLuoTrip.Combat
         public bool RespondsToFocusFire => behaviorProfile == null || behaviorProfile.respondsToFocusFire;
         public bool CanInitiateCombat => behaviorProfile == null || behaviorProfile.canInitiateCombat;
         public bool IsWindingUp => _isWindingUp;
+        public bool IsRetreating { get; private set; }
+        public bool IsDefending => DefendTarget != null || DefendPosition.HasValue;
+        public bool IsPursuingObjective { get; private set; }
+        public float DistanceFromHome
+        {
+            get
+            {
+                var origin = homePositionSource != null ? homePositionSource.position : _homePosition;
+                var offset = transform.position - origin;
+                offset.y = 0f;
+                return offset.magnitude;
+            }
+        }
         public AICombatNavigationController NavController => _navController;
         public float StopDistance => EffectiveStopDistance;
         public float EffectiveStopDistance
@@ -150,7 +165,8 @@ namespace LuoLuoTrip.Combat
             DefendTarget = target;
             DefendPosition = target != null ? target.position : (Vector3?)null;
             DefendRadius = Mathf.Max(1f, behaviorProfile != null ? behaviorProfile.EffectiveDefendRadius(radius) : radius);
-            DefendLeashRadius = DefendRadius + Mathf.Max(EffectiveStopDistance, 2f);
+            var fallbackLeash = DefendRadius + Mathf.Max(EffectiveStopDistance, 2f);
+            DefendLeashRadius = behaviorProfile != null ? behaviorProfile.EffectiveGuardLeashRadius(fallbackLeash) : fallbackLeash;
             FollowTarget = null;
             HoldPosition = null;
             CommanderCommandStatus = target != null ? $"Defending {target.name}" : "Defend objective missing";
@@ -192,6 +208,10 @@ namespace LuoLuoTrip.Combat
             CommanderCommandStatus = null;
             if (_navController != null)
                 _navController.ClearNavigation();
+            IsRetreating = false;
+            IsPursuingObjective = false;
+            _lastEngageTarget = null;
+            _engageTimer = 0f;
         }
 
         private void Awake()
@@ -241,6 +261,7 @@ namespace LuoLuoTrip.Combat
             if (!_self.IsAlive) return;
 
             _navController.Tick(Time.deltaTime);
+            IsRetreating = false;
 
             if (FollowTarget != null)
             {
@@ -273,13 +294,27 @@ namespace LuoLuoTrip.Combat
             {
                 ForcedAttackTarget = null;
                 if (!CanInitiateCombat)
+                {
                     ExecuteNonCombatantBehavior();
+                    return;
+                }
                 RefreshTargetIfNeeded();
             }
 
             if (_target == null)
             {
+                ResetEngageTimer();
                 IdlePatrol();
+                return;
+            }
+
+            TrackEngageTimer(_target);
+            if (IsOverMaxEngageDuration())
+            {
+                SetProfileDecision("Returning home: engage window expired");
+                _target = null;
+                ResetEngageTimer();
+                _navController.MoveToPosition(_homePosition);
                 return;
             }
 
@@ -287,6 +322,7 @@ namespace LuoLuoTrip.Combat
             {
                 SetProfileDecision("Returning home: chase limit reached");
                 _target = null;
+                ResetEngageTimer();
                 _navController.MoveToPosition(_homePosition);
                 return;
             }
@@ -295,6 +331,7 @@ namespace LuoLuoTrip.Combat
             if (distance > _detectRange * _disengageDistanceMultiplier)
             {
                 _target = null;
+                ResetEngageTimer();
                 _navController.ClearNavigation();
                 return;
             }
@@ -364,13 +401,15 @@ namespace LuoLuoTrip.Combat
                 if (IsBeyondProfileChaseLimit(_target.transform.position) || !IsInsideDefendLeash(_target.transform.position))
                 {
                     _target = null;
-                    _navController.MoveToPosition(anchor);
+                    MoveToPosition(anchor, behaviorProfile != null ? behaviorProfile.guardReturnSpeedMultiplier : 1f);
                     CommanderCommandStatus = "Returning to defend objective";
+                    SetProfileDecision("Defending: returning to objective");
                     return;
                 }
 
                 var distance = Vector3.Distance(transform.position, _target.transform.position);
                 CommanderCommandStatus = "Engaging threat";
+                SetProfileDecision("Defending");
                 ExecuteIntent(ChooseIntent(distance), distance);
                 return;
             }
@@ -378,11 +417,13 @@ namespace LuoLuoTrip.Combat
             if (anchorOffset.magnitude > Mathf.Max(1f, EffectiveDefendRadius * 0.5f))
             {
                 CommanderCommandStatus = "Moving to defend objective";
-                _navController.MoveToPosition(anchor);
+                SetProfileDecision("Defending");
+                MoveToPosition(anchor, behaviorProfile != null ? behaviorProfile.guardReturnSpeedMultiplier : 1f);
             }
             else
             {
                 CommanderCommandStatus = "Holding defend objective";
+                SetProfileDecision("Holding");
                 _navController.StopNavigation();
             }
         }
@@ -432,7 +473,7 @@ namespace LuoLuoTrip.Combat
             if (_target != null && _target.IsAlive && _targetRefreshTimer > 0f) return;
 
             _target = SelectBestHostileTarget();
-            _targetRefreshTimer = _targetRefreshInterval;
+            _targetRefreshTimer = behaviorProfile != null ? behaviorProfile.EffectiveDecisionRefreshInterval(_targetRefreshInterval) : _targetRefreshInterval;
         }
 
         private void IdlePatrol()
@@ -468,11 +509,13 @@ namespace LuoLuoTrip.Combat
             {
                 case CombatIntent.Chase:
                     FaceTarget();
+                    SetProfileDecision(IsPursuingObjectiveTarget(_target) ? "Pressuring Objective" : "Chasing target");
                     _navController.ChaseTarget(_target.transform, EffectiveStopDistance);
                     break;
                 case CombatIntent.Attack:
                     _navController.StopNavigation();
                     FaceTarget();
+                    SetProfileDecision(behaviorProfile != null && behaviorProfile.profileType == AIBehaviorProfileType.Hardliner ? "Escalation Risk" : "Attacking");
                     TryAttack();
                     break;
                 case CombatIntent.Reposition:
@@ -639,6 +682,7 @@ namespace LuoLuoTrip.Combat
 
             if (score.IsValid)
             {
+                IsPursuingObjective = score.Reason == "Pressuring Objective" || score.Reason == "Protected target pressure";
                 SetProfileDecision(score.Reason);
                 return baseScore + score.Score;
             }
@@ -680,12 +724,17 @@ namespace LuoLuoTrip.Combat
         {
             if (behaviorProfile == null) return;
 
-            if (behaviorProfile.canRetreat && _self != null && _self.CurrentHealth <= _self.Stats.maxHealth * behaviorProfile.retreatHealthRatio)
+            var nearbyThreat = FindNearestThreat(behaviorProfile.retreatTriggerRadius);
+            var lowHealth = _self != null && _self.CurrentHealth <= _self.Stats.maxHealth * behaviorProfile.retreatHealthRatio;
+            if (behaviorProfile.canRetreat && (lowHealth || nearbyThreat != null))
             {
-                var retreatDirection = transform.position - (protectedTarget != null ? protectedTarget.position : _homePosition);
+                var threatPosition = nearbyThreat != null ? nearbyThreat.transform.position : (protectedTarget != null ? protectedTarget.position : _homePosition);
+                var retreatDirection = transform.position - threatPosition;
                 retreatDirection.y = 0f;
                 if (retreatDirection.sqrMagnitude <= 0.01f) retreatDirection = -transform.forward;
-                _navController.MoveToPosition(transform.position + retreatDirection.normalized * Mathf.Max(2f, EffectiveStopDistance));
+                var distance = behaviorProfile.EffectiveRetreatDistance(Mathf.Max(2f, EffectiveStopDistance));
+                _navController.MoveToPosition(transform.position + retreatDirection.normalized * distance);
+                IsRetreating = true;
                 SetProfileDecision("Retreating");
             }
             else if (behaviorProfile.holdPositionWhenNoTarget)
@@ -693,6 +742,81 @@ namespace LuoLuoTrip.Combat
                 _navController.StopNavigation();
                 SetProfileDecision("Holding");
             }
+        }
+
+        public void ForceRefreshTargetForTests()
+        {
+            EnsureReferences();
+            _target = SelectBestHostileTarget();
+            _targetRefreshTimer = behaviorProfile != null ? behaviorProfile.EffectiveDecisionRefreshInterval(_targetRefreshInterval) : _targetRefreshInterval;
+        }
+
+        public void TickNonCombatantBehaviorForTests()
+        {
+            EnsureReferences();
+            ExecuteNonCombatantBehavior();
+        }
+
+        private void MoveToPosition(Vector3 position, float speedMultiplier)
+        {
+            if (Mathf.Approximately(speedMultiplier, 1f) || speedMultiplier <= 0f)
+            {
+                _navController.MoveToPosition(position);
+                return;
+            }
+
+            var direction = position - transform.position;
+            direction.y = 0f;
+            if (direction.magnitude > 0.1f)
+                MoveTowards(direction.normalized, _chaseSpeed * speedMultiplier);
+            else
+                _navController.StopNavigation();
+        }
+
+        private void TrackEngageTimer(Combatant target)
+        {
+            if (target == null || target != _lastEngageTarget)
+            {
+                _lastEngageTarget = target;
+                _engageTimer = 0f;
+                return;
+            }
+
+            _engageTimer += Time.deltaTime;
+        }
+
+        private bool IsOverMaxEngageDuration()
+        {
+            return behaviorProfile != null && behaviorProfile.maxEngageDuration > 0f && _engageTimer > behaviorProfile.maxEngageDuration;
+        }
+
+        private void ResetEngageTimer()
+        {
+            _lastEngageTarget = null;
+            _engageTimer = 0f;
+            IsPursuingObjective = false;
+        }
+
+        private bool IsPursuingObjectiveTarget(Combatant target)
+        {
+            return target != null && (AITargetSelectionUtility.IsObjectiveLike(target) || IsProtectedTarget(target));
+        }
+
+        private Combatant FindNearestThreat(float radius)
+        {
+            if (radius <= 0f || CombatantQuery == null || _entity == null) return null;
+            Combatant best = null;
+            var bestDistance = float.MaxValue;
+            foreach (var other in CombatantQuery())
+            {
+                if (other == null || other == _self || !other.IsAlive || other.CharacterEntity == null) continue;
+                if (!_entity.IsHostileTo(other.CharacterEntity) && !other.CharacterEntity.IsHostileTo(_entity)) continue;
+                var distance = Vector3.Distance(transform.position, other.transform.position);
+                if (distance > radius || distance >= bestDistance) continue;
+                best = other;
+                bestDistance = distance;
+            }
+            return best;
         }
 
         private void RefreshBehaviorDiagnostics(string decision)
