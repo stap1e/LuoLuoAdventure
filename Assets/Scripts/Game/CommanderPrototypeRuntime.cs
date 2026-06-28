@@ -13,6 +13,7 @@ namespace LuoLuoTrip
         [SerializeField] private CommanderControlHintPanel _hintPanel;
         [SerializeField] private FactionDeltaToastPanel _toastPanel;
         [SerializeField] private MissionChainSummaryPanel _chainSummaryPanel;
+        [SerializeField] private MissionOutcomePreviewHud _outcomePreviewHud;
         [SerializeField] private TutorialFlowRuntime _tutorial;
 
         private MissionService _missionService;
@@ -35,6 +36,17 @@ namespace LuoLuoTrip
 
             if (_chainSummaryPanel != null)
                 _chainSummaryPanel.SetProfile(context.CommanderProfile);
+
+            if (_outcomePreviewHud == null)
+                _outcomePreviewHud = FindObjectOfType<MissionOutcomePreviewHud>();
+            if (_outcomePreviewHud == null)
+                _outcomePreviewHud = gameObject.AddComponent<MissionOutcomePreviewHud>();
+
+            if (_outcomePreviewHud != null)
+            {
+                _outcomePreviewHud.SetPreviewService(new MissionOutcomePreviewService());
+                _outcomePreviewHud.SetContext(context);
+            }
 
             _missionService = context.MissionService;
             _chainService = context.MissionChainService;

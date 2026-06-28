@@ -65,6 +65,7 @@ namespace LuoLuoTrip.Tests.EditMode
                 DebugUILayout.ControlHint,
                 DebugUILayout.MissionObjective,
                 DebugUILayout.MissionResultSummary,
+                DebugUILayout.MissionOutcomePreview,
                 DebugUILayout.MissionChainSummary,
                 DebugUILayout.FactionStanding,
                 DebugUILayout.FactionDeltaToast,

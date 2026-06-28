@@ -66,6 +66,7 @@ namespace LuoLuoTrip.Editor
             CheckDemoFlow(report, ref errors, ref warnings);
             CheckPlayableDemoReadability(report, ref errors, ref warnings);
             CheckHudLayout(report, ref errors, ref warnings);
+            CheckMissionOutcomePreview(report, ref errors, ref warnings);
             CheckMissionMarkerCoverage(report, ref errors, ref warnings);
             CheckMissionAuthoring(report, ref errors, ref warnings);
             CheckCommanderActionReadability(report, ref errors, ref warnings);
@@ -1908,7 +1909,8 @@ namespace LuoLuoTrip.Editor
                 { "MissionObjective", DebugUILayout.GetMissionObjectiveRect(1280, 720) },
                 { "ControlHint", DebugUILayout.GetControlHintRect(1280, 720) },
                 { "CommanderHud", DebugUILayout.GetCommanderHudRect(1280, 720) },
-                { "MissionResultSummary", DebugUILayout.GetMissionResultSummaryRect(1280, 720) }
+                { "MissionResultSummary", DebugUILayout.GetMissionResultSummaryRect(1280, 720) },
+                { "MissionOutcomePreview", DebugUILayout.GetMissionOutcomePreviewRect(1280, 720) }
             };
 
             foreach (var panel in defaultPanels)
@@ -1936,7 +1938,8 @@ namespace LuoLuoTrip.Editor
                 DebugUILayout.GetDemoFlowRect(800, 600),
                 DebugUILayout.GetMissionObjectiveRect(800, 600),
                 DebugUILayout.GetControlHintRect(800, 600),
-                DebugUILayout.GetMissionResultSummaryRect(800, 600)
+                DebugUILayout.GetMissionResultSummaryRect(800, 600),
+                DebugUILayout.GetMissionOutcomePreviewRect(800, 600)
             };
             foreach (var rect in compactPanels)
             {
@@ -1944,6 +1947,93 @@ namespace LuoLuoTrip.Editor
                     continue;
                 report.Add($"  ERROR: compact rect unsafe ({rect})");
                 errors++;
+            }
+        }
+
+        private static void CheckMissionOutcomePreview(List<string> report, ref int errors, ref int warnings)
+        {
+            report.Add("");
+            report.Add("--- Mission Outcome Preview ---");
+
+            var requiredTypes = new[]
+            {
+                typeof(MissionOutcomePreviewService),
+                typeof(MissionOutcomePreview),
+                typeof(MissionOutcomeRisk),
+                typeof(MissionConsequencePreview),
+                typeof(MissionOutcomeTextLibrary),
+                typeof(MissionOutcomePreviewHud)
+            };
+            foreach (var type in requiredTypes)
+                report.Add($"  OK: {type.Name} type exists");
+
+            var service = new MissionOutcomePreviewService();
+            var cityGateCases = new Dictionary<MissionOutcomeType, MissionOutcomePreview>
+            {
+                { MissionOutcomeType.BalancedMediation, service.BuildCityGatePreview(true, true, true, 0, 0) },
+                { MissionOutcomeType.MechaSuppression, service.BuildCityGatePreview(true, false, true, 0, 0) },
+                { MissionOutcomeType.BeastNegotiation, service.BuildCityGatePreview(true, true, false, 0, 0) },
+                { MissionOutcomeType.FailedEscalation, service.BuildCityGatePreview(false, true, true, 0, 0) },
+                { MissionOutcomeType.PartialContainment, service.BuildCityGatePreview(true, true, true, 3, 4) }
+            };
+
+            foreach (var item in cityGateCases)
+            {
+                if (item.Value != null && item.Value.likelyOutcome == item.Key)
+                    report.Add($"  OK: CityGate preview supports {item.Key}");
+                else
+                {
+                    report.Add($"  ERROR: CityGate preview expected {item.Key} but got {item.Value?.likelyOutcome.ToString() ?? "null"}");
+                    errors++;
+                }
+            }
+
+            var convoy = service.BuildPreview(DemoFlowManager.ConvoyMissionId, null);
+            var border = service.BuildPreview(DemoFlowManager.BorderMissionId, null);
+            if (convoy != null && convoy.missionId == DemoFlowManager.ConvoyMissionId) report.Add("  OK: Convoy preview builds without context");
+            else { report.Add("  ERROR: Convoy preview missing"); errors++; }
+            if (border != null && border.missionId == DemoFlowManager.BorderMissionId) report.Add("  OK: Border preview builds without context");
+            else { report.Add("  ERROR: Border preview missing"); errors++; }
+
+            var chain = new MissionChainState();
+            chain.CompletedMissions.Add(new MissionHistoryEntry { MissionId = DemoFlowManager.ConvoyMissionId, Outcome = MissionOutcomeType.BalancedResolution });
+            var previousEffect = service.BuildPreviousOutcomeEffectText(DemoFlowManager.BorderMissionId, chain);
+            if (!string.IsNullOrEmpty(previousEffect) && previousEffect.Contains("Border hostility reduced"))
+                report.Add("  OK: previous outcome effect text available");
+            else { report.Add("  ERROR: previous outcome effect text missing"); errors++; }
+
+            foreach (MissionOutcomeType outcome in System.Enum.GetValues(typeof(MissionOutcomeType)))
+            {
+                var summary = MissionOutcomeTextLibrary.BuildOutcomeSummary(outcome);
+                if (!string.IsNullOrEmpty(summary) && summary != "No consequence data")
+                    continue;
+                report.Add($"  ERROR: outcome summary missing for {outcome}");
+                errors++;
+            }
+            report.Add("  OK: MissionOutcomeTextLibrary covers MissionOutcomeType values");
+
+            var previewRect = DebugUILayout.GetMissionOutcomePreviewRect(1280, 720);
+            if (previewRect.width > 0f && previewRect.height > 0f && !DebugUILayout.OverlapsHeavily(previewRect, DebugUILayout.GetMissionObjectiveRect(1280, 720)))
+                report.Add("  OK: preview HUD uses DebugUILayout and avoids MissionObjective overlap");
+            else { report.Add("  ERROR: preview HUD layout unsafe"); errors++; }
+
+            var serviceText = File.ReadAllText("Assets/Scripts/Mission/MissionOutcomePreviewService.cs");
+            if (!serviceText.Contains("RecordMissionResult") && !serviceText.Contains("AddExperience"))
+                report.Add("  OK: preview service has no obvious chain write or XP grant path");
+            else { report.Add("  ERROR: preview service appears to write chain state or grant XP"); errors++; }
+
+            var hudText = File.ReadAllText("Assets/Scripts/UI/MissionOutcomePreviewHud.cs");
+            if (hudText.Contains("DebugUILayout.MissionOutcomePreview"))
+                report.Add("  OK: MissionOutcomePreviewHud uses DebugUILayout");
+            else { report.Add("  ERROR: MissionOutcomePreviewHud does not use DebugUILayout"); errors++; }
+
+            var checklistPath = Path.Combine("Assets", "Docs", "MANUAL_DEMO_VALIDATION_CHECKLIST.md");
+            if (File.Exists(checklistPath) && File.ReadAllText(checklistPath).Contains("Mission Outcome Preview"))
+                report.Add("  OK: manual checklist includes outcome preview validation");
+            else
+            {
+                report.Add("  WARNING: manual checklist missing Mission Outcome Preview validation");
+                warnings++;
             }
         }
 

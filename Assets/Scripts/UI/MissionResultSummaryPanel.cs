@@ -19,36 +19,17 @@ namespace LuoLuoTrip.UI
 
         public static string DisplayMissionName(string missionName)
         {
-            return DemoFlowManager.DisplayMissionName(missionName);
+            return MissionOutcomeTextLibrary.DisplayMissionName(missionName);
         }
 
         public static string BuildOutcomeSummary(MissionOutcomeType outcome)
         {
-            return outcome switch
-            {
-                MissionOutcomeType.MechaVictory => "Mecha victory improves Motor trust but increases Beast retaliation pressure.",
-                MissionOutcomeType.BeastVictory => "Beast victory improves Beast trust but weakens Mecha support.",
-                MissionOutcomeType.BalancedResolution => "Balanced resolution lowers mainstream hostility while extremists remain.",
-                MissionOutcomeType.PartialSuccess => "Partial success contains the conflict with lingering trust loss.",
-                MissionOutcomeType.Failed => "Mission failed; faction confidence drops and hostility may rise.",
-                MissionOutcomeType.BalancedMediation => "Mainstream hostility reduced below 40; extremists remain.",
-                MissionOutcomeType.MechaSuppression => "Mecha order is restored, but Beast hostility rises sharply.",
-                MissionOutcomeType.BeastNegotiation => "Beast negotiation lowers Beast hostility while Mecha support softens.",
-                MissionOutcomeType.FailedEscalation => "City gate collapse escalates hostility on both sides.",
-                MissionOutcomeType.PartialContainment => "The dispute is contained, but casualties leave both sides wary.",
-                _ => "No consequence data"
-            };
+            return MissionOutcomeTextLibrary.BuildOutcomeSummary(outcome);
         }
 
         public static string BuildNextHint(string missionName)
         {
-            return missionName switch
-            {
-                DemoFlowManager.ConvoyMissionId => "Next: Border Retaliation",
-                DemoFlowManager.BorderMissionId => "Next: City Gate Dispute",
-                DemoFlowManager.CityGateMissionId => "Next: Review Border / City stability",
-                _ => "Next: Continue demo flow"
-            };
+            return MissionOutcomeTextLibrary.BuildNextHint(missionName);
         }
 
         public void ShowSummary(string missionName, MissionConsequence consequence,

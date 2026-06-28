@@ -3,7 +3,15 @@
 Date: 2026-06-17
 Unity: 2022.3.62f3 LTS
 
-## AI Behavior Tuning & Scenario Validation Pass — verified
+## Mission Outcome Preview & Consequence Visibility Pass — pending verification
+
+- Adds a non-mutating preview layer over the existing Convoy / Border / CityGate chain.
+- `MissionOutcomePreviewService` estimates likely outcomes, top risks, commander XP, faction deltas, and previous outcome effects without calling mission completion paths or writing `MissionChainState`.
+- `MissionOutcomePreviewHud` remains OnGUI/debug style and uses `DebugUILayout` instead of introducing Canvas UI.
+- `MissionOutcomeTextLibrary` is shared by preview and `MissionResultSummaryPanel` fallback summaries.
+- Full-suite status must be refreshed after EditMode and PlayMode verification; target remains 0 failed in both suites.
+
+
 
 - Builds on `AIBehaviorProfileSO` and the six authored profile assets with additional tuning fields for objective/protected pressure, guard leash, retreat triggers, escalation bias, max engage duration, and decision refresh cadence.
 - Adds `AIBehaviorScenarioMonitor` for CityGate manual validation and PlayMode-readable behavior summaries.

@@ -159,6 +159,18 @@ Expected pass criteria:
 - Press `G` on `CityGateCore` and confirm eligible guard/ally behavior changes to defend/hold near the objective.
 - Press `F5`, then `F9`, and confirm profile assignments remain readable and CityGate waves are not duplicated.
 
+### Mission Outcome Preview validation
+
+- Enter CityGate and confirm `Mission Outcome Preview` is visible without covering the core objective HUD.
+- Confirm `Likely Outcome` updates to a readable CityGate outcome such as `BalancedMediation`, `BeastNegotiation`, `PartialContainment`, `MechaSuppression`, or `FailedEscalation`.
+- Let or simulate `BeastNegotiator` threat and confirm a Negotiator risk appears.
+- Let `CityGateCore` drop to low health and confirm a critical CityGateCore risk appears.
+- Press `G` DefendObjective on `CityGateCore` / `BeastNegotiator` and confirm the suggested action matches the risk being shown.
+- Press `F` FocusFire on a `BeastRaider` / `MechaHardliner` and confirm Raider/Hardliner pressure suggestions are readable.
+- Complete the mission and confirm `MissionResultSummaryPanel` outcome/effect wording is consistent with the preview summary.
+- Complete/debug Mission 1 and confirm Mission 2 preview shows the previous outcome effect.
+- Complete/debug Mission 2 and confirm Mission 3 preview shows the previous outcome effect.
+
 - Press `F7` to trigger the CityGate BalancedMediation debug outcome.
 - Expected:
   - readable result summary appears,

@@ -88,6 +88,12 @@ Completed missions show a compact outcome/casualty summary.
 
 The panel supports legacy Convoy/Border outcomes and the five CityGate outcomes.
 
+### MissionOutcomePreviewHud
+
+`MissionOutcomePreviewHud` is an additive OnGUI/debug panel under the existing guidance stack. It shows the current likely mission outcome, confidence, top three risks, commander XP preview, faction consequence preview, previous outcome effect, and a short next hint. It uses `MissionOutcomePreviewService` and `DebugUILayout`; it does not write `MissionChainState`, award XP, complete missions, or replace `MissionResultSummaryPanel`.
+
+Preview text and completed-result fallback text share `MissionOutcomeTextLibrary` so the player sees consistent wording before and after mission completion.
+
 ### Playable demo polish layout
 
 The OnGUI demo layout is intentionally grouped into four non-overlapping readability blocks instead of a final Canvas UI:

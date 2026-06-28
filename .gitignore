@@ -36,6 +36,7 @@ crashlytics-build.properties
 
 # Non-project files (skills, submodules, tools)
 .gitmodules
+.claude/
 ppt-image-first/
 readpaper-skill/
 

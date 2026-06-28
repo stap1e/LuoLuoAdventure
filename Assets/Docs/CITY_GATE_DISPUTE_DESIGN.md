@@ -52,6 +52,22 @@ NotStarted → Tension → Skirmish(Active) → MediationWindow → Resolved/Fai
 - **FailedEscalation**: Both sides radicalized. Future wave pressure increases.
 - **PartialContainment**: Status quo with minor trust erosion. Future encounters at medium intensity.
 
+## Mission Outcome Preview
+
+CityGateDispute is the primary scenario for `MissionOutcomePreviewService`. The preview reuses `CityGateDisputeRuntime.ResolveOutcome(...)` and shows a non-mutating projection of the likely result if the mission completed now.
+
+Preview-visible outcome rules mirror the runtime resolver:
+
+- `BalancedMediation`: CityGateCore alive, BeastNegotiator alive, raiders defeated, and casualties below balanced thresholds.
+- `MechaSuppression`: CityGateCore alive and raiders defeated, but BeastNegotiator is dead/endangered or casualties are too high.
+- `BeastNegotiation`: CityGateCore and BeastNegotiator alive, Beast casualties low, and raiders not fully defeated before mediation pressure resolves.
+- `FailedEscalation`: CityGateCore destroyed.
+- `PartialContainment`: core saved but casualties/objectives are damaged enough to prevent full mediation.
+
+Preview risks include CityGateCore HP, BeastNegotiator HP, Mecha/Beast casualties, Hardliner escalation, and Raider pressure. Suggestions intentionally point at existing player tools: `G` DefendObjective for CityGateCore / Negotiator protection and `F` FocusFire for BeastRaiders or Hardliner pressure.
+
+The preview HUD shows commander XP and faction deltas by calling `MissionConsequenceResolver.Resolve(...)` on synthetic state only. It does not call mission completion APIs, write `MissionChainState`, or add XP. Completed results still appear in `MissionResultSummaryPanel`, which shares outcome summary text with the preview through `MissionOutcomeTextLibrary`.
+
 ## AI Behavior Profiles
 
 CityGateDispute uses `AIBehaviorProfileSO` to make the existing units behave differently without changing outcome logic:

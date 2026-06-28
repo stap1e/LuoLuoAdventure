@@ -62,6 +62,9 @@ namespace LuoLuoTrip
         public bool CoreSurvived => _coreSurvived;
         public int MechaCasualties => _mechaCasualties;
         public int BeastCasualties => _beastCasualties;
+        public int MaxMechaCasualtiesForBalanced => _maxMechaCasualtiesForBalanced;
+        public int MaxBeastCasualtiesForBalanced => _maxBeastCasualtiesForBalanced;
+        public int MaxTotalCasualtiesForPartial => _maxTotalCasualtiesForPartial;
         public bool IsInitialized { get; private set; }
 
         private void Start()

@@ -83,6 +83,21 @@ python scripts\parse_unity_test_results.py TestResults\playmode-results.xml
 
 `ProjectSettings/TimeManager.asset` was restored after PlayMode verification.
 
+## Pending verification — Mission Outcome Preview & Consequence Visibility Pass
+
+This in-progress pass adds `MissionOutcomePreviewService`, `MissionOutcomePreviewHud`, runtime-safe preview DTOs, shared outcome summary text, previous outcome effect visibility, validator coverage, tests, and `Assets/Docs/MISSION_OUTCOME_PREVIEW_DESIGN.md`. It keeps the existing three-mission chain and OnGUI/debug HUD style. The target baseline remains **EditMode 0 failed** and **PlayMode 0 failed** on Unity 2022.3.62f3 LTS. Refresh this section with exact counts after the required full verification commands complete.
+
+Expected verification commands:
+
+```powershell
+.\scripts\run_unity_editmode_tests.ps1
+python scripts\parse_unity_test_results.py TestResults\editmode-results.xml
+.\scripts\run_unity_playmode_tests.ps1
+python scripts\parse_unity_test_results.py TestResults\playmode-results.xml
+```
+
+If PlayMode modifies `ProjectSettings/TimeManager.asset`, restore it with `git checkout -- ProjectSettings/TimeManager.asset`.
+
 ## Pending verification — CommanderAction Expansion Pass
 
 This in-progress pass adds `DefendObjective` and `FocusFire` as additive Commander tactical actions. The target baseline remains **EditMode 0 failed** and **PlayMode 0 failed** on Unity 2022.3.62f3 LTS. This section must be refreshed after the full verification commands complete.

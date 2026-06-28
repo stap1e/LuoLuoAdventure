@@ -18,6 +18,7 @@ namespace LuoLuoTrip.UI
         public static Rect ControlHint => GetControlHintRect(Screen.width, Screen.height);
         public static Rect CommanderHud => GetCommanderHudRect(Screen.width, Screen.height);
         public static Rect MissionResultSummary => GetMissionResultSummaryRect(Screen.width, Screen.height);
+        public static Rect MissionOutcomePreview => GetMissionOutcomePreviewRect(Screen.width, Screen.height);
         public static Rect MissionChainSummary => GetMissionChainSummaryRect(Screen.width, Screen.height);
         public static Rect FactionStanding => GetFactionStandingRect(Screen.width, Screen.height);
         public static Rect FactionDeltaToast => GetFactionDeltaToastRect(Screen.width, Screen.height);
@@ -79,8 +80,16 @@ namespace LuoLuoTrip.UI
 
         public static Rect GetMissionChainSummaryRect(float screenWidth, float screenHeight)
         {
+            var preview = GetMissionOutcomePreviewRect(screenWidth, screenHeight);
+            return new Rect(preview.x, preview.y + preview.height + Gap, preview.width, IsCompact(screenWidth) ? 120f : 180f);
+        }
+
+        public static Rect GetMissionOutcomePreviewRect(float screenWidth, float screenHeight)
+        {
             var objective = GetMissionObjectiveRect(screenWidth, screenHeight);
-            return new Rect(objective.x, objective.y + objective.height + Gap, objective.width, IsCompact(screenWidth) ? 120f : 180f);
+            var compact = IsCompact(screenWidth);
+            var height = compact ? 142f : 176f;
+            return new Rect(objective.x, objective.y + objective.height + Gap, objective.width, height);
         }
 
         public static Rect GetFactionStandingRect(float screenWidth, float screenHeight)
